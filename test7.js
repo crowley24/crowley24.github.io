@@ -3,7 +3,7 @@
     'use strict';
 
     /*
-     * TV INTERFACE — STABLE REVISED
+     * TV INTERFACE — PREMIUM STREAMING
      *
      * Lampa / Android TV
      *
@@ -16,16 +16,24 @@
      * - Слайдшоу TMDB
      * - Налаштування Lampa
      *
-     * Виправлено:
-     * - Ізоляцію CSS
-     * - Резервну текстову назву
-     * - Керування таймерами та сесією картки
+     * PREMIUM STREAMING:
+     * - Кінематографічний фон
+     * - Широка область відео
+     * - Багатошарові градієнти
+     * - Затемнення зліва та знизу
+     * - Плавна поява трейлера
+     * - Контрольоване масштабування
+     * - Покращене розташування iframe
+     * - Резервне слайдшоу
+     *
+     * Стабільність:
+     * - Ізоляція CSS
+     * - Резервна текстова назва
+     * - Очищення таймерів
      * - Очищення YouTube-плеєра
      * - Захист від застарілих відповідей
-     * - Захист слайдшоу від повторного запуску
      */
 
-    var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {};
     var currentActiveId = null;
     var sessionCounter = 0;
@@ -73,14 +81,18 @@
     }
 
     function clearSessionTimeout(session, key) {
-        if (!session || !session[key]) return;
+        if (!session || session[key] === null || session[key] === undefined) {
+            return;
+        }
 
         clearTimeout(session[key]);
         session[key] = null;
     }
 
     function clearSessionInterval(session, key) {
-        if (!session || !session[key]) return;
+        if (!session || session[key] === null || session[key] === undefined) {
+            return;
+        }
 
         clearInterval(session[key]);
         session[key] = null;
@@ -91,6 +103,7 @@
 
         clearSessionTimeout(session, 'slideshowTimeout');
         clearSessionTimeout(session, 'fallbackTimeout');
+
         clearSessionInterval(session, 'slideshowInterval');
         clearSessionInterval(session, 'youtubePoll');
     }
@@ -232,9 +245,7 @@
 
                 ctx.drawImage(img, 0, 0, 40, 40);
 
-                var data = ctx.getImageData(
-                    0, 0, 40, 40
-                ).data;
+                var data = ctx.getImageData(0, 0, 40, 40).data;
 
                 var totalBrightness = 0;
                 var hasColor = false;
@@ -267,9 +278,7 @@
                     ? totalBrightness / count
                     : 255;
 
-                callback(
-                    avgBrightness < 110 && !hasColor
-                );
+                callback(avgBrightness < 110 && !hasColor);
             } catch (e) {
                 callback(false);
             }
@@ -283,13 +292,11 @@
     }
 
     /*
-     * CSS
+     * CSS — PREMIUM STREAMING
      */
 
     function applyStyles() {
-        var style = document.getElementById(
-            'tv-interface-styles'
-        );
+        var style = document.getElementById('tv-interface-styles');
 
         if (!style) {
             style = document.createElement('style');
@@ -297,9 +304,7 @@
             document.head.appendChild(style);
         }
 
-        var isUIAnim = Lampa.Storage.get(
-            'tv_interface_ui_anim'
-        );
+        var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');
 
         var animEffect = Lampa.Storage.get(
             'tv_interface_ui_anim_effect',
@@ -344,13 +349,15 @@
             'float'
         ];
 
-        if (
-            allowedBadgeAnimations.indexOf(badgeAnim) === -1
-        ) {
+        if (allowedBadgeAnimations.indexOf(badgeAnim) === -1) {
             badgeAnim = 'pulse';
         }
 
         var css = '';
+
+        /*
+         * АНІМАЦІЇ ІНТЕРФЕЙСУ
+         */
 
         css += '@keyframes anim_smooth_zoom {';
         css += '0% { opacity:0; transform:translate3d(0,10px,0) scale(.94); }';
@@ -399,9 +406,7 @@
         css += '} ';
 
         /*
-         * Усі приховування обмежені карткою.
-         * Не використовуємо глобальні [class*="status"],
-         * [class*="pg"] та інші надто широкі селектори.
+         * ПРИХОВУВАННЯ ЕЛЕМЕНТІВ КАРТКИ
          */
 
         css += '.full-start-new .full-start__reactions,';
@@ -425,8 +430,13 @@
 
         css += '.background { background:#000 !important; } ';
 
+        /*
+         * ОСНОВА КАРТКИ
+         */
+
         css += '.full-start-new {';
         css += 'position:relative !important;';
+        css += 'isolation:isolate;';
         css += 'will-change:auto;';
         css += '} ';
 
@@ -447,7 +457,7 @@
 
         css += '.full-start-new__right {';
         css += 'background:none !important;';
-        css += 'z-index:2 !important;';
+        css += 'z-index:3 !important;';
         css += 'display:flex !important;';
         css += 'flex-direction:column !important;';
         css += 'align-items:flex-start !important;';
@@ -455,6 +465,10 @@
         css += 'gap:' + blocksGap + ' !important;';
         css += 'position:relative !important;';
         css += '} ';
+
+        /*
+         * АНІМАЦІЯ БЛОКІВ
+         */
 
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = 'cubic-bezier(0.16,1,0.3,1)';
@@ -472,6 +486,10 @@
             );
         }
 
+        /*
+         * ЛОГОТИП СТУДІЇ
+         */
+
         css += '.studio-header-brand {';
         css += getAnimRule('0s');
         css += 'order:1;';
@@ -480,6 +498,8 @@
         css += 'justify-content:flex-start;';
         css += 'align-items:center;';
         css += 'margin-bottom:-2px !important;';
+        css += 'position:relative;';
+        css += 'z-index:4;';
         css += '} ';
 
         css += '.studio-header-brand img {';
@@ -487,14 +507,18 @@
         css += 'width:auto;';
         css += 'max-width:130px;';
         css += 'object-fit:contain;';
-        css += 'filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));';
+        css += 'filter:drop-shadow(0 2px 8px rgba(0,0,0,.9));';
         css += 'opacity:.95;';
         css += 'transition:opacity .3s ease;';
         css += '} ';
 
         css += '.studio-header-brand img.is-dark-logo {';
-        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,.8)) !important;';
+        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0,0,0,.9)) !important;';
         css += '} ';
+
+        /*
+         * НАЗВА ФІЛЬМУ
+         */
 
         css += '.full-start-new__title {';
         css += 'min-height:60px;';
@@ -509,6 +533,7 @@
         css += 'margin:0 !important;';
         css += 'order:2;';
         css += 'overflow:visible !important;';
+        css += 'z-index:4;';
         css += '} ';
 
         css += '.full-start-new__title img {';
@@ -517,20 +542,15 @@
         css += 'width:auto !important;';
         css += 'max-width:45vw !important;';
         css += 'object-fit:contain !important;';
-        css += 'filter:drop-shadow(0 4px 12px rgba(0,0,0,.7));';
+        css += 'filter:drop-shadow(0 4px 16px rgba(0,0,0,.85));';
         css += 'margin:0 !important;';
         css += 'opacity:0;';
-        css += 'transition:opacity .3s ease-in-out;';
+        css += 'transition:opacity .45s ease-in-out;';
         css += '} ';
 
         css += '.full-start-new__title img.loaded {';
         css += 'opacity:1;';
         css += '} ';
-
-        /*
-         * Текстова назва використовується,
-         * коли логотип відсутній або не завантажився.
-         */
 
         css += '.full-start-new__title.tvi-title-text {';
         css += 'font-size:2em !important;';
@@ -540,17 +560,22 @@
         css += 'height:auto !important;';
         css += 'overflow-wrap:anywhere !important;';
         css += 'line-height:1.15;';
+        css += 'text-shadow:0 3px 18px rgba(0,0,0,.9);';
         css += '} ';
 
         css += '.full-start-new__title.tvi-title-text img {';
         css += 'display:none !important;';
         css += '} ';
 
+        /*
+         * РЕЙТИНГИ
+         */
+
         css += '.quality-row-inline {';
         css += 'position:absolute;';
         css += 'top:30px;';
         css += 'right:24px;';
-        css += 'z-index:99;';
+        css += 'z-index:5;';
         css += 'display:flex;';
         css += 'flex-direction:column;';
         css += 'align-items:flex-end;';
@@ -558,16 +583,44 @@
         css += 'pointer-events:none;';
         css += '} ';
 
+        css += '.quality-row-inline .plugin-rating-item {';
+        css += 'display:flex;';
+        css += 'align-items:center;';
+        css += 'gap:6px;';
+        css += 'font-weight:700;';
+        css += 'color:#fff;';
+        css += 'font-size:1.05em;';
+        css += 'padding:2px 0;';
+        css += 'text-shadow:0 2px 8px rgba(0,0,0,.9);';
+        css += '} ';
+
+        css += '.quality-row-inline .plugin-rating-item img {';
+        css += 'height:1.1em;';
+        css += 'width:auto;';
+        css += 'filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));';
+        css += '} ';
+
+        /*
+         * СЛОГАН
+         */
+
         css += '.full-start-new__tagline {';
         css += getAnimRule('.15s');
         css += 'display:' + (showTagline ? 'block' : 'none') + ' !important;';
         css += 'font-style:italic !important;';
         css += 'font-size:1em !important;';
         css += 'margin:0 !important;';
-        css += 'color:rgba(255,255,255,.8) !important;';
+        css += 'color:rgba(255,255,255,.82) !important;';
+        css += 'text-shadow:0 2px 12px rgba(0,0,0,.95);';
         css += 'text-align:left !important;';
         css += 'order:3;';
+        css += 'position:relative;';
+        css += 'z-index:4;';
         css += '} ';
+
+        /*
+         * МЕТАДАНІ
+         */
 
         css += '.plugin-meta-row {';
         css += getAnimRule('.22s');
@@ -580,9 +633,29 @@
         css += 'font-size:calc(' + rSize + ' * 2.8);';
         css += 'width:100%;';
         css += 'order:4;';
-        css += 'color:rgba(255,255,255,.85);';
+        css += 'color:rgba(255,255,255,.88);';
         css += 'font-family:"Inter",-apple-system,system-ui,sans-serif;';
+        css += 'text-shadow:0 2px 10px rgba(0,0,0,.95);';
+        css += 'position:relative;';
+        css += 'z-index:4;';
         css += '} ';
+
+        css += '.info-text-item {';
+        css += 'opacity:.95;';
+        css += 'font-weight:500;';
+        css += 'font-size:.9em;';
+        css += 'white-space:nowrap;';
+        css += '} ';
+
+        css += '.info-separator {';
+        css += 'opacity:.45;';
+        css += 'font-size:.85em;';
+        css += 'margin:0 -2px;';
+        css += '} ';
+
+        /*
+         * АНІМАЦІЯ БЕЙДЖІВ
+         */
 
         var loopAnimName = badgeAnim !== 'none'
             ? 'badge_anim_' + badgeAnim
@@ -607,33 +680,9 @@
 
         css += '} ';
 
-        css += '.quality-row-inline .plugin-rating-item {';
-        css += 'display:flex;';
-        css += 'align-items:center;';
-        css += 'gap:6px;';
-        css += 'font-weight:700;';
-        css += 'color:#fff;';
-        css += 'font-size:1.05em;';
-        css += 'padding:2px 0;';
-        css += '} ';
-
-        css += '.quality-row-inline .plugin-rating-item img {';
-        css += 'height:1.1em;';
-        css += 'width:auto;';
-        css += '} ';
-
-        css += '.info-text-item {';
-        css += 'opacity:.9;';
-        css += 'font-weight:500;';
-        css += 'font-size:.9em;';
-        css += 'white-space:nowrap;';
-        css += '} ';
-
-        css += '.info-separator {';
-        css += 'opacity:.35;';
-        css += 'font-size:.85em;';
-        css += 'margin:0 -2px;';
-        css += '} ';
+        /*
+         * КНОПКИ
+         */
 
         css += '.card-tweaks__buttons {';
         css += getAnimRule('.3s');
@@ -644,11 +693,17 @@
         css += 'gap:15px !important;';
         css += 'margin-top:15px !important;';
         css += 'order:5;';
+        css += 'position:relative;';
+        css += 'z-index:4;';
         css += '} ';
+
+        /*
+         * ПЕРЕХІД ВІД СТАНДАРТНОГО ФОНУ ДО ТРЕЙЛЕРА
+         */
 
         css += '.full-start__background {';
         css += 'will-change:opacity;';
-        css += 'transition:opacity .8s ease-in-out;';
+        css += 'transition:opacity .85s ease-in-out,visibility .85s ease-in-out;';
         css += '} ';
 
         css += 'body.has-active-trailer .full-start__background {';
@@ -656,58 +711,163 @@
         css += 'visibility:hidden !important;';
         css += '} ';
 
+        /*
+         * PREMIUM STREAMING — ЗОВНІШНІЙ ШАР
+         *
+         * Відео займає праву частину екрана.
+         * Градієнти створюють єдиний фон із чорною
+         * областю інтерфейсу зліва.
+         */
+
         css += '.tvi-trailer {';
-        css += 'position:absolute;';
+        css += 'position:fixed;';
         css += 'top:0;';
-        css += 'left:0;';
-        css += 'width:100%;';
-        css += 'height:100%;';
+        css += 'right:0;';
+        css += 'bottom:0;';
+        css += 'left:15vw;';
+        css += 'width:85vw;';
+        css += 'height:100vh;';
         css += 'z-index:0;';
+        css += 'overflow:hidden;';
+        css += 'background:#000;';
         css += 'opacity:0;';
-        css += 'transition:opacity .5s ease;';
+        css += 'visibility:hidden;';
         css += 'pointer-events:none;';
+        css += 'contain:paint;';
+        css += 'transition:opacity 1.1s cubic-bezier(.22,1,.36,1),visibility 1.1s ease;';
+        css += 'isolation:isolate;';
         css += '} ';
 
         css += '.tvi-trailer.display {';
         css += 'opacity:1;';
+        css += 'visibility:visible;';
         css += '} ';
 
+        /*
+         * ОБЛАСТЬ YOUTUBE
+         *
+         * Невелике збільшення iframe допомагає
+         * зменшити видимість країв кадру.
+         */
+
         css += '.tvi-trailer__yt {';
-        css += 'position:fixed;';
-        css += 'top:-12vh;';
-        css += 'left:30vw;';
-        css += 'width:70vw;';
-        css += 'height:118vh;';
-        css += 'background:transparent;';
+        css += 'position:absolute;';
+        css += 'top:-5%;';
+        css += 'left:-5%;';
+        css += 'width:110%;';
+        css += 'height:110%;';
         css += 'overflow:hidden;';
-        css += 'display:flex;';
-        css += 'align-items:center;';
-        css += 'justify-content:center;';
+        css += 'background:#000;';
         css += 'z-index:0;';
-        css += '-webkit-mask-image:radial-gradient(ellipse 80% 50% at 60% 50%,#000 30%,transparent 75%);';
-        css += 'mask-image:radial-gradient(ellipse 80% 50% at 60% 50%,#000 30%,transparent 75%);';
+        css += 'display:block;';
+        css += 'border:0;';
+        css += 'pointer-events:none;';
         css += '} ';
 
         css += '.tvi-trailer__iframe {';
+        css += 'position:absolute;';
+        css += 'inset:0;';
         css += 'width:100%;';
         css += 'height:100%;';
+        css += 'overflow:hidden;';
+        css += 'background:#000;';
         css += 'pointer-events:none;';
         css += '} ';
 
         css += '.tvi-trailer__yt iframe {';
-        css += 'border:0;';
-        css += 'width:100%;';
-        css += 'height:100%;';
-        css += 'flex-shrink:0;';
-        css += 'pointer-events:none;';
-        css += 'will-change:transform;';
-        css += 'transition:transform .3s;';
+        css += 'position:absolute !important;';
+        css += 'top:0 !important;';
+        css += 'left:0 !important;';
+        css += 'width:100% !important;';
+        css += 'height:100% !important;';
+        css += 'min-width:100% !important;';
+        css += 'min-height:100% !important;';
+        css += 'border:0 !important;';
+        css += 'pointer-events:none !important;';
+        css += 'will-change:transform,opacity;';
+        css += 'transform:scale(1.04) translateZ(0);';
+        css += 'transform-origin:center center;';
+        css += 'filter:contrast(1.04) saturate(1.04) brightness(.96);';
         css += 'opacity:1;';
-        css += 'filter:contrast(105%) brightness(102%);';
         css += '} ';
+
+        /*
+         * ГРАДІЄНТ ЗЛІВА
+         *
+         * Плавно зливає трейлер із чорним
+         * фоном області назви й опису.
+         */
+
+        css += '.tvi-trailer::before {';
+        css += 'content:"";';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'z-index:2;';
+        css += 'pointer-events:none;';
+        css += 'background:linear-gradient(';
+        css += '90deg,';
+        css += 'rgba(0,0,0,1) 0%,';
+        css += 'rgba(0,0,0,.96) 7%,';
+        css += 'rgba(0,0,0,.84) 17%,';
+        css += 'rgba(0,0,0,.60) 30%,';
+        css += 'rgba(0,0,0,.30) 45%,';
+        css += 'rgba(0,0,0,.08) 62%,';
+        css += 'rgba(0,0,0,0) 78%';
+        css += ');';
+        css += '} ';
+
+        /*
+         * ГРАДІЄНТ ЗНИЗУ ТА СПРАВА
+         *
+         * Нижня частина затемнюється сильніше,
+         * а права — лише трохи.
+         */
+
+        css += '.tvi-trailer::after {';
+        css += 'content:"";';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'z-index:3;';
+        css += 'pointer-events:none;';
+        css += 'background:';
+        css += 'linear-gradient(';
+        css += '0deg,';
+        css += 'rgba(0,0,0,.68) 0%,';
+        css += 'rgba(0,0,0,.40) 12%,';
+        css += 'rgba(0,0,0,.13) 30%,';
+        css += 'rgba(0,0,0,0) 52%';
+        css += '),';
+        css += 'linear-gradient(';
+        css += '270deg,';
+        css += 'rgba(0,0,0,.20) 0%,';
+        css += 'rgba(0,0,0,.08) 8%,';
+        css += 'rgba(0,0,0,0) 22%';
+        css += '),';
+        css += 'linear-gradient(';
+        css += '180deg,';
+        css += 'rgba(0,0,0,.12) 0%,';
+        css += 'rgba(0,0,0,0) 22%';
+        css += ');';
+        css += '} ';
+
+        /*
+         * ДОДАТКОВА СУМІСНІСТЬ
+         */
 
         css += '.tvi-trailer__overlay {';
         css += 'display:none !important;';
+        css += '} ';
+
+        /*
+         * ЗМЕНШЕННЯ РУХУ
+         */
+
+        css += '@media (prefers-reduced-motion: reduce) {';
+        css += '.tvi-trailer,';
+        css += '.tvi-trailer__yt iframe,';
+        css += '.full-start__background {';
+        css += 'transition-duration:.2s !important;';
+        css += '}';
         css += '} ';
 
         style.textContent = css;
@@ -876,10 +1036,7 @@
      */
 
     function applyMovieDetailsData(data, movie, $render, session) {
-        if (
-            session &&
-            !isCurrentSession(session)
-        ) {
+        if (session && !isCurrentSession(session)) {
             return;
         }
 
@@ -887,12 +1044,22 @@
             '.full-start-new__title'
         );
 
+        var fallbackTitle =
+            movie.title ||
+            movie.name ||
+            movie.original_title ||
+            movie.original_name ||
+            '';
+
         if (
             !data.images ||
             !data.images.logos ||
             !data.images.logos.length
         ) {
-            $titleContainer.addClass('tvi-title-text');
+            $titleContainer
+                .empty()
+                .addClass('tvi-title-text')
+                .text(fallbackTitle);
         } else {
             var lang = Lampa.Storage.get('language') || 'uk';
 
@@ -914,10 +1081,7 @@
                 var tempImg = new Image();
 
                 tempImg.onload = function () {
-                    if (
-                        session &&
-                        !isCurrentSession(session)
-                    ) {
+                    if (session && !isCurrentSession(session)) {
                         return;
                     }
 
@@ -928,68 +1092,50 @@
                     var $img = $('<img alt="">');
 
                     $img.on('error', function () {
-                        if (
-                            session &&
-                            !isCurrentSession(session)
-                        ) {
+                        if (session && !isCurrentSession(session)) {
                             return;
                         }
 
                         $titleContainer
                             .empty()
                             .addClass('tvi-title-text')
-                            .text(
-                                movie.title ||
-                                movie.name ||
-                                movie.original_title ||
-                                movie.original_name ||
-                                ''
-                            );
+                            .text(fallbackTitle);
                     });
 
                     $img.attr('src', logoUrl);
                     $titleContainer.append($img);
 
                     setTimeout(function () {
-                        if (
-                            session &&
-                            !isCurrentSession(session)
-                        ) {
+                        if (session && !isCurrentSession(session)) {
                             return;
                         }
 
-                        $titleContainer
-                            .find('img')
-                            .addClass('loaded');
+                        $titleContainer.find('img').addClass('loaded');
                     }, 20);
                 };
 
                 tempImg.onerror = function () {
-                    if (
-                        session &&
-                        !isCurrentSession(session)
-                    ) {
+                    if (session && !isCurrentSession(session)) {
                         return;
                     }
 
                     $titleContainer
                         .empty()
                         .addClass('tvi-title-text')
-                        .text(
-                            movie.title ||
-                            movie.name ||
-                            movie.original_title ||
-                            movie.original_name ||
-                            ''
-                        );
+                        .text(fallbackTitle);
                 };
 
                 tempImg.src = logoUrl;
+            } else {
+                $titleContainer
+                    .empty()
+                    .addClass('tvi-title-text')
+                    .text(fallbackTitle);
             }
         }
 
         /*
-         * Логотип студії
+         * ЛОГОТИП СТУДІЇ
          */
 
         $render.find('.studio-header-brand').remove();
@@ -1037,10 +1183,7 @@
                 $title.before($brand);
 
                 isImageDark(studioLogoUrl, function (isDark) {
-                    if (
-                        session &&
-                        !isCurrentSession(session)
-                    ) {
+                    if (session && !isCurrentSession(session)) {
                         return;
                     }
 
@@ -1081,10 +1224,7 @@
             dataType: 'json',
 
             success: function (data) {
-                if (
-                    session &&
-                    !isCurrentSession(session)
-                ) {
+                if (session && !isCurrentSession(session)) {
                     return;
                 }
 
@@ -1099,17 +1239,10 @@
             },
 
             error: function () {
-                if (
-                    session &&
-                    !isCurrentSession(session)
-                ) {
+                if (session && !isCurrentSession(session)) {
                     return;
                 }
 
-                /*
-                 * Заголовок залишається текстовим,
-                 * якщо запит деталей TMDB не вдався.
-                 */
                 var $title = $render.find(
                     '.full-start-new__title'
                 );
@@ -1262,17 +1395,12 @@
 
         Lampa.Utils.putScript(
             ['https://www.youtube.com/iframe_api'],
-            function () {
-                /*
-                 * Не викликаємо callback передчасно:
-                 * готовність визначає onYouTubeIframeAPIReady.
-                 */
-            }
+            function () {}
         );
     }
 
     /*
-     * ФОНОВИЙ ТРЕЙЛЕР
+     * ФОНОВИЙ ТРЕЙЛЕР — PREMIUM
      */
 
     function startTrailer(session, trailer) {
@@ -1324,7 +1452,7 @@
                     $wrap.find('.tvi-trailer__iframe')[0],
                     {
                         height: window.innerHeight,
-                        width: Math.round(window.innerWidth * 0.70),
+                        width: window.innerWidth,
                         videoId: trailer.id,
 
                         playerVars: {
@@ -1336,6 +1464,7 @@
                             playsinline: 1,
                             rel: 0,
                             modestbranding: 1,
+                            iv_load_policy: 3,
                             origin: window.location.origin
                         },
 
@@ -1355,14 +1484,29 @@
                                     'tv_interface_trailer_zoom'
                                 ) || '0';
 
-                                if (zoom !== '0') {
-                                    iframe.css(
-                                        'transform',
-                                        'scale(' +
-                                        (1 + parseInt(zoom, 10) / 100) +
-                                        ') translateZ(0)'
-                                    );
+                                var zoomValue = parseInt(zoom, 10);
+
+                                if (isNaN(zoomValue)) {
+                                    zoomValue = 0;
                                 }
+
+                                zoomValue = Math.max(
+                                    0,
+                                    Math.min(50, zoomValue)
+                                );
+
+                                /*
+                                 * Масштабування застосовується
+                                 * до iframe, а не до всієї картки.
+                                 */
+
+                                iframe.css({
+                                    transform:
+                                        'scale(' +
+                                        (1.04 + zoomValue / 100) +
+                                        ') translateZ(0)',
+                                    transformOrigin: 'center center'
+                                });
 
                                 try {
                                     ev.target.mute();
@@ -1381,6 +1525,9 @@
                                         'has-active-trailer'
                                     );
 
+                                    /*
+                                     * Плавна поява фонового відео.
+                                     */
                                     $wrap.addClass('display');
                                 }
 
@@ -1418,8 +1565,8 @@
         }
 
         /*
-         * Обмежений час очікування API:
-         * картка не повинна залишатися без фону нескінченно.
+         * Якщо API не завантажився, не залишаємо
+         * картку з порожнім фоном.
          */
 
         session.fallbackTimeout = setTimeout(function () {
@@ -1458,10 +1605,9 @@
         session.slideshowStarted = true;
 
         var movieId = session.movieId;
-        var mediaType = getMediaType({
-            id: movieId,
-            name: session.movieKey.indexOf('tv:') === 0 ? 'tv' : ''
-        });
+        var mediaType = session.movieKey.indexOf('tv:') === 0
+            ? 'tv'
+            : 'movie';
 
         var currentLang =
             Lampa.Storage.field('tmdb_lang') || 'uk';
@@ -1532,10 +1678,6 @@
 
                     finalB = finalB.concat(otherB);
                 }
-
-                /*
-                 * Видаляємо повтори за file_path.
-                 */
 
                 var seen = {};
 
@@ -1614,13 +1756,7 @@
                         );
                     };
 
-                    img.onerror = function () {
-                        /*
-                         * Якщо зображення не завантажилося,
-                         * поточний фон не змінюємо.
-                         */
-                    };
-
+                    img.onerror = function () {};
                     img.src = url;
                 }
 
@@ -1671,6 +1807,7 @@
                     cleanupSession(activeSession);
                 } else {
                     currentActiveId = null;
+
                     $('body').removeClass(
                         'has-active-trailer'
                     );
@@ -1706,8 +1843,7 @@
             watchActivity(session);
 
             /*
-             * Резервна назва відразу доступна,
-             * навіть поки TMDB завантажує логотип.
+             * РЕЗЕРВНА ТЕКСТОВА НАЗВА
              */
 
             var $title = $render.find(
@@ -1736,6 +1872,10 @@
 
             loadMovieDetails(movie, $render, session);
 
+            /*
+             * ТРЕЙЛЕР АБО СЛАЙДШОУ
+             */
+
             var isTrailerBg = Lampa.Storage.get(
                 'tv_interface_trailer_bg'
             );
@@ -1755,8 +1895,7 @@
             }
 
             /*
-             * Переміщення кнопок зберігає
-             * початкову структуру інтерфейсу.
+             * ПЕРЕМІЩЕННЯ КНОПОК
              */
 
             var $body = $render.find(
@@ -1779,6 +1918,10 @@
                 $buttons.detach().appendTo($tweaksButtons);
                 $tweaksButtons.insertAfter($body);
             }
+
+            /*
+             * РЯДОК РЕЙТИНГІВ
+             */
 
             var $mainContainer = $render.find(
                 '.full-start-new'
@@ -1986,6 +2129,21 @@
             },
             field: {
                 name: 'Показувати логотип студії'
+            },
+            onChange: function () {
+                applyStyles();
+
+                if (activeSession && !activeSession.destroyed) {
+                    loadMovieDetails(
+                        activeSession.activity &&
+                        activeSession.activity.data &&
+                        activeSession.activity.data.movie
+                            ? activeSession.activity.data.movie
+                            : null,
+                        activeSession.$render,
+                        activeSession
+                    );
+                }
             }
         });
 
