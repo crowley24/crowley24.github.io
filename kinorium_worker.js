@@ -1,6 +1,6 @@
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.6
+ * KINORIUM WORKER 1.6.7
  *
  * Cloudflare Workers + KV
  * Binding: KINORIUM_CACHE
@@ -9,18 +9,20 @@
  * - Custom OST catalog priority
  * - YouTube soundtrack catalog
  * - OSTMusic album/track resolution
- * - Kinorium fallback
+ * - Kinorium featured-track lookup
+ * - Full-album fallback: /{id}/soundtrack/
  * - Automatic movie and TV series search
  * - Movie year tolerance +/- 1
  * - Exact start year for TV series
  * - Roman / Arabic movie sequel numbers
  * - Shared KV resolution cache
- * - Shared KV soundtrack cache
+ * - Separate featured and album soundtrack caches
  * - Short-lived negative soundtrack cache
  * - Audio verification on every verified request
  * - Cache HIT / MISS diagnostics
  * - HTML inspection mode
  * - Featured-track parser diagnostics
+ * - Album-track parser diagnostics
  * - Graceful fallback if KV is unavailable
  * - No hardcoded movie mappings
  * - No Muzofond integration
@@ -31,7 +33,7 @@
 
 'use strict';
 
-const VERSION = '1.6.6';
+const VERSION = '1.6.7';
 
 const CUSTOM_CATALOG = {
     url: 'https://crowley24.github.io/OST/ost_custom.json',
@@ -48,15 +50,18 @@ const CONFIG = {
     maxCandidates: 80,
     maxVerifyCandidates: 35,
     maxTotalVerifyCandidates: 35,
+    maxAlbumVerifyCandidates: 12,
     cacheSeconds: 300,
     yearTolerance: 1,
     maxSearchVariants: 5,
 
     kv: {
-        prefix: 'kinorium:v166:',
+        prefix: 'kinorium:v167:',
         resolutionTTL: 7 * 86400,
         soundtrackTTL: 12 * 3600,
         emptySoundtrackTTL: 600,
+        albumTTL: 12 * 3600,
+        emptyAlbumTTL: 600,
         schema: 1
     }
 };
@@ -556,6 +561,7 @@ export default {
 
         const debug = params.get('debug') === '1';
         const inspect = params.get('inspect') === '1';
+        const albumDebug = params.get('album_debug') === '1';
         const verify = params.get('verify') !== '0';
 
         const cacheBypass =
@@ -573,7 +579,8 @@ export default {
                     enabled: cache.enabled,
                     binding: 'KINORIUM_CACHE',
                     resolutionTTL: CONFIG.kv.resolutionTTL,
-                    soundtrackTTL: CONFIG.kv.soundtrackTTL
+                    soundtrackTTL: CONFIG.kv.soundtrackTTL,
+                    albumTTL: CONFIG.kv.albumTTL
                 },
                 customCatalog: {
                     url: CUSTOM_CATALOG.url,
@@ -588,7 +595,8 @@ export default {
                     track: '?id=108983&track=Rose',
                     verifyOff: '?id=108983&verify=0',
                     refresh: '?title=Titanic&year=1997&refresh=1',
-                    inspect: '?id=348789&debug=1&inspect=1&refresh=1&verify=0'
+                    inspect: '?id=348789&debug=1&inspect=1&refresh=1&verify=0',
+                    albumDebug: '?id=11990768&album_debug=1&refresh=1'
                 }
             });
         }
@@ -628,10 +636,63 @@ export default {
             enabled: cache.enabled,
             resolution: id ? 'DIRECT' : 'MISS',
             soundtrack: 'MISS',
+            album: 'MISS',
             errors: []
         };
 
         try {
+            /*
+             * ALBUM DIAGNOSTICS
+             *
+             * This mode inspects the full soundtrack page without
+             * changing the regular response consumed by Lampa.
+             */
+
+            if (albumDebug && id) {
+                const albumPage = await fetchHTML(
+                    CONFIG.site + '/' + id + '/soundtrack/',
+                    { bypassCache: cacheBypass }
+                );
+
+                if (!albumPage.ok) {
+                    return json({
+                        success: false,
+                        version: VERSION,
+                        mode: 'album_debug',
+                        id,
+                        pageURL: albumPage.url,
+                        status: albumPage.status,
+                        contentType: albumPage.contentType,
+                        htmlLength: albumPage.length,
+                        error: 'album_page_fetch_failed'
+                    });
+                }
+
+                const albumDiagnostics = {};
+                const albumTracks = extractAlbumTracks(
+                    albumPage.html,
+                    albumDiagnostics
+                );
+
+                return json({
+                    success: true,
+                    version: VERSION,
+                    mode: 'album_debug',
+                    id,
+                    pageURL: albumPage.url,
+                    status: albumPage.status,
+                    contentType: albumPage.contentType,
+                    htmlLength: albumPage.length,
+                    pageTitle: extractTitle(albumPage.html),
+                    parserDiagnostics: albumDiagnostics,
+                    tracksCount: albumTracks.length,
+                    tracks: albumTracks,
+                    inspection: inspectSoundtrackHTML(
+                        albumPage.html
+                    )
+                });
+            }
+
             /*
              * STEP 0:
              * Check custom OST catalog first.
@@ -1002,6 +1063,12 @@ function makeSoundtrackKey(id) {
         String(id);
 }
 
+function makeAlbumKey(id) {
+    return CONFIG.kv.prefix +
+        'album:' +
+        String(id);
+}
+
 /* =========================================================
  * HTTP
  * ========================================================= */
@@ -1030,7 +1097,7 @@ function siteHeaders() {
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.6.6)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6.7)'
     };
 }
 
@@ -1923,7 +1990,7 @@ function validateAudioURL(value) {
     if (!value) return null;
 
     try {
-        const url = new URL(value);
+        const url = new URL(String(value).trim());
 
         if (url.protocol !== 'https:') {
             return null;
@@ -1944,7 +2011,132 @@ function validateAudioURL(value) {
 }
 
 /* =========================================================
- * FEATURED SOUNDTRACK EXTRACTION — FIXED
+ * SOUNDTRACK TRACK DATA NORMALIZATION
+ * ========================================================= */
+
+function normalizeKinoriumTrack(data) {
+    if (!data || typeof data !== 'object') return null;
+
+    const name = String(
+        data.song_name ||
+        data.name ||
+        data.track_name ||
+        data.trackName ||
+        data.title ||
+        ''
+    ).trim();
+
+    if (!name) return null;
+
+    const id = String(
+        data.song_id ||
+        data.songId ||
+        data.id ||
+        data.track_id ||
+        data.trackId ||
+        ''
+    ).trim();
+
+    const audioValue =
+        data.preview_url ||
+        data.previewUrl ||
+        data.audio_url ||
+        data.audioUrl ||
+        data.file ||
+        data.url ||
+        '';
+
+    const audioUrl = validateAudioURL(audioValue);
+
+    const duration = Number(
+        data.duration ||
+        data.length ||
+        data.track_duration ||
+        0
+    );
+
+    const mainValue =
+        data.isMain ??
+        data.is_main ??
+        data.main ??
+        false;
+
+    const isMain =
+        mainValue === true ||
+        mainValue === 1 ||
+        mainValue === '1' ||
+        mainValue === 'true';
+
+    return {
+        id,
+        name,
+        artist: String(
+            data.artist_name ||
+            data.artistName ||
+            data.artist ||
+            ''
+        ).trim(),
+        duration,
+        isMain,
+        audioUrl
+    };
+}
+
+function parseSongJSON(raw) {
+    const source = decodeEntities(String(raw || '')).trim();
+
+    if (!source) return null;
+
+    const attempts = [
+        source,
+        source.replace(/\\"/g, '"'),
+        source.replace(/\\+"/g, '"'),
+        source.replace(/\\\\/g, '\\')
+    ];
+
+    for (const attempt of attempts) {
+        try {
+            const parsed = JSON.parse(attempt);
+
+            if (
+                parsed &&
+                typeof parsed === 'object' &&
+                !Array.isArray(parsed)
+            ) {
+                return parsed;
+            }
+
+            if (Array.isArray(parsed)) {
+                const candidate = parsed.find(
+                    item => item && typeof item === 'object'
+                );
+
+                if (candidate) return candidate;
+            }
+        } catch (_) {}
+    }
+
+    return null;
+}
+
+function addUniqueTrack(tracks, seen, track) {
+    if (!track || !track.name) return false;
+
+    const key = track.id
+        ? 'id:' + track.id
+        : 'name:' + normalize(track.name) +
+            '|artist:' + normalize(track.artist);
+
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    tracks.push(track);
+
+    return true;
+}
+
+/* =========================================================
+ * FEATURED SOUNDTRACK EXTRACTION
  * ========================================================= */
 
 function extractFeaturedTracks(html, diagnostics) {
@@ -1964,10 +2156,6 @@ function extractFeaturedTracks(html, diagnostics) {
     stats.tracksExtracted = 0;
     stats.parseErrors = [];
 
-    /*
-     * This tag pattern allows > characters inside quoted attributes.
-     * The old /<li\b[^>]*>/ pattern could stop too early.
-     */
     const tagRegex =
         /<li\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
 
@@ -2009,43 +2197,16 @@ function extractFeaturedTracks(html, diagnostics) {
 
         stats.dataSongAttributesFound++;
 
-        raw = decodeEntities(raw).trim();
+        const data = parseSongJSON(raw);
 
-        let data = null;
-
-        try {
-            data = JSON.parse(raw);
-        } catch (_) {
-            /*
-             * Some HTML variants escape JSON quotes.
-             * Try cautious alternate forms before rejecting it.
-             */
-            const variants = [
-                raw.replace(/\\"/g, '"'),
-                raw.replace(/\\+"/g, '"'),
-                raw.replace(/\\\\/g, '\\')
-            ];
-
-            for (const variant of variants) {
-                try {
-                    data = JSON.parse(variant);
-                    break;
-                } catch (_) {}
-            }
-        }
-
-        if (
-            !data ||
-            typeof data !== 'object' ||
-            Array.isArray(data)
-        ) {
+        if (!data) {
             stats.jsonParseErrors++;
 
             if (stats.parseErrors.length < 10) {
                 stats.parseErrors.push({
                     stage: 'json',
                     reason: 'data_song_json_invalid',
-                    attributeStart: raw.slice(0, 240)
+                    attributeStart: String(raw).slice(0, 240)
                 });
             }
 
@@ -2054,11 +2215,9 @@ function extractFeaturedTracks(html, diagnostics) {
 
         stats.jsonParsed++;
 
-        const name = String(
-            data.song_name || data.name || ''
-        ).trim();
+        const track = normalizeKinoriumTrack(data);
 
-        if (!name) {
+        if (!track) {
             stats.missingSongNames++;
 
             if (stats.parseErrors.length < 10) {
@@ -2072,37 +2231,236 @@ function extractFeaturedTracks(html, diagnostics) {
             continue;
         }
 
-        const id = String(
-            data.song_id || data.id || ''
-        ).trim();
-
-        const key = id || normalize(name);
-
-        if (seen.has(key)) {
+        if (!addUniqueTrack(tracks, seen, track)) {
             stats.duplicateTracks++;
-            continue;
         }
-
-        seen.add(key);
-
-        const audioUrl = validateAudioURL(
-            data.preview_url
-        );
-
-        tracks.push({
-            id,
-            name,
-            artist: String(data.artist_name || '').trim(),
-            duration: Number(data.duration || 0),
-            isMain: Number(data.isMain || 0) === 1,
-            audioUrl
-        });
     }
 
     stats.tracksExtracted = tracks.length;
 
     return tracks;
 }
+
+/* =========================================================
+ * FULL ALBUM TRACK EXTRACTION
+ *
+ * Album pages may use a different HTML structure than the
+ * featured list. Therefore, this parser searches all tags
+ * with data-song attributes and embedded song JSON objects.
+ * ========================================================= */
+
+function extractAlbumTracks(html, diagnostics) {
+    const source = String(html || '');
+    const tracks = [];
+    const seen = new Set();
+
+    const stats = diagnostics || {};
+
+    stats.tagsScanned = 0;
+    stats.dataSongAttributesFound = 0;
+    stats.jsonParsed = 0;
+    stats.jsonParseErrors = 0;
+    stats.embeddedObjectsFound = 0;
+    stats.duplicateTracks = 0;
+    stats.tracksExtracted = 0;
+    stats.audioURLsFound = 0;
+    stats.parseErrors = [];
+
+    /*
+     * First pass: inspect data-song attributes on any tag.
+     * The album page may not use the featured-track class.
+     */
+
+    const tagRegex =
+        /<[a-z][a-z0-9:-]*\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
+    let tagMatch;
+
+    while (
+        (tagMatch = tagRegex.exec(source)) &&
+        tracks.length < CONFIG.maxTracks
+    ) {
+        stats.tagsScanned++;
+
+        const tag = tagMatch[0];
+        const raw = extractAttribute(tag, 'data-song');
+
+        if (!raw) continue;
+
+        stats.dataSongAttributesFound++;
+
+        const data = parseSongJSON(raw);
+
+        if (!data) {
+            stats.jsonParseErrors++;
+
+            if (stats.parseErrors.length < 12) {
+                stats.parseErrors.push({
+                    stage: 'data-song',
+                    reason: 'invalid_json',
+                    tagStart: tag.slice(0, 260)
+                });
+            }
+
+            continue;
+        }
+
+        stats.jsonParsed++;
+
+        const track = normalizeKinoriumTrack(data);
+
+        if (!track) {
+            if (stats.parseErrors.length < 12) {
+                stats.parseErrors.push({
+                    stage: 'data-song',
+                    reason: 'track_name_missing',
+                    keys: Object.keys(data).slice(0, 20)
+                });
+            }
+
+            continue;
+        }
+
+        if (track.audioUrl) stats.audioURLsFound++;
+
+        if (!addUniqueTrack(tracks, seen, track)) {
+            stats.duplicateTracks++;
+        }
+    }
+
+    /*
+     * Second pass: scan JSON-like objects that explicitly
+     * contain song fields. This helps with script-embedded
+     * data when no data-song attribute is present.
+     */
+
+    const fieldRegex =
+        /["'](?:song_name|songName|track_name|trackName)["']\s*:/gi;
+
+    let fieldMatch;
+    const inspectedPositions = new Set();
+
+    while (
+        (fieldMatch = fieldRegex.exec(source)) &&
+        tracks.length < CONFIG.maxTracks
+    ) {
+        const fieldPosition = fieldMatch.index;
+
+        /*
+         * Find the nearest preceding opening brace, then
+         * scan forward while respecting quoted strings.
+         */
+
+        let start = source.lastIndexOf('{', fieldPosition);
+
+        if (start < 0) continue;
+
+        let depth = 0;
+        let quote = '';
+        let escaped = false;
+        let end = -1;
+
+        for (
+            let i = start;
+            i < source.length && i < start + 12000;
+            i++
+        ) {
+            const ch = source[i];
+
+            if (quote) {
+                if (escaped) {
+                    escaped = false;
+                } else if (ch === '\\') {
+                    escaped = true;
+                } else if (ch === quote) {
+                    quote = '';
+                }
+
+                continue;
+            }
+
+            if (ch === '"' || ch === "'") {
+                quote = ch;
+                continue;
+            }
+
+            if (ch === '{') depth++;
+
+            if (ch === '}') {
+                depth--;
+
+                if (depth === 0) {
+                    end = i + 1;
+                    break;
+                }
+            }
+        }
+
+        if (end < 0) continue;
+
+        const objectText = source.slice(start, end);
+        const positionKey = start + ':' + end;
+
+        if (inspectedPositions.has(positionKey)) continue;
+        inspectedPositions.add(positionKey);
+
+        const data = parseSongJSON(objectText);
+
+        if (!data) continue;
+
+        const hasSongFields = Boolean(
+            data.song_name ||
+            data.songName ||
+            data.track_name ||
+            data.trackName
+        );
+
+        if (!hasSongFields) continue;
+
+        stats.embeddedObjectsFound++;
+
+        const track = normalizeKinoriumTrack(data);
+
+        if (!track) continue;
+
+        if (track.audioUrl) stats.audioURLsFound++;
+
+        if (!addUniqueTrack(tracks, seen, track)) {
+            stats.duplicateTracks++;
+        }
+    }
+
+    /*
+     * Third pass: the featured-track parser remains useful
+     * for album pages that reuse the same <li> structure.
+     */
+
+    if (tracks.length < CONFIG.maxTracks) {
+        const featuredStats = {};
+        const featured = extractFeaturedTracks(
+            source,
+            featuredStats
+        );
+
+        for (const track of featured) {
+            if (tracks.length >= CONFIG.maxTracks) break;
+
+            if (!addUniqueTrack(tracks, seen, track)) {
+                stats.duplicateTracks++;
+            }
+        }
+
+        stats.featuredParser = featuredStats;
+    }
+
+    stats.tracksExtracted = tracks.length;
+
+    return tracks.slice(0, CONFIG.maxTracks);
+}
+
+/* =========================================================
+ * TRACK SELECTION
+ * ========================================================= */
 
 function selectTrack(tracks, requestedTrack, requestedSongId) {
     if (requestedSongId) {
@@ -2131,7 +2489,7 @@ function selectTrack(tracks, requestedTrack, requestedSongId) {
 }
 
 /* =========================================================
- * TEMPORARY HTML INSPECTOR
+ * HTML INSPECTOR
  * ========================================================= */
 
 function inspectSoundtrackHTML(html) {
@@ -2289,7 +2647,267 @@ async function checkAudio(url) {
 }
 
 /* =========================================================
- * SOUNDTRACK ENDPOINT WITH KV
+ * ALBUM CACHE AND FALLBACK
+ * ========================================================= */
+
+async function getAlbumTracks(options) {
+    const {
+        id,
+        cache,
+        cacheInfo,
+        cacheBypass
+    } = options;
+
+    const albumURL = CONFIG.site + '/' + id + '/soundtrack/';
+    const albumKey = makeAlbumKey(id);
+
+    let albumData = null;
+    let page = null;
+
+    if (!cacheBypass) {
+        const cached = await cache.get(
+            albumKey,
+            cacheInfo
+        );
+
+        if (
+            cached &&
+            Array.isArray(cached.tracks) &&
+            typeof cached.title === 'string'
+        ) {
+            const validTracks = cached.tracks.every(
+                item =>
+                    item &&
+                    typeof item.id === 'string' &&
+                    typeof item.name === 'string' &&
+                    (
+                        item.audioUrl === null ||
+                        (
+                            typeof item.audioUrl === 'string' &&
+                            validateAudioURL(item.audioUrl) ===
+                                item.audioUrl
+                        )
+                    )
+            );
+
+            if (validTracks) {
+                albumData = cached;
+                cacheInfo.album = 'HIT';
+            }
+        }
+    }
+
+    if (!albumData) {
+        cacheInfo.album = cacheBypass ? 'BYPASS' : 'MISS';
+
+        page = await fetchHTML(
+            albumURL,
+            {
+                bypassCache: cacheBypass
+            }
+        );
+
+        if (!page.ok) {
+            return {
+                success: false,
+                page,
+                albumURL,
+                data: {
+                    title: '',
+                    tracks: [],
+                    parserDiagnostics: null
+                },
+                reason: 'album_page_fetch_failed'
+            };
+        }
+
+        const parserDiagnostics = {};
+
+        const tracks = extractAlbumTracks(
+            page.html,
+            parserDiagnostics
+        );
+
+        albumData = {
+            title: extractTitle(page.html),
+            tracks,
+            parserDiagnostics
+        };
+
+        const ttl = tracks.some(item => item.audioUrl)
+            ? CONFIG.kv.albumTTL
+            : CONFIG.kv.emptyAlbumTTL;
+
+        await cache.put(
+            albumKey,
+            albumData,
+            ttl,
+            cacheInfo
+        );
+    }
+
+    return {
+        success: true,
+        page,
+        albumURL,
+        data: albumData,
+        reason: 'ok'
+    };
+}
+
+async function findPlayableAlbumTrack(options) {
+    const {
+        tracks,
+        requestedTrack,
+        requestedSongId,
+        verify
+    } = options;
+
+    const list = Array.isArray(tracks) ? tracks : [];
+
+    if (!list.length) {
+        return {
+            selected: null,
+            audioCheck: null,
+            checkedCandidates: 0,
+            reason: 'album_tracks_not_found'
+        };
+    }
+
+    /*
+     * Explicit track requests are respected. The fallback does
+     * not silently replace a requested track with another one.
+     */
+
+    if (requestedTrack || requestedSongId) {
+        const requested = selectTrack(
+            list,
+            requestedTrack,
+            requestedSongId
+        );
+
+        if (!requested) {
+            return {
+                selected: null,
+                audioCheck: null,
+                checkedCandidates: 0,
+                reason: 'requested_track_not_found'
+            };
+        }
+
+        if (!requested.audioUrl) {
+            return {
+                selected: requested,
+                audioCheck: null,
+                checkedCandidates: 0,
+                reason: 'requested_track_has_no_audio_url'
+            };
+        }
+
+        if (!verify) {
+            return {
+                selected: requested,
+                audioCheck: null,
+                checkedCandidates: 0,
+                reason: 'audio_not_checked'
+            };
+        }
+
+        const audioCheck = await checkAudio(
+            requested.audioUrl
+        );
+
+        return {
+            selected: requested,
+            audioCheck,
+            checkedCandidates: 1,
+            reason: audioCheck.playableCandidate
+                ? 'ok'
+                : 'requested_track_audio_check_failed'
+        };
+    }
+
+    /*
+     * Prefer the main theme when it has an audio URL, then
+     * try other tracks in album order.
+     */
+
+    const ordered = [
+        ...list.filter(item => item.isMain && item.audioUrl),
+        ...list.filter(item => !item.isMain && item.audioUrl)
+    ];
+
+    const candidates = [];
+    const seen = new Set();
+
+    for (const item of ordered) {
+        const key = item.id || normalize(item.name);
+
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        candidates.push(item);
+
+        if (
+            candidates.length >=
+            CONFIG.maxAlbumVerifyCandidates
+        ) {
+            break;
+        }
+    }
+
+    if (!candidates.length) {
+        return {
+            selected: list[0] || null,
+            audioCheck: null,
+            checkedCandidates: 0,
+            reason: 'album_preview_url_missing'
+        };
+    }
+
+    if (!verify) {
+        return {
+            selected: candidates[0],
+            audioCheck: null,
+            checkedCandidates: 0,
+            reason: 'audio_not_checked'
+        };
+    }
+
+    let lastSelected = null;
+    let lastCheck = null;
+    let checkedCandidates = 0;
+
+    for (const candidate of candidates) {
+        checkedCandidates++;
+
+        const audioCheck = await checkAudio(
+            candidate.audioUrl
+        );
+
+        lastSelected = candidate;
+        lastCheck = audioCheck;
+
+        if (audioCheck.playableCandidate) {
+            return {
+                selected: candidate,
+                audioCheck,
+                checkedCandidates,
+                reason: 'ok'
+            };
+        }
+    }
+
+    return {
+        selected: lastSelected,
+        audioCheck: lastCheck,
+        checkedCandidates,
+        reason: 'album_audio_check_failed'
+    };
+}
+
+/* =========================================================
+ * SOUNDTRACK ENDPOINT WITH KV AND ALBUM FALLBACK
  * ========================================================= */
 
 async function getSoundtrack(options) {
@@ -2314,7 +2932,7 @@ async function getSoundtrack(options) {
 
     /*
      * STEP 1:
-     * Read shared soundtrack cache.
+     * Read shared featured-soundtrack cache.
      */
 
     if (!cacheBypass) {
@@ -2352,7 +2970,7 @@ async function getSoundtrack(options) {
 
     /*
      * STEP 2:
-     * Fetch Kinorium on cache miss or refresh.
+     * Fetch the main movie page on cache miss or refresh.
      */
 
     if (!soundtrackData) {
@@ -2366,68 +2984,50 @@ async function getSoundtrack(options) {
             }
         );
 
-        if (!page.ok) {
-            return {
-                success: false,
-                version: VERSION,
-                source: 'kinorium',
-                id,
-                found: false,
-                playable: false,
-                audioUrl: null,
-                reason: 'page_fetch_failed',
-                httpStatus: page.status,
-                pageURL,
-                ...(inspect
-                    ? {
-                        inspection: {
-                            htmlLength: page.length,
-                            contentType: page.contentType,
-                            note: 'HTML inspection unavailable because the page fetch failed.'
-                        }
-                    }
-                    : {})
+        if (page.ok) {
+            parserDiagnostics = {};
+
+            soundtrackData = {
+                title: extractTitle(page.html),
+                tracks: extractFeaturedTracks(
+                    page.html,
+                    parserDiagnostics
+                ),
+                parserDiagnostics
+            };
+
+            const ttl = soundtrackData.tracks.length
+                ? CONFIG.kv.soundtrackTTL
+                : CONFIG.kv.emptySoundtrackTTL;
+
+            await cache.put(
+                soundtrackKey,
+                soundtrackData,
+                ttl,
+                cacheInfo
+            );
+        } else {
+            soundtrackData = {
+                title: '',
+                tracks: [],
+                parserDiagnostics: {
+                    error: 'main_page_fetch_failed',
+                    status: page.status
+                }
             };
         }
-
-        parserDiagnostics = {};
-
-        soundtrackData = {
-            title: extractTitle(page.html),
-            tracks: extractFeaturedTracks(
-                page.html,
-                parserDiagnostics
-            ),
-            parserDiagnostics
-        };
-
-        /*
-         * Cache valid page results.
-         * Empty soundtracks expire sooner.
-         */
-
-        const ttl = soundtrackData.tracks.length
-            ? CONFIG.kv.soundtrackTTL
-            : CONFIG.kv.emptySoundtrackTTL;
-
-        await cache.put(
-            soundtrackKey,
-            soundtrackData,
-            ttl,
-            cacheInfo
-        );
     } else {
         parserDiagnostics =
             soundtrackData.parserDiagnostics || null;
     }
 
+    const title = soundtrackData.title;
+    const tracks = soundtrackData.tracks || [];
+
     /*
      * STEP 3:
-     * Select the requested track.
+     * Try the featured list first.
      */
-
-    const title = soundtrackData.title;
-    const tracks = soundtrackData.tracks;
 
     const selected = selectTrack(
         tracks,
@@ -2435,18 +3035,13 @@ async function getSoundtrack(options) {
         songId
     );
 
-    /*
-     * STEP 4:
-     * Verify audio independently of KV.
-     */
-
     let audioCheck = null;
 
     if (selected && selected.audioUrl && verify) {
         audioCheck = await checkAudio(selected.audioUrl);
     }
 
-    const playable = Boolean(
+    let playable = Boolean(
         selected &&
         selected.audioUrl &&
         (
@@ -2458,52 +3053,205 @@ async function getSoundtrack(options) {
         )
     );
 
-    let reason = 'ok';
+    let featuredReason = 'ok';
 
     if (!tracks.length) {
-        reason = 'featured_tracks_not_found';
+        featuredReason = 'featured_tracks_not_found';
     } else if (!selected) {
-        reason = 'requested_track_not_found';
+        featuredReason = 'requested_track_not_found';
     } else if (!selected.audioUrl) {
-        reason = 'preview_url_missing';
+        featuredReason = 'preview_url_missing';
     } else if (!verify) {
-        reason = 'audio_not_checked';
+        featuredReason = 'audio_not_checked';
     } else if (!playable) {
-        reason = 'audio_check_failed';
+        featuredReason = 'audio_check_failed';
     }
+
+    /*
+     * STEP 4:
+     * If the featured list does not produce playable audio,
+     * automatically fetch the full soundtrack album.
+     */
+
+    const needsAlbumFallback = !playable;
+
+    let albumResult = null;
+    let albumSelection = null;
+
+    if (needsAlbumFallback) {
+        albumResult = await getAlbumTracks({
+            id,
+            cache,
+            cacheInfo,
+            cacheBypass
+        });
+
+        if (albumResult.success) {
+            albumSelection = await findPlayableAlbumTrack({
+                tracks: albumResult.data.tracks,
+                requestedTrack: track,
+                requestedSongId: songId,
+                verify
+            });
+        } else {
+            albumSelection = {
+                selected: null,
+                audioCheck: null,
+                checkedCandidates: 0,
+                reason: albumResult.reason
+            };
+        }
+    }
+
+    const albumSelected =
+        albumSelection && albumSelection.selected;
+
+    const albumPlayable = Boolean(
+        albumSelected &&
+        albumSelected.audioUrl &&
+        (
+            !verify ||
+            (
+                albumSelection.audioCheck &&
+                albumSelection.audioCheck.playableCandidate
+            )
+        )
+    );
+
+    /*
+     * Prefer the featured track if it was verified as playable.
+     * Otherwise, use the first verified playable album track.
+     */
+
+    const useAlbum = !playable && albumPlayable;
+
+    const finalSelected = useAlbum
+        ? albumSelected
+        : selected;
+
+    const finalAudioCheck = useAlbum
+        ? albumSelection.audioCheck
+        : audioCheck;
+
+    playable = useAlbum || playable;
+
+    const finalTitle = title ||
+        (
+            albumResult &&
+            albumResult.data &&
+            albumResult.data.title
+        ) ||
+        '';
+
+    let reason = featuredReason;
+    let mode = 'featured_soundtrack';
+    let sourcePage = pageURL;
+
+    if (useAlbum) {
+        reason = 'album_fallback_playable';
+        mode = 'album_fallback';
+        sourcePage = albumResult.albumURL;
+    } else if (
+        needsAlbumFallback &&
+        albumResult &&
+        albumResult.success
+    ) {
+        mode = 'album_fallback_unplayable';
+
+        reason = albumSelection
+            ? albumSelection.reason
+            : 'album_fallback_no_selection';
+    } else if (
+        needsAlbumFallback &&
+        albumResult &&
+        !albumResult.success
+    ) {
+        mode = 'featured_and_album_failed';
+        reason = albumResult.reason;
+    }
+
+    const finalTracks = useAlbum
+        ? albumResult.data.tracks
+        : tracks;
 
     const result = {
         success: true,
         version: VERSION,
         source: 'kinorium',
-        mode: 'featured_soundtrack',
-        found: tracks.length > 0,
+        mode,
+        found: Boolean(
+            finalSelected ||
+            tracks.length ||
+            (
+                albumResult &&
+                albumResult.data &&
+                albumResult.data.tracks &&
+                albumResult.data.tracks.length
+            )
+        ),
         playable,
         id,
-        title,
-        track: selected
+        title: finalTitle,
+        track: finalSelected
             ? {
-                id: selected.id,
-                name: selected.name,
-                artist: selected.artist,
-                duration: selected.duration
+                id: finalSelected.id,
+                name: finalSelected.name,
+                artist: finalSelected.artist,
+                duration: finalSelected.duration,
+                audioUrl: finalSelected.audioUrl,
+                playable
             }
             : null,
-        audioUrl: selected ? selected.audioUrl : null,
+        audioUrl: finalSelected
+            ? finalSelected.audioUrl
+            : null,
         audioAssociationVerified: Boolean(
-            selected && selected.audioUrl
+            finalSelected &&
+            finalSelected.audioUrl &&
+            (
+                !verify ||
+                (
+                    finalAudioCheck &&
+                    finalAudioCheck.playableCandidate
+                )
+            )
         ),
-        tracksCount: tracks.length,
-        tracks: tracks.map(item => ({
+        tracksCount: finalTracks.length,
+        tracks: finalTracks.map(item => ({
             id: item.id,
             name: item.name,
             artist: item.artist,
+            duration: item.duration,
             audioUrl: item.audioUrl,
             isMain: item.isMain
         })),
-        audioCheck,
+        audioCheck: finalAudioCheck,
         reason,
-        pageURL
+        pageURL: sourcePage,
+        fallback: {
+            attempted: needsAlbumFallback,
+            used: useAlbum,
+            albumURL: albumResult
+                ? albumResult.albumURL
+                : CONFIG.site + '/' + id + '/soundtrack/',
+            albumFetchSucceeded: Boolean(
+                albumResult && albumResult.success
+            ),
+            albumTracksCount: albumResult &&
+                albumResult.data &&
+                Array.isArray(albumResult.data.tracks)
+                    ? albumResult.data.tracks.length
+                    : 0,
+            albumPlayableCandidatesChecked:
+                albumSelection
+                    ? albumSelection.checkedCandidates
+                    : 0,
+            albumReason: albumSelection
+                ? albumSelection.reason
+                : albumResult
+                    ? albumResult.reason
+                    : null
+        }
     };
 
     if (inspect) {
@@ -2511,8 +3259,14 @@ async function getSoundtrack(options) {
             ? inspectSoundtrackHTML(page.html)
             : {
                 available: false,
-                reason: 'page_not_fetched_use_refresh_1'
+                reason: 'main_page_not_fetched'
             };
+
+        if (albumResult && albumResult.page) {
+            result.albumInspection = inspectSoundtrackHTML(
+                albumResult.page.html
+            );
+        }
     }
 
     if (debug) {
@@ -2526,14 +3280,53 @@ async function getSoundtrack(options) {
                     ? parserDiagnostics.soundtrackControlsFound
                     : tracks.length,
             parserDiagnostics,
-            selectedTrackId: selected ? selected.id : null,
-            selectedTrackName: selected ? selected.name : null,
+            selectedFeaturedTrackId: selected
+                ? selected.id
+                : null,
+            selectedFeaturedTrackName: selected
+                ? selected.name
+                : null,
+            selectedFinalTrackId: finalSelected
+                ? finalSelected.id
+                : null,
+            selectedFinalTrackName: finalSelected
+                ? finalSelected.name
+                : null,
             previewVerificationEnabled: verify,
-            audioCheck,
+            audioCheck: finalAudioCheck,
+            fallback: {
+                attempted: needsAlbumFallback,
+                used: useAlbum,
+                albumStatus: albumResult &&
+                    albumResult.page
+                        ? albumResult.page.status
+                        : null,
+                albumURL: albumResult
+                    ? albumResult.albumURL
+                    : CONFIG.site + '/' + id + '/soundtrack/',
+                albumHTMLLength: albumResult &&
+                    albumResult.page
+                        ? albumResult.page.length
+                        : null,
+                albumParserDiagnostics: albumResult &&
+                    albumResult.data
+                        ? albumResult.data.parserDiagnostics
+                        : null,
+                albumTracksCount: albumResult &&
+                    albumResult.data &&
+                    Array.isArray(albumResult.data.tracks)
+                        ? albumResult.data.tracks.length
+                        : 0,
+                albumSelection,
+                albumAudioCheck: albumSelection
+                    ? albumSelection.audioCheck
+                    : null
+            },
             kv: {
                 enabled: cache.enabled,
                 resolution: cacheInfo.resolution,
-                soundtrack: cacheInfo.soundtrack
+                soundtrack: cacheInfo.soundtrack,
+                album: cacheInfo.album
             }
         };
     }
