@@ -1,7 +1,6 @@
-
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.5
+ * KINORIUM WORKER 1.6.6
  *
  * Cloudflare Workers + KV
  * Binding: KINORIUM_CACHE
@@ -21,27 +20,18 @@
  * - Audio verification on every verified request
  * - Cache HIT / MISS diagnostics
  * - HTML inspection mode
+ * - Featured-track parser diagnostics
  * - Graceful fallback if KV is unavailable
  * - No hardcoded movie mappings
  * - No Muzofond integration
  *
  * Custom catalog:
  * https://crowley24.github.io/OST/ost_custom.json
- *
- * Endpoints:
- * ?title=Titanic&year=1997
- * ?title=Friends&year=1994
- * ?id=108983
- * ?title=Titanic&year=1997&debug=1
- * ?id=108983&track=Rose
- * ?id=108983&song_id=205745739
- * ?id=108983&verify=0
- * ?id=2663934&debug=1&inspect=1&refresh=1
  */
 
 'use strict';
 
-const VERSION = '1.6.5';
+const VERSION = '1.6.6';
 
 const CUSTOM_CATALOG = {
     url: 'https://crowley24.github.io/OST/ost_custom.json',
@@ -63,7 +53,7 @@ const CONFIG = {
     maxSearchVariants: 5,
 
     kv: {
-        prefix: 'kinorium:v160:',
+        prefix: 'kinorium:v166:',
         resolutionTTL: 7 * 86400,
         soundtrackTTL: 12 * 3600,
         emptySoundtrackTTL: 600,
@@ -81,17 +71,9 @@ const JSON_HEADERS = {
     'Cache-Control': 'no-store'
 };
 
-/*
+/* =========================================================
  * CUSTOM SOUNDTRACK CATALOG
- *
- * Priority:
- * 1. ost_custom.json
- * 2. Existing Kinorium lookup
- *
- * Supported sources:
- * - youtube
- * - ostmusic
- */
+ * ========================================================= */
 
 async function fetchCustomCatalog() {
     const controller = new AbortController();
@@ -524,9 +506,9 @@ async function resolveCustomOstMusic(entry) {
     }
 }
 
-/*
+/* =========================================================
  * ENTRY POINT
- */
+ * ========================================================= */
 
 export default {
     async fetch(request, env, ctx) {
@@ -606,7 +588,7 @@ export default {
                     track: '?id=108983&track=Rose',
                     verifyOff: '?id=108983&verify=0',
                     refresh: '?title=Titanic&year=1997&refresh=1',
-                    inspect: '?id=2663934&debug=1&inspect=1&refresh=1'
+                    inspect: '?id=348789&debug=1&inspect=1&refresh=1&verify=0'
                 }
             });
         }
@@ -652,11 +634,8 @@ export default {
         try {
             /*
              * STEP 0:
-             * Check the custom OST catalog first.
-             *
+             * Check custom OST catalog first.
              * Direct Kinorium ID requests bypass this step.
-             * If the custom catalog has no usable result,
-             * normal Kinorium lookup continues unchanged.
              */
 
             if (!id && title) {
@@ -670,15 +649,6 @@ export default {
                     custom.matched &&
                     custom.valid
                 ) {
-                    /*
-                     * YouTube:
-                     * Return the canonical video URL.
-                     *
-                     * The Lampa plugin must handle source="youtube"
-                     * with the YouTube IFrame Player.
-                     * Do not pass this URL to new Audio().
-                     */
-
                     if (
                         custom.source === 'youtube' &&
                         custom.audioUrl
@@ -728,13 +698,6 @@ export default {
                         });
                     }
 
-                    /*
-                     * OSTMusic:
-                     * Resolve albumId and trackId to a direct
-                     * audio URL. If resolution fails, continue
-                     * to the normal Kinorium lookup.
-                     */
-
                     if (custom.source === 'ostmusic') {
                         const resolvedCustom =
                             await resolveCustomOstMusic(custom);
@@ -781,10 +744,7 @@ export default {
 
             /*
              * STEP 1:
-             * Existing Kinorium resolution.
-             *
-             * This remains the fallback when the custom catalog
-             * does not provide a usable result.
+             * Kinorium ID resolution.
              */
 
             let resolved;
@@ -934,9 +894,9 @@ export default {
     }
 };
 
-/*
+/* =========================================================
  * JSON RESPONSE
- */
+ * ========================================================= */
 
 function json(data, status = 200) {
     return new Response(
@@ -948,9 +908,9 @@ function json(data, status = 200) {
     );
 }
 
-/*
+/* =========================================================
  * CLOUDFLARE KV
- */
+ * ========================================================= */
 
 function createCache(env) {
     const namespace =
@@ -1042,9 +1002,9 @@ function makeSoundtrackKey(id) {
         String(id);
 }
 
-/*
+/* =========================================================
  * HTTP
- */
+ * ========================================================= */
 
 async function fetchTimed(url, options = {}) {
     const controller = new AbortController();
@@ -1070,19 +1030,26 @@ function siteHeaders() {
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.6.5)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6.6)'
     };
 }
 
-async function fetchHTML(url) {
+async function fetchHTML(url, options = {}) {
+    const bypassCache = options.bypassCache === true;
+
     const response = await fetchTimed(
         url,
         {
             headers: siteHeaders(),
-            cf: {
-                cacheEverything: true,
-                cacheTtl: CONFIG.cacheSeconds
-            }
+            cf: bypassCache
+                ? {
+                    cacheEverything: false,
+                    cacheTtl: 0
+                }
+                : {
+                    cacheEverything: true,
+                    cacheTtl: CONFIG.cacheSeconds
+                }
         }
     );
 
@@ -1108,9 +1075,9 @@ async function fetchHTML(url) {
     };
 }
 
-/*
+/* =========================================================
  * HTML UTILITIES
- */
+ * ========================================================= */
 
 function decodeEntities(value) {
     return String(value || '')
@@ -1178,7 +1145,7 @@ function extractAttribute(tag, name) {
     const regex = new RegExp(
         '\\b' +
         escaped +
-        '\\s*=\\s*(["\'])([\\s\S]*?)\\1',
+        '\\s*=\\s*(["\'])([\\s\\S]*?)\\1',
         'i'
     );
 
@@ -1187,9 +1154,9 @@ function extractAttribute(tag, name) {
     return match ? decodeEntities(match[2]) : '';
 }
 
-/*
+/* =========================================================
  * SEARCH VARIANTS
- */
+ * ========================================================= */
 
 function buildSearchTitleVariants(title) {
     const original = String(title || '')
@@ -1259,9 +1226,9 @@ function buildSearchTitleVariants(title) {
     return variants.slice(0, CONFIG.maxSearchVariants);
 }
 
-/*
+/* =========================================================
  * SEARCH CANDIDATES
- */
+ * ========================================================= */
 
 function extractSearchCandidates(html) {
     const results = [];
@@ -1352,9 +1319,9 @@ function extractSearchCandidates(html) {
     return results;
 }
 
-/*
+/* =========================================================
  * CANDIDATE SCORING
- */
+ * ========================================================= */
 
 function scoreCandidate(candidate, title, year) {
     const requested = normalize(title);
@@ -1425,9 +1392,9 @@ function scoreCandidate(candidate, title, year) {
     return score;
 }
 
-/*
+/* =========================================================
  * PAGE NAMES
- */
+ * ========================================================= */
 
 function cleanPageName(value) {
     let result = stripTags(value);
@@ -1537,9 +1504,9 @@ function extractPageNames(html) {
     return names;
 }
 
-/*
+/* =========================================================
  * PAGE YEAR AND TYPE
- */
+ * ========================================================= */
 
 function extractMoviePageYear(html) {
     const title = extractTitle(html);
@@ -1600,9 +1567,9 @@ function extractPageType(html) {
     return 'unknown';
 }
 
-/*
+/* =========================================================
  * MOVIE SEQUEL NORMALIZATION
- */
+ * ========================================================= */
 
 function normalizeMovieTitle(value) {
     let result = normalize(cleanPageName(value));
@@ -1661,9 +1628,9 @@ function titleNameMatches(pageName, requestedTitle, pageType) {
     return false;
 }
 
-/*
+/* =========================================================
  * CANDIDATE PAGE VERIFICATION
- */
+ * ========================================================= */
 
 function verifyCandidatePage(html, title, year) {
     const pageTitle = extractTitle(html);
@@ -1705,9 +1672,9 @@ function verifyCandidatePage(html, title, year) {
     };
 }
 
-/*
+/* =========================================================
  * AUTOMATIC RESOLUTION
- */
+ * ========================================================= */
 
 async function resolveMovie(title, year) {
     const diagnostics = [];
@@ -1939,11 +1906,6 @@ async function resolveMovie(title, year) {
         }
     }
 
-    /*
-     * No hardcoded movie fallback.
-     * If Kinorium cannot verify a match, return no result.
-     */
-
     return {
         id: null,
         method: 'search_no_verified_match',
@@ -1953,9 +1915,9 @@ async function resolveMovie(title, year) {
     };
 }
 
-/*
+/* =========================================================
  * AUDIO URL VALIDATION
- */
+ * ========================================================= */
 
 function validateAudioURL(value) {
     if (!value) return null;
@@ -1981,70 +1943,163 @@ function validateAudioURL(value) {
     }
 }
 
-/*
- * FEATURED SOUNDTRACK EXTRACTION
- */
+/* =========================================================
+ * FEATURED SOUNDTRACK EXTRACTION — FIXED
+ * ========================================================= */
 
-function extractFeaturedTracks(html) {
+function extractFeaturedTracks(html, diagnostics) {
+    const source = String(html || '');
     const tracks = [];
     const seen = new Set();
 
-    const regex = /<li\b[^>]*>/gi;
+    const stats = diagnostics || {};
+
+    stats.liTagsFound = 0;
+    stats.soundtrackControlsFound = 0;
+    stats.dataSongAttributesFound = 0;
+    stats.jsonParsed = 0;
+    stats.jsonParseErrors = 0;
+    stats.missingSongNames = 0;
+    stats.duplicateTracks = 0;
+    stats.tracksExtracted = 0;
+    stats.parseErrors = [];
+
+    /*
+     * This tag pattern allows > characters inside quoted attributes.
+     * The old /<li\b[^>]*>/ pattern could stop too early.
+     */
+    const tagRegex =
+        /<li\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
     let match;
 
     while (
-        (match = regex.exec(html)) &&
+        (match = tagRegex.exec(source)) &&
         tracks.length < CONFIG.maxTracks
     ) {
+        stats.liTagsFound++;
+
         const tag = match[0];
 
-        const classes = extractAttribute(
-            tag,
-            'class'
-        ).split(/\s+/);
+        const classValue = extractAttribute(tag, 'class');
 
-        if (
-            !classes.includes(
-                'film-page__soundtrack-control'
-            )
-        ) {
+        const classes = classValue
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (!classes.includes('film-page__soundtrack-control')) {
             continue;
         }
 
-        const raw = extractAttribute(tag, 'data-song');
+        stats.soundtrackControlsFound++;
 
-        if (!raw) continue;
+        let raw = extractAttribute(tag, 'data-song');
 
-        let data;
+        if (!raw) {
+            if (stats.parseErrors.length < 10) {
+                stats.parseErrors.push({
+                    stage: 'attribute',
+                    reason: 'data_song_missing',
+                    tag: tag.slice(0, 300)
+                });
+            }
+
+            continue;
+        }
+
+        stats.dataSongAttributesFound++;
+
+        raw = decodeEntities(raw).trim();
+
+        let data = null;
 
         try {
             data = JSON.parse(raw);
         } catch (_) {
+            /*
+             * Some HTML variants escape JSON quotes.
+             * Try cautious alternate forms before rejecting it.
+             */
+            const variants = [
+                raw.replace(/\\"/g, '"'),
+                raw.replace(/\\+"/g, '"'),
+                raw.replace(/\\\\/g, '\\')
+            ];
+
+            for (const variant of variants) {
+                try {
+                    data = JSON.parse(variant);
+                    break;
+                } catch (_) {}
+            }
+        }
+
+        if (
+            !data ||
+            typeof data !== 'object' ||
+            Array.isArray(data)
+        ) {
+            stats.jsonParseErrors++;
+
+            if (stats.parseErrors.length < 10) {
+                stats.parseErrors.push({
+                    stage: 'json',
+                    reason: 'data_song_json_invalid',
+                    attributeStart: raw.slice(0, 240)
+                });
+            }
+
             continue;
         }
 
-        const name = String(data.song_name || '').trim();
+        stats.jsonParsed++;
 
-        if (!name) continue;
+        const name = String(
+            data.song_name || data.name || ''
+        ).trim();
 
-        const id = String(data.song_id || '');
+        if (!name) {
+            stats.missingSongNames++;
+
+            if (stats.parseErrors.length < 10) {
+                stats.parseErrors.push({
+                    stage: 'data',
+                    reason: 'song_name_missing',
+                    songId: String(data.song_id || '')
+                });
+            }
+
+            continue;
+        }
+
+        const id = String(
+            data.song_id || data.id || ''
+        ).trim();
+
         const key = id || normalize(name);
 
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+            stats.duplicateTracks++;
+            continue;
+        }
 
         seen.add(key);
 
-        const audioUrl = validateAudioURL(data.preview_url);
+        const audioUrl = validateAudioURL(
+            data.preview_url
+        );
 
         tracks.push({
             id,
             name,
-            artist: String(data.artist_name || ''),
+            artist: String(data.artist_name || '').trim(),
             duration: Number(data.duration || 0),
             isMain: Number(data.isMain || 0) === 1,
             audioUrl
         });
     }
+
+    stats.tracksExtracted = tracks.length;
 
     return tracks;
 }
@@ -2075,9 +2130,9 @@ function selectTrack(tracks, requestedTrack, requestedSongId) {
     ) || tracks[0] || null;
 }
 
-/*
+/* =========================================================
  * TEMPORARY HTML INSPECTOR
- */
+ * ========================================================= */
 
 function inspectSoundtrackHTML(html) {
     const source = String(html || '');
@@ -2160,12 +2215,9 @@ function inspectSoundtrackHTML(html) {
     };
 }
 
-/*
+/* =========================================================
  * AUDIO VERIFICATION
- *
- * Verification is intentionally not stored in KV.
- * Cached audio URLs are checked again when requested.
- */
+ * ========================================================= */
 
 async function checkAudio(url) {
     const result = {
@@ -2236,9 +2288,9 @@ async function checkAudio(url) {
     return result;
 }
 
-/*
+/* =========================================================
  * SOUNDTRACK ENDPOINT WITH KV
- */
+ * ========================================================= */
 
 async function getSoundtrack(options) {
     const {
@@ -2258,6 +2310,7 @@ async function getSoundtrack(options) {
 
     let soundtrackData = null;
     let page = null;
+    let parserDiagnostics = null;
 
     /*
      * STEP 1:
@@ -2299,14 +2352,19 @@ async function getSoundtrack(options) {
 
     /*
      * STEP 2:
-     * Fetch Kinorium on a cache miss or refresh.
+     * Fetch Kinorium on cache miss or refresh.
      */
 
     if (!soundtrackData) {
         cacheInfo.soundtrack =
             cacheBypass ? 'BYPASS' : 'MISS';
 
-        page = await fetchHTML(pageURL);
+        page = await fetchHTML(
+            pageURL,
+            {
+                bypassCache: cacheBypass
+            }
+        );
 
         if (!page.ok) {
             return {
@@ -2332,9 +2390,15 @@ async function getSoundtrack(options) {
             };
         }
 
+        parserDiagnostics = {};
+
         soundtrackData = {
             title: extractTitle(page.html),
-            tracks: extractFeaturedTracks(page.html)
+            tracks: extractFeaturedTracks(
+                page.html,
+                parserDiagnostics
+            ),
+            parserDiagnostics
         };
 
         /*
@@ -2352,6 +2416,9 @@ async function getSoundtrack(options) {
             ttl,
             cacheInfo
         );
+    } else {
+        parserDiagnostics =
+            soundtrackData.parserDiagnostics || null;
     }
 
     /*
@@ -2439,12 +2506,6 @@ async function getSoundtrack(options) {
         pageURL
     };
 
-    /*
-     * HTML inspection only works when the page was fetched
-     * during this request. If KV supplied the soundtrack,
-     * refresh=1 is needed to inspect fresh HTML.
-     */
-
     if (inspect) {
         result.inspection = page
             ? inspectSoundtrackHTML(page.html)
@@ -2460,7 +2521,11 @@ async function getSoundtrack(options) {
             finalURL: page ? page.url : pageURL,
             contentType: page ? page.contentType : null,
             htmlLength: page ? page.length : null,
-            featuredControlsFound: tracks.length,
+            featuredControlsFound:
+                parserDiagnostics
+                    ? parserDiagnostics.soundtrackControlsFound
+                    : tracks.length,
+            parserDiagnostics,
             selectedTrackId: selected ? selected.id : null,
             selectedTrackName: selected ? selected.name : null,
             previewVerificationEnabled: verify,
