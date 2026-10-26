@@ -1,3 +1,4 @@
+
 (function () {
     'use strict';
 
@@ -295,6 +296,18 @@
         }
     }
 
+    /*
+     * PREMIUM NOTICE DESIGN
+     *
+     * Visual changes only:
+     * - Graphite background
+     * - Muted gold accents
+     * - Compact title and message
+     * - Smooth entrance and exit
+     *
+     * Existing notification conditions and timing are preserved.
+     */
+
     function showNotice(title, message, type, duration) {
         if (!setting('debug')) {
             removeNotice();
@@ -308,45 +321,48 @@
         var noticeToken = state.noticeToken;
 
         var colors = {
-            info: '#8ab4f8',
-            success: '#81c995',
-            warning: '#fdd663',
-            error: '#f28b82'
+            info: '#c6a96b',
+            success: '#b9d69a',
+            warning: '#e5bd73',
+            error: '#e58b83'
         };
 
         var icons = {
-            info: '\u25cf',
+            info: '\u266a',
             success: '\u266b',
             warning: '\u26a0',
             error: '\u2715'
         };
 
+        var accent = colors[type] || colors.info;
         var panel = document.createElement('div');
 
         panel.setAttribute('data-kinorium-ost-notice', 'true');
 
         var styles = {
             position: 'fixed',
-            top: 'max(18px, env(safe-area-inset-top))',
-            right: 'max(18px, env(safe-area-inset-right))',
+            top: 'max(22px, env(safe-area-inset-top))',
+            right: 'max(22px, env(safe-area-inset-right))',
             zIndex: '2147483000',
-            width: 'min(360px, calc(100vw - 36px))',
+            width: 'min(370px, calc(100vw - 32px))',
             boxSizing: 'border-box',
-            padding: '13px 16px',
-            borderRadius: '12px',
-            background: 'rgba(20,22,27,0.96)',
-            border: '1px solid rgba(255,255,255,0.13)',
-            borderLeft: '3px solid ' + (colors[type] || colors.info),
-            color: '#ffffff',
-            fontFamily: 'Arial,sans-serif',
+            padding: '16px 18px 16px 17px',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(29,30,32,0.98), rgba(15,16,18,0.98))',
+            border: '1px solid rgba(255,255,255,0.09)',
+            borderLeft: '3px solid ' + accent,
+            color: '#f5f3ee',
+            fontFamily: 'Arial, sans-serif',
             fontSize: '14px',
-            lineHeight: '1.4',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
+            lineHeight: '1.45',
+            boxShadow: '0 12px 38px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.2)',
             opacity: '0',
-            transform: 'translateY(-8px)',
-            transition: 'opacity 180ms ease,transform 180ms ease',
+            transform: 'translateY(-10px) scale(0.985)',
+            transition: 'opacity 240ms ease, transform 240ms cubic-bezier(0.2,0.75,0.25,1)',
             pointerEvents: 'none',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)'
         };
 
         Object.keys(styles).forEach(function (key) {
@@ -357,30 +373,83 @@
 
         header.style.display = 'flex';
         header.style.alignItems = 'center';
-        header.style.gap = '9px';
-        header.style.marginBottom = message ? '5px' : '0';
+        header.style.gap = '11px';
+        header.style.marginBottom = message ? '7px' : '0';
         header.style.fontWeight = '700';
+        header.style.letterSpacing = '0.15px';
+
+        var iconBox = document.createElement('div');
+
+        iconBox.style.width = '32px';
+        iconBox.style.height = '32px';
+        iconBox.style.minWidth = '32px';
+        iconBox.style.boxSizing = 'border-box';
+        iconBox.style.display = 'flex';
+        iconBox.style.alignItems = 'center';
+        iconBox.style.justifyContent = 'center';
+        iconBox.style.borderRadius = '10px';
+        iconBox.style.background = 'rgba(198,169,107,0.11)';
+        iconBox.style.border = '1px solid rgba(198,169,107,0.18)';
+        iconBox.style.color = accent;
+        iconBox.style.fontSize = '19px';
+        iconBox.style.lineHeight = '1';
 
         var icon = document.createElement('span');
         icon.textContent = icons[type] || icons.info;
-        icon.style.color = colors[type] || colors.info;
 
-        var heading = document.createElement('span');
+        iconBox.appendChild(icon);
+
+        var textBox = document.createElement('div');
+        textBox.style.minWidth = '0';
+        textBox.style.flex = '1';
+
+        var brand = document.createElement('div');
+        brand.textContent = 'KINORIUM  /  ORIGINAL SOUNDTRACK';
+        brand.style.color = '#c6a96b';
+        brand.style.fontSize = '9px';
+        brand.style.fontWeight = '700';
+        brand.style.letterSpacing = '1.35px';
+        brand.style.lineHeight = '1.4';
+        brand.style.marginBottom = '3px';
+        brand.style.overflowWrap = 'anywhere';
+
+        var heading = document.createElement('div');
         heading.textContent = String(title || 'KINORIUM OST');
+        heading.style.color = '#f5f3ee';
+        heading.style.fontSize = '14px';
+        heading.style.fontWeight = '700';
+        heading.style.lineHeight = '1.4';
         heading.style.overflowWrap = 'anywhere';
 
-        header.appendChild(icon);
-        header.appendChild(heading);
+        textBox.appendChild(brand);
+        textBox.appendChild(heading);
+
+        header.appendChild(iconBox);
+        header.appendChild(textBox);
         panel.appendChild(header);
 
         if (message) {
             var description = document.createElement('div');
+
             description.textContent = String(message);
-            description.style.color = 'rgba(255,255,255,0.78)';
-            description.style.fontSize = '13px';
+            description.style.color = 'rgba(238,237,232,0.72)';
+            description.style.fontSize = '12px';
+            description.style.lineHeight = '1.55';
+            description.style.paddingLeft = '43px';
             description.style.overflowWrap = 'anywhere';
+
             panel.appendChild(description);
         }
+
+        var bottomLine = document.createElement('div');
+
+        bottomLine.style.height = '1px';
+        bottomLine.style.marginTop = '13px';
+        bottomLine.style.background =
+            'linear-gradient(90deg, ' + accent + ' 0%, rgba(198,169,107,0.18) 45%, transparent 100%)';
+        bottomLine.style.opacity = '0.75';
+
+        panel.appendChild(bottomLine);
 
         document.body.appendChild(panel);
         state.notice = panel;
@@ -392,7 +461,7 @@
             ) return;
 
             panel.style.opacity = '1';
-            panel.style.transform = 'translateY(0)';
+            panel.style.transform = 'translateY(0) scale(1)';
         };
 
         if (typeof requestAnimationFrame === 'function') {
@@ -408,7 +477,7 @@
             ) return;
 
             panel.style.opacity = '0';
-            panel.style.transform = 'translateY(-8px)';
+            panel.style.transform = 'translateY(-8px) scale(0.985)';
 
             state.noticeTimer = setTimeout(function () {
                 if (
@@ -417,7 +486,7 @@
                 ) {
                     removeNotice();
                 }
-            }, 220);
+            }, 260);
         }, Math.max(500, duration || NOTICE_DURATION));
     }
 
