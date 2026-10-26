@@ -1,16 +1,16 @@
-
 (function () {
     'use strict';
 
     /*
-     * KINORIUM OST 1.5.1
+     * KINORIUM OST 1.5.2
      *
      * Lampa / Android TV / Mobile
      * Cloudflare Worker 1.6.2+
      *
      * Sources:
-     * - YouTube IFrame Player API
-     * - OSTMusic and direct audio files
+     * - Kinorium
+     * - Custom catalog: OSTMusic and YouTube
+     * - Direct audio files
      *
      * FEATURES:
      * - Custom catalog support
@@ -25,7 +25,7 @@
      * - Navigation and stale-request protection
      */
 
-    var VERSION = '1.5.1';
+    var VERSION = '1.5.2';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -34,8 +34,6 @@
 
     var DEFAULTS = {
         enabled: true,
-        autoplay: true,
-        series: true,
         repeat: true,
         volume: 65,
         delay: 2000,
@@ -152,8 +150,6 @@
 
         if (
             key === 'enabled' ||
-            key === 'autoplay' ||
-            key === 'series' ||
             key === 'repeat' ||
             key === 'fade' ||
             key === 'debug'
@@ -1760,9 +1756,7 @@
     function schedulePlayback(movie) {
         if (!movie || !movie.title) return;
 
-        if (!setting('enabled') || !setting('autoplay')) return;
-
-        if (movie.series && !setting('series')) return;
+        if (!setting('enabled')) return;
 
         var key = getMovieKey(movie);
 
@@ -2037,33 +2031,9 @@
         addTrigger(
             'enabled',
             'Увімкнути Kinorium OST',
-            'Незалежне джерело саундтреків',
+            'Автоматично відтворювати саундтреки фільмів і серіалів',
             function (enabled) {
                 if (!enabled) stopPlayback('disabled');
-            }
-        );
-
-        addTrigger(
-            'autoplay',
-            'Автоматичне відтворення',
-            'Запускати музику під час відкриття картки',
-            function (enabled) {
-                if (!enabled) stopPlayback('autoplay_disabled');
-            }
-        );
-
-        addTrigger(
-            'series',
-            'Саундтреки серіалів',
-            'Шукати музику також для серіалів',
-            function (enabled) {
-                if (
-                    !enabled &&
-                    state.movie &&
-                    state.movie.series
-                ) {
-                    stopPlayback('series_disabled');
-                }
             }
         );
 
