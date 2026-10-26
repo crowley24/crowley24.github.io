@@ -1,4 +1,3 @@
-
 (function () {
     'use strict';
 
@@ -16,14 +15,12 @@
      * - Слайдшоу TMDB
      * - Налаштування Lampa
      *
-     * PREMIUM STREAMING:
-     * - Кінематографічний фон
-     * - Широка область відео
-     * - Багатошарові градієнти
-     * - Затемнення зліва та знизу
+     * PREMIUM TRAILER:
+     * - Відео у правому верхньому куті
+     * - Компактний кінематографічний формат
+     * - Градієнтне затемнення зліва та знизу
      * - Плавна поява трейлера
      * - Контрольоване масштабування
-     * - Покращене розташування iframe
      * - Резервне слайдшоу
      *
      * Стабільність:
@@ -712,29 +709,31 @@
         css += '} ';
 
         /*
-         * PREMIUM STREAMING — ЗОВНІШНІЙ ШАР
+         * TRAILER — ПРАВИЙ ВЕРХНІЙ КУТ
          *
-         * Відео займає праву частину екрана.
-         * Градієнти створюють єдиний фон із чорною
-         * областю інтерфейсу зліва.
+         * Відео більше не займає весь екран.
+         * Розмір — 64% ширини та 52% висоти.
+         * Зліва й знизу є градієнтне затемнення.
          */
 
         css += '.tvi-trailer {';
         css += 'position:fixed;';
-        css += 'top:0;';
-        css += 'right:0;';
-        css += 'bottom:0;';
-        css += 'left:15vw;';
-        css += 'width:85vw;';
-        css += 'height:100vh;';
-        css += 'z-index:0;';
+        css += 'top:3.5vh;';
+        css += 'right:2.5vw;';
+        css += 'left:auto;';
+        css += 'bottom:auto;';
+        css += 'width:64vw;';
+        css += 'height:52vh;';
+        css += 'z-index:2;';
         css += 'overflow:hidden;';
-        css += 'background:#000;';
+        css += 'background:#050608;';
         css += 'opacity:0;';
         css += 'visibility:hidden;';
         css += 'pointer-events:none;';
         css += 'contain:paint;';
-        css += 'transition:opacity 1.1s cubic-bezier(.22,1,.36,1),visibility 1.1s ease;';
+        css += 'border-radius:10px;';
+        css += 'box-shadow:0 12px 38px rgba(0,0,0,.35);';
+        css += 'transition:opacity .75s cubic-bezier(.22,1,.36,1),visibility .75s ease;';
         css += 'isolation:isolate;';
         css += '} ';
 
@@ -745,9 +744,6 @@
 
         /*
          * ОБЛАСТЬ YOUTUBE
-         *
-         * Невелике збільшення iframe допомагає
-         * зменшити видимість країв кадру.
          */
 
         css += '.tvi-trailer__yt {';
@@ -793,9 +789,6 @@
 
         /*
          * ГРАДІЄНТ ЗЛІВА
-         *
-         * Плавно зливає трейлер із чорним
-         * фоном області назви й опису.
          */
 
         css += '.tvi-trailer::before {';
@@ -806,21 +799,17 @@
         css += 'pointer-events:none;';
         css += 'background:linear-gradient(';
         css += '90deg,';
-        css += 'rgba(0,0,0,1) 0%,';
-        css += 'rgba(0,0,0,.96) 7%,';
-        css += 'rgba(0,0,0,.84) 17%,';
-        css += 'rgba(0,0,0,.60) 30%,';
-        css += 'rgba(0,0,0,.30) 45%,';
-        css += 'rgba(0,0,0,.08) 62%,';
-        css += 'rgba(0,0,0,0) 78%';
+        css += 'rgba(0,0,0,.94) 0%,';
+        css += 'rgba(0,0,0,.82) 12%,';
+        css += 'rgba(0,0,0,.56) 28%,';
+        css += 'rgba(0,0,0,.26) 45%,';
+        css += 'rgba(0,0,0,.07) 65%,';
+        css += 'rgba(0,0,0,0) 82%';
         css += ');';
         css += '} ';
 
         /*
-         * ГРАДІЄНТ ЗНИЗУ ТА СПРАВА
-         *
-         * Нижня частина затемнюється сильніше,
-         * а права — лише трохи.
+         * ГРАДІЄНТ ЗНИЗУ ТА ЗВЕРХУ
          */
 
         css += '.tvi-trailer::after {';
@@ -832,21 +821,16 @@
         css += 'background:';
         css += 'linear-gradient(';
         css += '0deg,';
-        css += 'rgba(0,0,0,.68) 0%,';
-        css += 'rgba(0,0,0,.40) 12%,';
-        css += 'rgba(0,0,0,.13) 30%,';
+        css += 'rgba(0,0,0,.62) 0%,';
+        css += 'rgba(0,0,0,.34) 15%,';
+        css += 'rgba(0,0,0,.10) 32%,';
         css += 'rgba(0,0,0,0) 52%';
         css += '),';
         css += 'linear-gradient(';
-        css += '270deg,';
-        css += 'rgba(0,0,0,.20) 0%,';
-        css += 'rgba(0,0,0,.08) 8%,';
-        css += 'rgba(0,0,0,0) 22%';
-        css += '),';
-        css += 'linear-gradient(';
         css += '180deg,';
-        css += 'rgba(0,0,0,.12) 0%,';
-        css += 'rgba(0,0,0,0) 22%';
+        css += 'rgba(0,0,0,.20) 0%,';
+        css += 'rgba(0,0,0,.05) 18%,';
+        css += 'rgba(0,0,0,0) 34%';
         css += ');';
         css += '} ';
 
@@ -1196,6 +1180,8 @@
     }
 
     function loadMovieDetails(movie, $render, session) {
+        if (!movie || !movie.id) return;
+
         var movieId = movie.id;
         var mediaType = getMediaType(movie);
         var cacheKey = mediaType + ':' + movieId;
@@ -1400,7 +1386,7 @@
     }
 
     /*
-     * ФОНОВИЙ ТРЕЙЛЕР — PREMIUM
+     * ФОНОВИЙ ТРЕЙЛЕР — ПРАВИЙ ВЕРХНІЙ КУТ
      */
 
     function startTrailer(session, trailer) {
@@ -1451,8 +1437,8 @@
                 session.player = new window.YT.Player(
                     $wrap.find('.tvi-trailer__iframe')[0],
                     {
-                        height: window.innerHeight,
-                        width: window.innerWidth,
+                        height: Math.round(window.innerHeight * 0.52),
+                        width: Math.round(window.innerWidth * 0.64),
                         videoId: trailer.id,
 
                         playerVars: {
@@ -1496,8 +1482,9 @@
                                 );
 
                                 /*
-                                 * Масштабування застосовується
-                                 * до iframe, а не до всієї картки.
+                                 * Масштабування iframe.
+                                 * Відео залишається в межах
+                                 * правого верхнього вікна.
                                  */
 
                                 iframe.css({
@@ -1525,9 +1512,6 @@
                                         'has-active-trailer'
                                     );
 
-                                    /*
-                                     * Плавна поява фонового відео.
-                                     */
                                     $wrap.addClass('display');
                                 }
 
