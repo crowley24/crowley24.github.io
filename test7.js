@@ -18,7 +18,9 @@
      * PREMIUM TRAILER:
      * - Відео у правому верхньому куті
      * - Компактний кінематографічний формат
-     * - Градієнтне затемнення зліва та знизу
+     * - Плавне розчинення країв відео
+     * - Збереження фонового зображення TMDB
+     * - Логотип і назва залишаються видимими
      * - Плавна поява трейлера
      * - Контрольоване масштабування
      * - Резервне слайдшоу
@@ -695,46 +697,64 @@
         css += '} ';
 
         /*
-         * ПЕРЕХІД ВІД СТАНДАРТНОГО ФОНУ ДО ТРЕЙЛЕРА
+         * ФОНОВЕ ЗОБРАЖЕННЯ TMDB
+         *
+         * ВАЖЛИВО:
+         * Під час запуску трейлера фон не ховається.
+         * Він залишається під відео, а через прозорі
+         * краї маски видно оригінальне зображення.
          */
 
         css += '.full-start__background {';
         css += 'will-change:opacity;';
+        css += 'opacity:1;';
+        css += 'visibility:visible;';
         css += 'transition:opacity .85s ease-in-out,visibility .85s ease-in-out;';
         css += '} ';
 
         css += 'body.has-active-trailer .full-start__background {';
-        css += 'opacity:0 !important;';
-        css += 'visibility:hidden !important;';
+        css += 'opacity:1 !important;';
+        css += 'visibility:visible !important;';
         css += '} ';
 
         /*
          * TRAILER — ПРАВИЙ ВЕРХНІЙ КУТ
          *
-         * Відео більше не займає весь екран.
-         * Розмір — 64% ширини та 52% висоти.
-         * Зліва й знизу є градієнтне затемнення.
+         * Компактне вікно 42vw × 42vh.
+         * Не повинно перекривати ліву область
+         * з логотипом і назвою фільму.
+         *
+         * Краї розчиняються CSS-маскою:
+         * - зліва;
+         * - справа;
+         * - зверху;
+         * - знизу.
+         *
+         * Фон TMDB просвічує крізь краї відео.
          */
 
         css += '.tvi-trailer {';
         css += 'position:fixed;';
-        css += 'top:3.5vh;';
-        css += 'right:2.5vw;';
+        css += 'top:4vh;';
+        css += 'right:3vw;';
         css += 'left:auto;';
         css += 'bottom:auto;';
-        css += 'width:64vw;';
-        css += 'height:52vh;';
+        css += 'width:42vw;';
+        css += 'height:42vh;';
         css += 'z-index:2;';
         css += 'overflow:hidden;';
-        css += 'background:#050608;';
+        css += 'background:transparent;';
         css += 'opacity:0;';
         css += 'visibility:hidden;';
         css += 'pointer-events:none;';
         css += 'contain:paint;';
-        css += 'border-radius:10px;';
-        css += 'box-shadow:0 12px 38px rgba(0,0,0,.35);';
-        css += 'transition:opacity .75s cubic-bezier(.22,1,.36,1),visibility .75s ease;';
+        css += 'border-radius:14px;';
+        css += 'border:0;';
+        css += 'box-shadow:0 12px 36px rgba(0,0,0,.12);';
+        css += 'transition:opacity .85s cubic-bezier(.22,1,.36,1),visibility .85s ease;';
         css += 'isolation:isolate;';
+        css += '-webkit-mask-image:radial-gradient(ellipse 78% 78% at 55% 46%,#000 52%,rgba(0,0,0,.96) 63%,rgba(0,0,0,.72) 74%,rgba(0,0,0,.28) 88%,transparent 100%);';
+        css += 'mask-image:radial-gradient(ellipse 78% 78% at 55% 46%,#000 52%,rgba(0,0,0,.96) 63%,rgba(0,0,0,.72) 74%,rgba(0,0,0,.28) 88%,transparent 100%);';
         css += '} ';
 
         css += '.tvi-trailer.display {';
@@ -744,16 +764,19 @@
 
         /*
          * ОБЛАСТЬ YOUTUBE
+         *
+         * Невеликий запас по краях потрібен
+         * для приховування чорних смуг.
          */
 
         css += '.tvi-trailer__yt {';
         css += 'position:absolute;';
-        css += 'top:-5%;';
-        css += 'left:-5%;';
-        css += 'width:110%;';
-        css += 'height:110%;';
+        css += 'top:-3%;';
+        css += 'left:-3%;';
+        css += 'width:106%;';
+        css += 'height:106%;';
         css += 'overflow:hidden;';
-        css += 'background:#000;';
+        css += 'background:transparent;';
         css += 'z-index:0;';
         css += 'display:block;';
         css += 'border:0;';
@@ -766,7 +789,7 @@
         css += 'width:100%;';
         css += 'height:100%;';
         css += 'overflow:hidden;';
-        css += 'background:#000;';
+        css += 'background:transparent;';
         css += 'pointer-events:none;';
         css += '} ';
 
@@ -788,7 +811,11 @@
         css += '} ';
 
         /*
-         * ГРАДІЄНТ ЗЛІВА
+         * М'ЯКИЙ ГРАДІЄНТ ЗЛІВА
+         *
+         * Додатково розчиняє ліву межу відео,
+         * щоб вона не виглядала як пряма лінія
+         * поруч із назвою та фоном картки.
          */
 
         css += '.tvi-trailer::before {';
@@ -799,17 +826,20 @@
         css += 'pointer-events:none;';
         css += 'background:linear-gradient(';
         css += '90deg,';
-        css += 'rgba(0,0,0,.94) 0%,';
-        css += 'rgba(0,0,0,.82) 12%,';
-        css += 'rgba(0,0,0,.56) 28%,';
-        css += 'rgba(0,0,0,.26) 45%,';
-        css += 'rgba(0,0,0,.07) 65%,';
-        css += 'rgba(0,0,0,0) 82%';
+        css += 'rgba(0,0,0,.46) 0%,';
+        css += 'rgba(0,0,0,.28) 10%,';
+        css += 'rgba(0,0,0,.12) 23%,';
+        css += 'rgba(0,0,0,.035) 38%,';
+        css += 'rgba(0,0,0,0) 55%';
         css += ');';
         css += '} ';
 
         /*
-         * ГРАДІЄНТ ЗНИЗУ ТА ЗВЕРХУ
+         * М'ЯКЕ ЗАТЕМНЕННЯ ЗНИЗУ ТА ЗВЕРХУ
+         *
+         * Не створює суцільної чорної рамки.
+         * Градієнти накладаються лише поверх
+         * відео, а маска розчиняє зовнішні краї.
          */
 
         css += '.tvi-trailer::after {';
@@ -821,17 +851,30 @@
         css += 'background:';
         css += 'linear-gradient(';
         css += '0deg,';
-        css += 'rgba(0,0,0,.62) 0%,';
-        css += 'rgba(0,0,0,.34) 15%,';
-        css += 'rgba(0,0,0,.10) 32%,';
-        css += 'rgba(0,0,0,0) 52%';
+        css += 'rgba(0,0,0,.32) 0%,';
+        css += 'rgba(0,0,0,.16) 12%,';
+        css += 'rgba(0,0,0,.045) 27%,';
+        css += 'rgba(0,0,0,0) 43%';
         css += '),';
         css += 'linear-gradient(';
         css += '180deg,';
-        css += 'rgba(0,0,0,.20) 0%,';
-        css += 'rgba(0,0,0,.05) 18%,';
-        css += 'rgba(0,0,0,0) 34%';
+        css += 'rgba(0,0,0,.16) 0%,';
+        css += 'rgba(0,0,0,.06) 12%,';
+        css += 'rgba(0,0,0,0) 26%';
         css += ');';
+        css += '} ';
+
+        /*
+         * АДАПТАЦІЯ ДЛЯ МЕНШИХ ЕКРАНІВ
+         */
+
+        css += '@media (max-width:900px) {';
+        css += '.tvi-trailer {';
+        css += 'top:4vh;';
+        css += 'right:2vw;';
+        css += 'width:44vw;';
+        css += 'height:38vh;';
+        css += '}';
         css += '} ';
 
         /*
@@ -1437,8 +1480,8 @@
                 session.player = new window.YT.Player(
                     $wrap.find('.tvi-trailer__iframe')[0],
                     {
-                        height: Math.round(window.innerHeight * 0.52),
-                        width: Math.round(window.innerWidth * 0.64),
+                        height: Math.round(window.innerHeight * 0.42),
+                        width: Math.round(window.innerWidth * 0.42),
                         videoId: trailer.id,
 
                         playerVars: {
