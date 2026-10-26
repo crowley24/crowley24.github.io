@@ -3,7 +3,7 @@
     'use strict';
 
     /*
-     * KINORIUM OST 1.5.2
+     * KINORIUM OST 1.5.3
      *
      * Lampa / Android TV / Mobile
      * Cloudflare Worker 1.6.2+
@@ -24,9 +24,10 @@
      * - Startup timeout
      * - Track title diagnostics
      * - Navigation and stale-request protection
+     * - Minimal premium notifications
      */
 
-    var VERSION = '1.5.2';
+    var VERSION = '1.5.3';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -297,15 +298,15 @@
     }
 
     /*
-     * PREMIUM NOTICE DESIGN
+     * PREMIUM NOTICE DESIGN 1.5.3
      *
-     * Visual changes only:
-     * - Graphite background
-     * - Muted gold accents
-     * - Compact title and message
+     * - No technical branding
+     * - No generic "Music is playing" heading
+     * - Track / artist / movie information
+     * - Dark translucent background
+     * - Soft accent colors
+     * - Compact icon and two-line layout
      * - Smooth entrance and exit
-     *
-     * Existing notification conditions and timing are preserved.
      */
 
     function showNotice(title, message, type, duration) {
@@ -321,8 +322,8 @@
         var noticeToken = state.noticeToken;
 
         var colors = {
-            info: '#c6a96b',
-            success: '#b9d69a',
+            info: '#8db9e8',
+            success: '#77d5b3',
             warning: '#e5bd73',
             error: '#e58b83'
         };
@@ -346,108 +347,97 @@
             zIndex: '2147483000',
             width: 'min(370px, calc(100vw - 32px))',
             boxSizing: 'border-box',
-            padding: '16px 18px 16px 17px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(29,30,32,0.98), rgba(15,16,18,0.98))',
-            border: '1px solid rgba(255,255,255,0.09)',
-            borderLeft: '3px solid ' + accent,
-            color: '#f5f3ee',
+            padding: '15px 16px 13px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, rgba(29,35,45,0.96), rgba(17,21,29,0.97))',
+            border: '1px solid rgba(255,255,255,0.10)',
+            color: '#f5f7fa',
             fontFamily: 'Arial, sans-serif',
-            fontSize: '14px',
-            lineHeight: '1.45',
-            boxShadow: '0 12px 38px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.2)',
+            boxShadow: '0 14px 42px rgba(0,0,0,0.42)',
             opacity: '0',
             transform: 'translateY(-10px) scale(0.985)',
             transition: 'opacity 240ms ease, transform 240ms cubic-bezier(0.2,0.75,0.25,1)',
             pointerEvents: 'none',
             overflow: 'hidden',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)'
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)'
         };
 
         Object.keys(styles).forEach(function (key) {
             panel.style[key] = styles[key];
         });
 
-        var header = document.createElement('div');
+        var content = document.createElement('div');
 
-        header.style.display = 'flex';
-        header.style.alignItems = 'center';
-        header.style.gap = '11px';
-        header.style.marginBottom = message ? '7px' : '0';
-        header.style.fontWeight = '700';
-        header.style.letterSpacing = '0.15px';
+        content.style.display = 'flex';
+        content.style.alignItems = 'center';
+        content.style.gap = '12px';
 
         var iconBox = document.createElement('div');
 
-        iconBox.style.width = '32px';
-        iconBox.style.height = '32px';
-        iconBox.style.minWidth = '32px';
+        iconBox.style.width = '46px';
+        iconBox.style.height = '46px';
+        iconBox.style.minWidth = '46px';
         iconBox.style.boxSizing = 'border-box';
         iconBox.style.display = 'flex';
         iconBox.style.alignItems = 'center';
         iconBox.style.justifyContent = 'center';
-        iconBox.style.borderRadius = '10px';
-        iconBox.style.background = 'rgba(198,169,107,0.11)';
-        iconBox.style.border = '1px solid rgba(198,169,107,0.18)';
+        iconBox.style.borderRadius = '12px';
+        iconBox.style.background = 'rgba(119,213,179,0.10)';
+        iconBox.style.border = '1px solid ' + accent + '33';
         iconBox.style.color = accent;
-        iconBox.style.fontSize = '19px';
+        iconBox.style.fontSize = '25px';
         iconBox.style.lineHeight = '1';
 
         var icon = document.createElement('span');
+
         icon.textContent = icons[type] || icons.info;
 
         iconBox.appendChild(icon);
 
         var textBox = document.createElement('div');
+
         textBox.style.minWidth = '0';
         textBox.style.flex = '1';
 
-        var brand = document.createElement('div');
-        brand.textContent = 'KINORIUM  /  ORIGINAL SOUNDTRACK';
-        brand.style.color = '#c6a96b';
-        brand.style.fontSize = '9px';
-        brand.style.fontWeight = '700';
-        brand.style.letterSpacing = '1.35px';
-        brand.style.lineHeight = '1.4';
-        brand.style.marginBottom = '3px';
-        brand.style.overflowWrap = 'anywhere';
+        if (title) {
+            var heading = document.createElement('div');
 
-        var heading = document.createElement('div');
-        heading.textContent = String(title || 'KINORIUM OST');
-        heading.style.color = '#f5f3ee';
-        heading.style.fontSize = '14px';
-        heading.style.fontWeight = '700';
-        heading.style.lineHeight = '1.4';
-        heading.style.overflowWrap = 'anywhere';
+            heading.textContent = String(title);
+            heading.style.color = '#f5f7fa';
+            heading.style.fontSize = '14px';
+            heading.style.fontWeight = '600';
+            heading.style.lineHeight = '1.4';
+            heading.style.overflowWrap = 'anywhere';
 
-        textBox.appendChild(brand);
-        textBox.appendChild(heading);
-
-        header.appendChild(iconBox);
-        header.appendChild(textBox);
-        panel.appendChild(header);
+            textBox.appendChild(heading);
+        }
 
         if (message) {
             var description = document.createElement('div');
 
             description.textContent = String(message);
-            description.style.color = 'rgba(238,237,232,0.72)';
+            description.style.color = '#a6afbd';
             description.style.fontSize = '12px';
-            description.style.lineHeight = '1.55';
-            description.style.paddingLeft = '43px';
+            description.style.lineHeight = '1.5';
+            description.style.marginTop = title ? '3px' : '0';
             description.style.overflowWrap = 'anywhere';
 
-            panel.appendChild(description);
+            textBox.appendChild(description);
         }
+
+        content.appendChild(iconBox);
+        content.appendChild(textBox);
+
+        panel.appendChild(content);
 
         var bottomLine = document.createElement('div');
 
-        bottomLine.style.height = '1px';
-        bottomLine.style.marginTop = '13px';
+        bottomLine.style.height = '2px';
+        bottomLine.style.marginTop = '12px';
+        bottomLine.style.borderRadius = '2px';
         bottomLine.style.background =
-            'linear-gradient(90deg, ' + accent + ' 0%, rgba(198,169,107,0.18) 45%, transparent 100%)';
-        bottomLine.style.opacity = '0.75';
+            'linear-gradient(90deg, ' + accent + ', transparent)';
 
         panel.appendChild(bottomLine);
 
@@ -535,12 +525,47 @@
     function diagnosticPlaying(result) {
         if (!setting('debug') || !state.cardActive) return;
 
-        var title = getTrackTitle(result) || 'Назву композиції не отримано';
+        var trackTitle = getTrackTitle(result);
         var artist = getTrackArtist(result);
 
-        if (artist) title += ' — ' + artist;
+        var movie = state.movie;
 
-        showNotice('Музика відтворюється', title, 'success', 4000);
+        var movieTitle = movie && movie.title
+            ? String(movie.title)
+            : '';
+
+        var movieYear = movie && movie.year
+            ? String(movie.year)
+            : '';
+
+        var heading = '';
+
+        if (trackTitle && artist) {
+            heading = artist + ' — ' + trackTitle;
+        } else if (trackTitle) {
+            heading = trackTitle;
+        } else if (artist) {
+            heading = artist;
+        } else {
+            heading = movieTitle || 'Саундтрек';
+        }
+
+        var subtitle = '';
+
+        if (trackTitle || artist) {
+            subtitle = movieTitle;
+
+            if (subtitle && movieYear) {
+                subtitle += ' (' + movieYear + ')';
+            }
+        }
+
+        showNotice(
+            heading,
+            subtitle,
+            'success',
+            4000
+        );
     }
 
     function diagnosticNotFound(result) {
