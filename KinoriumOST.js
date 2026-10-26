@@ -1,4 +1,3 @@
-
 (function () {
     'use strict';
 
@@ -301,8 +300,8 @@
      * PREMIUM NOTICE DESIGN 1.5.3
      *
      * - No technical branding
-     * - No generic "Music is playing" heading
-     * - Track / artist / movie information
+     * - No movie title or year in playback notifications
+     * - Track / artist information
      * - Dark translucent background
      * - Soft accent colors
      * - Compact icon and two-line layout
@@ -522,21 +521,19 @@
         ).trim();
     }
 
+    /*
+     * SUCCESS NOTIFICATION
+     *
+     * Shows the track and artist when available.
+     * Movie title and release year are deliberately omitted.
+     * Successful-playback notification remains enabled in debug mode.
+     */
+
     function diagnosticPlaying(result) {
         if (!setting('debug') || !state.cardActive) return;
 
         var trackTitle = getTrackTitle(result);
         var artist = getTrackArtist(result);
-
-        var movie = state.movie;
-
-        var movieTitle = movie && movie.title
-            ? String(movie.title)
-            : '';
-
-        var movieYear = movie && movie.year
-            ? String(movie.year)
-            : '';
 
         var heading = '';
 
@@ -547,22 +544,12 @@
         } else if (artist) {
             heading = artist;
         } else {
-            heading = movieTitle || 'Саундтрек';
-        }
-
-        var subtitle = '';
-
-        if (trackTitle || artist) {
-            subtitle = movieTitle;
-
-            if (subtitle && movieYear) {
-                subtitle += ' (' + movieYear + ')';
-            }
+            heading = 'Саундтрек';
         }
 
         showNotice(
             heading,
-            subtitle,
+            '',
             'success',
             4000
         );
