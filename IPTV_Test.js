@@ -617,54 +617,81 @@
      * один раз пробуємо GET як резервний режим.
      */
 
+    
+    /*
+     * EPG LOADER 13.3
+     *
+     * - POST пакетами максимум по 40 tvg-id
+     * - Послідовне завантаження пакетів
+     * - Об'єднання каналів і передач
+     * - Продовження після помилки окремого пакета
+     * - Без GET-fallback
+     * - Один запис кешу після завершення всіх пакетів
+     */
+
     function epgLoad(done, force) {
         if (done) EPG.callbacks.push(done);
+
+        if (EPG.loading || EPG.request) {
+            if (force) EPG.refreshQueued = true;
+            EPG.status = 'Завантаження EPG...';
+            return;
+        }
 
         if (
             !force &&
             EPG.loaded &&
             now() - EPG.loaded < CACHE_TTL
         ) {
-            if (!EPG.request) finishCallbacks();
-
+            finishCallbacks();
             return;
         }
 
-        if (EPG.request) {
-            if (force) EPG.refreshQueued = true;
+        var ids = uniqueIds(EPG.playlistIds || []);
 
-            EPG.status = force
-                ? 'Очікування повторного оновлення'
-                : 'Завантаження EPG...';
-
+        if (!ids.length) {
+            EPG.status = 'Немає tvg-id для запиту EPG';
+            EPG.error =
+                'У плейлисті не знайдено tvg-id. ' +
+                'Повний XMLTV через GET вимкнено.';
+            EPG.lastResult = 'Немає ідентифікаторів каналів';
+            EPG.requestMode = 'POST — немає tvg-id';
+            EPG.requestedChannelCount = 0;
+            EPG.loading = false;
+            finishCallbacks();
             return;
+        }
+
+        var BATCH_SIZE = 40;
+        var batches = [];
+
+        for (var i = 0; i < ids.length; i += BATCH_SIZE) {
+            batches.push(ids.slice(i, i + BATCH_SIZE));
         }
 
         EPG.loading = true;
-        EPG.status = force
-            ? 'Примусове оновлення EPG...'
-            : 'Завантаження EPG...';
-
+        EPG.status = 'Завантаження EPG пакетами...';
         EPG.error = '';
         EPG.lastAttempt = now();
         EPG.lastDuration = 0;
+        EPG.httpStatus = 0;
+        EPG.requestMode = 'POST — пакети по 40 каналів';
         EPG.fallbackUsed = false;
+        EPG.requestedChannelCount = ids.length;
 
         var startedAt = now();
-        var initialMode =
-            EPG.playlistIds && EPG.playlistIds.length
-                ? 'POST'
-                : 'GET';
-
-        EPG.requestMode = initialMode === 'POST'
-            ? 'POST — фільтрація за tvg-id'
-            : 'GET — повний XMLTV (немає tvg-id)';
-
-        EPG.requestedChannelCount = EPG.playlistIds.length;
-
+        var batchIndex = 0;
         var completed = false;
+        var failedBatches = 0;
+        var successfulBatches = 0;
+        var errors = [];
+        var allChannels = {};
+        var allAliases = {};
+        var totalChannels = 0;
+        var totalProgrammes = 0;
+        var lastXHR = null;
 
-        function finishRequest() {
+        function finishAll() {
             if (completed) return;
 
             completed = true;
@@ -682,164 +709,180 @@
             finishCallbacks();
         }
 
-        function runRequest(mode, isFallback) {
-            var postMode = mode === 'POST';
+        function finishWithError(message) {
+            EPG.error = message;
+            EPG.status = 'Помилка завантаження EPG';
+            EPG.lastResult = 'Помилка';
+            finishAll();
+        }
 
-            if (isFallback) {
-                EPG.fallbackUsed = true;
-                EPG.requestMode =
-                    'GET — резервний запит після помилки POST';
+        function processNextBatch() {
+            if (completed) return;
+
+            if (batchIndex >= batches.length) {
+                if (totalProgrammes > 0) {
+                    EPG.channels = allChannels;
+                    EPG.aliases = allAliases;
+                    EPG.channelCount = totalChannels;
+                    EPG.programmeCount = totalProgrammes;
+                    EPG.loaded = now();
+                    EPG.lastSuccess = EPG.loaded;
+                    EPG.cacheSource = 'Мережа';
+                    EPG.error = '';
+
+                    if (failedBatches > 0) {
+                        EPG.status =
+                            'EPG завантажено частково';
+                        EPG.lastResult =
+                            'Успішних пакетів: ' +
+                            successfulBatches +
+                            '/' + batches.length +
+                            '; помилок: ' + failedBatches;
+
+                        EPG.error =
+                            'Не вдалося завантажити ' +
+                            failedBatches + ' із ' +
+                            batches.length + ' пакетів. ' +
+                            errors.slice(0, 3).join(' | ');
+                    } else {
+                        EPG.status = 'EPG успішно оновлено';
+                        EPG.lastResult = 'Успішно';
+                    }
+
+                    saveEPGCache();
+
+                    console.log(
+                        '[IPTV PRO 13.3] EPG завершено:',
+                        successfulBatches,
+                        'пакетів успішно;',
+                        failedBatches,
+                        'з помилками;',
+                        Object.keys(allChannels).length,
+                        'каналів;',
+                        totalProgrammes,
+                        'передач'
+                    );
+                } else {
+                    EPG.status = 'Не вдалося отримати EPG';
+                    EPG.lastResult = 'Немає валідних передач';
+                    EPG.error = errors.length
+                        ? errors.slice(0, 5).join(' | ')
+                        : 'У відповідях Worker немає валідних передач.';
+
+                    console.error(
+                        '[IPTV PRO 13.3] EPG не завантажено:',
+                        EPG.error
+                    );
+                }
+
+                finishAll();
+                return;
             }
 
-            var ajaxOptions = {
-                url: EPG_URL,
-                method: postMode ? 'POST' : 'GET',
-                dataType: 'text',
-                timeout: 120000,
-                cache: false,
+            var currentBatch = batches[batchIndex];
+            var currentNumber = batchIndex + 1;
 
-                success: function (body, textStatus, xhr) {
-                    EPG.httpStatus = xhr ? xhr.status : 200;
+            batchIndex++;
+
+            EPG.status =
+                'Завантаження пакета ' +
+                currentNumber + '/' + batches.length;
+
+            var xhr = $.ajax({
+                url: EPG_URL,
+                method: 'POST',
+                dataType: 'text',
+                timeout: 60000,
+                cache: false,
+                contentType: 'application/json; charset=utf-8',
+                processData: false,
+                data: JSON.stringify({
+                    ids: currentBatch
+                }),
+
+                success: function (body, textStatus, responseXHR) {
+                    EPG.httpStatus = responseXHR
+                        ? responseXHR.status
+                        : 200;
 
                     try {
                         var result = parseEPG(body);
 
-                        EPG.channels = result.channels;
-                        EPG.aliases = result.aliases;
-                        EPG.channelCount = result.channelCount;
-                        EPG.programmeCount = result.programmeCount;
-                        EPG.loaded = now();
-                        EPG.lastSuccess = EPG.loaded;
-                        EPG.error = '';
-                        EPG.status = 'EPG успішно оновлено';
-                        EPG.lastResult = 'Успішно';
-                        EPG.cacheSource = isFallback
-                            ? 'Резервний GET'
-                            : 'Мережа';
+                        Object.keys(result.channels).forEach(
+                            function (id) {
+                                if (!allChannels[id]) {
+                                    allChannels[id] = [];
+                                }
 
-                        saveEPGCache();
-
-                        console.log(
-                            '[IPTV PRO 13.2] EPG оновлено:',
-                            EPG.channelCount,
-                            'каналів;',
-                            EPG.programmeCount,
-                            'передач;',
-                            'режим:',
-                            EPG.requestMode
+                                allChannels[id] =
+                                    allChannels[id].concat(
+                                        result.channels[id] || []
+                                    );
+                            }
                         );
+
+                        Object.keys(result.aliases).forEach(
+                            function (alias) {
+                                allAliases[alias] =
+                                    result.aliases[alias];
+                            }
+                        );
+
+                        totalChannels += result.channelCount;
+                        totalProgrammes += result.programmeCount;
+                        successfulBatches++;
                     } catch (e) {
-                        if (postMode && !isFallback) {
-                            EPG.error =
-                                'POST не повернув придатний XMLTV: ' +
-                                String(e.message || e);
+                        failedBatches++;
 
-                            EPG.status =
-                                'POST не спрацював — резервний GET';
+                        errors.push(
+                            'Пакет ' + currentNumber +
+                            ': ' + String(e.message || e)
+                        );
 
-                            EPG.lastResult =
-                                'POST: помилка обробки; пробуємо GET';
-
-                            EPG._retryGET = true;
-
-                            console.warn(
-                                '[IPTV PRO 13.2] POST XMLTV parse error:',
-                                e
-                            );
-                        } else {
-                            EPG.status = 'Помилка XMLTV';
-                            EPG.error = String(e.message || e);
-                            EPG.lastResult = 'Помилка обробки XMLTV';
-
-                            console.error(
-                                '[IPTV PRO 13.2] Помилка XMLTV:',
-                                e
-                            );
-                        }
+                        console.warn(
+                            '[IPTV PRO 13.3] Помилка пакета:',
+                            currentNumber,
+                            e
+                        );
                     }
                 },
 
-                error: function (xhr, status, err) {
-                    EPG.httpStatus = xhr
-                        ? (xhr.status || 0)
+                error: function (responseXHR, status, err) {
+                    EPG.httpStatus = responseXHR
+                        ? responseXHR.status || 0
                         : 0;
 
-                    var message =
-                        'Запит: ' + status +
+                    failedBatches++;
+
+                    errors.push(
+                        'Пакет ' + currentNumber +
+                        ': ' + status +
                         (err ? ' / ' + err : '') +
-                        ' (HTTP ' + EPG.httpStatus + ')';
+                        ' (HTTP ' + EPG.httpStatus + ')'
+                    );
 
-                    if (EPG.httpStatus === 0) {
-                        message +=
-                            '. Можлива проблема CORS, мережі або Worker';
-                    }
-
-                    if (postMode && !isFallback) {
-                        EPG.error = message;
-                        EPG.status =
-                            'POST не спрацював — резервний GET';
-                        EPG.lastResult =
-                            'POST: помилка запиту; пробуємо GET';
-                        EPG._retryGET = true;
-
-                        console.warn(
-                            '[IPTV PRO 13.2] POST EPG error:',
-                            message
-                        );
-                    } else {
-                        EPG.status = 'EPG недоступний';
-                        EPG.error = message;
-                        EPG.lastResult = 'Помилка запиту';
-
-                        console.error(
-                            '[IPTV PRO 13.2] Помилка EPG:',
-                            EPG.error
-                        );
-                    }
+                    console.warn(
+                        '[IPTV PRO 13.3] HTTP-помилка пакета:',
+                        currentNumber,
+                        errors[errors.length - 1]
+                    );
                 },
 
                 complete: function () {
-                    /*
-                     * Після POST-помилки запускаємо лише один
-                     * резервний GET. Callback виконується після нього.
-                     */
+                    if (completed) return;
 
-                    if (
-                        EPG._retryGET &&
-                        postMode &&
-                        !isFallback
-                    ) {
-                        EPG._retryGET = false;
-
-                        runRequest('GET', true);
-
-                        return;
-                    }
-
-                    finishRequest();
+                    EPG.request = null;
+                    processNextBatch();
                 }
-            };
+            });
 
-            if (postMode) {
-                ajaxOptions.contentType =
-                    'application/json; charset=utf-8';
-
-                ajaxOptions.processData = false;
-
-                ajaxOptions.data = JSON.stringify({
-                    ids: EPG.playlistIds.slice(0, 2000)
-                });
-            }
-
-            var request = $.ajax(ajaxOptions);
-
-            EPG.request = request;
+            lastXHR = xhr;
+            EPG.request = xhr;
         }
 
-        EPG._retryGET = false;
-
-        runRequest(initialMode, false);
+        processNextBatch();
     }
+
 
     /*
      * PROGRAM MATCHING
