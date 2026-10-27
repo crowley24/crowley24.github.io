@@ -1,6 +1,6 @@
 // ==Lampa==
 // name: IPTV PRO (XMLTV Edition)
-// version: 12.8
+// version: 12.9
 
 (function () {
     'use strict';
@@ -9,12 +9,15 @@
 
     var KEY = 'iptv_pro_v12';
 
+    var EPG_URL =
+        'https://iptv-epg-proxy.unclezhenya24.workers.dev/epg.xml';
+
     var defaults = {
         playlists: [{
             name: 'TEST',
             url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'
         }],
-        epg_url: 'http://only4.tv/epg/epg.xml',
+        epg_url: EPG_URL,
         favorites: [],
         current_pl_index: 0
     };
@@ -29,7 +32,9 @@
         cfg.favorites = [];
     }
 
-    cfg.epg_url = 'http://only4.tv/epg/epg.xml';
+    // Використовуємо Cloudflare Worker як джерело XMLTV.
+    // Зберігаємо правильну адресу й у конфігурації Lampa.
+    cfg.epg_url = EPG_URL;
 
     Lampa.Storage.set(KEY, cfg);
 
@@ -39,7 +44,9 @@
         aliases: {},
         loaded: 0,
         request: null,
-        error: ''
+        error: '',
+        channelCount: 0,
+        programmeCount: 0
     };
 
     function norm(s) {
@@ -89,7 +96,14 @@
         }
 
         if (EPG.request) {
-            if (done) done();
+            if (done) {
+                var oldRequest = EPG.request;
+
+                oldRequest.always(function () {
+                    done();
+                });
+            }
+
             return;
         }
 
@@ -97,32 +111,65 @@
         EPG.error = '';
 
         EPG.request = $.ajax({
-            url: cfg.epg_url,
+            url: EPG_URL,
             method: 'GET',
             dataType: 'text',
-            timeout: 45000,
+            timeout: 120000,
+            cache: true,
 
             success: function (body) {
                 try {
+                    if (!body || !String(body).trim()) {
+                        throw new Error('Отримано порожню відповідь');
+                    }
+
                     var xml = $.parseXML(body);
+
+                    if (!xml) {
+                        throw new Error('Не вдалося розібрати XML');
+                    }
+
+                    var parserErrors =
+                        xml.getElementsByTagName('parsererror');
+
+                    if (parserErrors.length) {
+                        throw new Error(
+                            'Некоректний XML: ' +
+                            (parserErrors[0].textContent || '').slice(0, 250)
+                        );
+                    }
+
                     var ch = xml.getElementsByTagName('channel');
                     var pr = xml.getElementsByTagName('programme');
 
+                    if (!ch.length && !pr.length) {
+                        throw new Error(
+                            'XML не містить channel або programme'
+                        );
+                    }
+
                     var map = {};
                     var aliases = {};
+                    var validProgrammes = 0;
 
                     for (var i = 0; i < ch.length; i++) {
                         var id = ch[i].getAttribute('id');
 
                         if (!id) continue;
 
-                        map[id] = [];
+                        map[id] = map[id] || [];
                         aliases[norm(id)] = id;
 
-                        var names = ch[i].getElementsByTagName('display-name');
+                        var names =
+                            ch[i].getElementsByTagName('display-name');
 
                         for (var j = 0; j < names.length; j++) {
-                            aliases[norm(names[j].textContent)] = id;
+                            var displayName =
+                                (names[j].textContent || '').trim();
+
+                            if (displayName) {
+                                aliases[norm(displayName)] = id;
+                            }
                         }
                     }
 
@@ -151,6 +198,8 @@
                             title: txt(p, 'title'),
                             desc: txt(p, 'desc')
                         });
+
+                        validProgrammes++;
                     }
 
                     Object.keys(map).forEach(function (id) {
@@ -159,14 +208,43 @@
                         });
                     });
 
+                    if (!Object.keys(map).length) {
+                        throw new Error(
+                            'Не знайдено каналів у XMLTV'
+                        );
+                    }
+
                     EPG.channels = map;
                     EPG.aliases = aliases;
+                    EPG.channelCount = ch.length;
+                    EPG.programmeCount = validProgrammes;
                     EPG.loaded = Date.now();
-                    EPG.status = 'EPG: ' + Object.keys(map).length + ' каналів';
+                    EPG.error = '';
+
+                    if (validProgrammes) {
+                        EPG.status =
+                            'EPG: ' +
+                            Object.keys(map).length +
+                            ' каналів, ' +
+                            validProgrammes +
+                            ' передач';
+                    } else {
+                        EPG.status =
+                            'XML завантажено, але передач не знайдено';
+
+                        EPG.error =
+                            'Перевірте формат часу start/stop у XMLTV';
+                    }
 
                 } catch (e) {
                     EPG.status = 'Помилка XMLTV';
                     EPG.error = String(e.message || e);
+                    EPG.loaded = 0;
+
+                    console.error(
+                        '[IPTV PRO] Помилка обробки EPG:',
+                        e
+                    );
                 }
             },
 
@@ -174,14 +252,23 @@
                 EPG.status = 'EPG недоступний';
 
                 EPG.error =
-                    status +
+                    'Запит: ' + status +
                     (err ? ' / ' + err : '') +
-                    ' (HTTP ' +
-                    (xhr.status || 0) +
-                    ')';
+                    ' (HTTP ' + (xhr.status || 0) + ')';
+
+                if (xhr.status === 0) {
+                    EPG.error +=
+                        '. Можлива проблема CORS, мережі або доступності Worker';
+                }
+
+                console.error(
+                    '[IPTV PRO] Помилка завантаження EPG:',
+                    EPG.error
+                );
             },
 
             complete: function () {
+                var completedRequest = EPG.request;
                 EPG.request = null;
 
                 if (done) done();
@@ -309,7 +396,10 @@
                     (EPG.error ? ' — ' + EPG.error : '')
                 );
             } else if (!p && !n) {
-                epg.text('Програма для цього каналу не знайдена');
+                epg.text(
+                    'Програму не знайдено' +
+                    (data.id ? '' : ' — немає відповідності каналу в EPG')
+                );
             }
 
             if (p) {
@@ -345,7 +435,9 @@
                 box.append(progress);
 
                 if (p.desc) {
-                    box.append(item(p.desc, 'iptv-description'));
+                    box.append(
+                        item(p.desc, 'iptv-description')
+                    );
                 }
             }
 
@@ -401,7 +493,9 @@
             colC.empty();
 
             list.forEach(function (c, i) {
-                var el = $('<div class="iptv-item iptv-channel"></div>');
+                var el = $(
+                    '<div class="iptv-item iptv-channel"></div>'
+                );
 
                 if (c.logo) {
                     el.append(
@@ -431,7 +525,10 @@
                 details(list[0]);
             } else {
                 colE.empty().append(
-                    item('У цій групі немає каналів', 'iptv-muted')
+                    item(
+                        'У цій групі немає каналів',
+                        'iptv-muted'
+                    )
                 );
             }
 
@@ -565,9 +662,9 @@
             flex.append(colG, colC, colE);
             root.append(flex);
 
-            if (!$('#iptv-pro-128-css').length) {
+            if (!$('#iptv-pro-129-css').length) {
                 $('head').append(
-                    '<style id="iptv-pro-128-css">' +
+                    '<style id="iptv-pro-129-css">' +
 
                     '.iptv-root{' +
                     'position:fixed;inset:0;z-index:1000;' +
@@ -635,7 +732,7 @@
                     '}' +
 
                     '.iptv-muted{' +
-                    'color:#9da5b2;font-size:1rem' +
+                    'color:#9da5b2;font-size:1rem;overflow-wrap:anywhere' +
                     '}' +
 
                     '.iptv-description{' +
@@ -664,6 +761,14 @@
 
             epgLoad(function () {
                 if (alive && chosen) details(chosen);
+
+                if (alive && EPG.error) {
+                    console.warn(
+                        '[IPTV PRO] EPG:',
+                        EPG.status,
+                        EPG.error
+                    );
+                }
             });
 
             timer = setInterval(function () {
@@ -757,9 +862,9 @@
     }
 
     function init() {
-        if (window.__iptv_pro_128_initialized) return;
+        if (window.__iptv_pro_129_initialized) return;
 
-        window.__iptv_pro_128_initialized = true;
+        window.__iptv_pro_129_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
