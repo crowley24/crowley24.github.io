@@ -1,7 +1,6 @@
-
- // ==Lampa==
- // name: IPTV PRO (XMLTV Edition)
- // version: 14.0.1
+// ==Lampa==
+// name: IPTV PRO (XMLTV Edition)
+// version: 14.0.1
 
 (function () {
     'use strict';
@@ -2109,9 +2108,9 @@
     /*
      * СИСТЕМНІ НАЛАШТУВАННЯ IPTV
      *
-     * Реєстрація SettingsApi навмисно не викликається,
-     * щоб не створювати другий пункт IPTV у меню налаштувань.
-     * Самі функції залишені для сумісності з поточною версією.
+     * Реєстрація SettingsApi використовується для окремого
+     * розділу IPTV PRO у системних налаштуваннях Lampa.
+     * Пункт «ТБ» у лівому меню створюється окремо.
      */
 
     function openIPTVSettingsPanel(mode) {
@@ -2259,17 +2258,26 @@
             return;
         }
 
+        // Захист від повторного запуску цього екземпляра плагіна.
         window.__iptv_pro_140_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
-        /*
-         * registerIPTVSettings() навмисно не викликаємо:
-         * пункт меню буде тільки один — власний пункт «ТБ».
-         */
+        // Відновлюємо системні налаштування IPTV PRO.
+        registerIPTVSettings();
 
+        /*
+         * Видаляємо старі пункти «ТБ» за текстом назви,
+         * навіть якщо вони мають інший CSS-клас.
+         */
+        menu.find('.menu__item').filter(function () {
+            return $(this).find('.menu__text').text().trim() === 'ТБ';
+        }).remove();
+
+        // Прибираємо залишки пунктів попередніх версій плагіна.
         menu.find('.iptv-pro-menu').remove();
 
+        // Створюємо один пункт «ТБ».
         var entry = $(
             '<li class="menu__item selector iptv-pro-menu">' +
                 '<div class="menu__ico">' +
