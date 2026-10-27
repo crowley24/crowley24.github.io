@@ -1,13 +1,12 @@
-
- // ==Lampa==
- // name: IPTV PRO (XMLTV Edition)
- // version: 13.6
+// ==Lampa==
+// name: IPTV PRO (XMLTV Edition)
+// version: 13.7
 
 (function () {
     'use strict';
 
     if (!window.Lampa || !window.$) return;
-    if (window.__iptv_pro_136_initialized) return;
+    if (window.__iptv_pro_137_initialized) return;
 
     var KEY = 'iptv_pro_v12';
     var EPG_CACHE_KEY = 'iptv_pro_epg_cache_v132';
@@ -75,7 +74,6 @@
     };
 
     var activeIPTVInstance = null;
-    var pendingIPTVAction = '';
 
     function now() {
         return Date.now();
@@ -153,14 +151,13 @@
             try {
                 fn();
             } catch (e) {
-                console.error('[IPTV PRO 13.6] Callback:', e);
+                console.error('[IPTV PRO 13.7] Callback:', e);
             }
         });
     }
 
     /*
-     * Оригінальні TVG-ID із M3U.
-     * Ручних відповідностей ID немає.
+     * TVG-ID
      */
 
     function uniqueIds(ids) {
@@ -191,7 +188,7 @@
             hash = Math.imul(hash, 16777619);
         }
 
-        return 'iptv136_' + (hash >>> 0).toString(16) + '_' + source.length;
+        return 'iptv137_' + (hash >>> 0).toString(16) + '_' + source.length;
     }
 
     /*
@@ -214,7 +211,7 @@
         try {
             cache = Lampa.Storage.get(EPG_CACHE_KEY, null);
         } catch (e) {
-            console.warn('[IPTV PRO 13.6] Читання кешу:', e);
+            console.warn('[IPTV PRO 13.7] Читання кешу:', e);
             return false;
         }
 
@@ -280,7 +277,7 @@
         EPG.lastResult = 'Локальний кеш';
 
         console.log(
-            '[IPTV PRO 13.6] Кеш відновлено:',
+            '[IPTV PRO 13.7] Кеш відновлено:',
             EPG.channelCount,
             'каналів;',
             totalPrograms,
@@ -324,7 +321,7 @@
         });
 
         if (!totalPrograms) {
-            console.warn('[IPTV PRO 13.6] Кеш не збережено: немає передач');
+            console.warn('[IPTV PRO 13.7] Кеш не збережено: немає передач');
             return false;
         }
 
@@ -384,7 +381,7 @@
             EPG.cacheSource = 'Мережа + локальний кеш';
 
             console.log(
-                '[IPTV PRO 13.6] Кеш збережено:',
+                '[IPTV PRO 13.7] Кеш збережено:',
                 Object.keys(cache.channels).length,
                 'каналів;',
                 json.length,
@@ -393,7 +390,7 @@
 
             return true;
         } catch (e) {
-            console.warn('[IPTV PRO 13.6] Помилка збереження кешу:', e);
+            console.warn('[IPTV PRO 13.7] Помилка збереження кешу:', e);
             EPG.cacheSource = 'Помилка збереження кешу';
             return false;
         }
@@ -500,8 +497,7 @@
 
     /*
      * ЗАВАНТАЖЕННЯ EPG
-     *
-     * POST пакетами максимум по 40 tvg-id.
+     * POST-пакети максимум по 40 tvg-id.
      * GET-fallback не використовується.
      */
 
@@ -617,7 +613,7 @@
                     saveEPGCache();
 
                     console.log(
-                        '[IPTV PRO 13.6] EPG завершено:',
+                        '[IPTV PRO 13.7] EPG завершено:',
                         successfulBatches,
                         'успішних пакетів;',
                         failedBatches,
@@ -634,7 +630,7 @@
                         ? errors.slice(0, 5).join(' | ')
                         : 'У відповідях Worker немає валідних передач.';
 
-                    console.error('[IPTV PRO 13.6] EPG:', EPG.error);
+                    console.error('[IPTV PRO 13.7] EPG:', EPG.error);
                 }
 
                 finishAll();
@@ -705,7 +701,7 @@
                         );
 
                         console.warn(
-                            '[IPTV PRO 13.6] Помилка пакета:',
+                            '[IPTV PRO 13.7] Помилка пакета:',
                             currentNumber,
                             e
                         );
@@ -723,7 +719,7 @@
                     );
 
                     console.warn(
-                        '[IPTV PRO 13.6] HTTP-помилка:',
+                        '[IPTV PRO 13.7] HTTP-помилка:',
                         errors[errors.length - 1]
                     );
                 },
@@ -962,7 +958,7 @@
 
             if (panelMode === 'settings') {
                 box.append(item('НАЛАШТУВАННЯ', 'iptv-panel-title'));
-                box.append(item('IPTV PRO 13.6', 'iptv-panel-subtitle'));
+                box.append(item('IPTV PRO 13.7', 'iptv-panel-subtitle'));
                 box.append(item('Джерело телепрограми', 'iptv-label'));
                 box.append(item(EPG_URL, 'iptv-url'));
 
@@ -1368,7 +1364,7 @@
 
                 if (EPG.error) {
                     console.warn(
-                        '[IPTV PRO 13.6] EPG:',
+                        '[IPTV PRO 13.7] EPG:',
                         EPG.status,
                         EPG.error
                     );
@@ -1404,23 +1400,6 @@
 
                     loadError = '';
                     parse(data);
-
-                    /*
-                     * Виконуємо відкладену команду після завантаження
-                     * плейлиста, якщо сторінку відкрили з налаштувань.
-                     */
-                    if (pendingIPTVAction) {
-                        var action = pendingIPTVAction;
-                        pendingIPTVAction = '';
-
-                        if (action === 'refresh') {
-                            refreshEPG();
-                        } else if (action === 'diagnostics') {
-                            showPanel('diagnostics');
-                        } else if (action === 'settings') {
-                            showPanel('settings');
-                        }
-                    }
                 },
 
                 error: function (xhr, status, err) {
@@ -1438,7 +1417,7 @@
                     notify('Не вдалося завантажити IPTV плейлист');
 
                     console.error(
-                        '[IPTV PRO 13.6] Playlist error:',
+                        '[IPTV PRO 13.7] Playlist error:',
                         loadError
                     );
                 }
@@ -1446,14 +1425,14 @@
         }
 
         /*
-         * СТИЛІ
+         * СТИЛІ ОСНОВНОГО IPTV
          */
 
         function buildStyles() {
-            if ($('#iptv-pro-136-css').length) return;
+            if ($('#iptv-pro-137-css').length) return;
 
             $('head').append(
-                '<style id="iptv-pro-136-css">' +
+                '<style id="iptv-pro-137-css">' +
                 '.iptv-root{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:#0a0d13;color:#edf2fa;padding-top:4rem;box-sizing:border-box;font-family:inherit}' +
                 '.iptv-toolbar{display:flex;align-items:center;gap:.65rem;padding:.85rem 1.15rem;background:linear-gradient(110deg,#141c2b,#10141d);border-bottom:1px solid #293345;flex-shrink:0}' +
                 '.iptv-brand{font-size:1.25rem;font-weight:800;letter-spacing:.05em;margin-right:auto;white-space:nowrap}' +
@@ -1489,10 +1468,17 @@
                 '.iptv-status{color:#9bc1ff;background:#172842;border:1px solid #294a77;border-radius:.55rem;padding:.75rem;margin:.35rem 0}' +
                 '.iptv-error-title{color:#ffb0a9;font-size:.8rem;font-weight:800;letter-spacing:.06em;margin-top:.7rem;background:none;border:0;padding:.25rem 0}' +
                 '.iptv-error{color:#ffd0cb;background:#341e23;border:1px solid #643039;border-radius:.5rem;padding:.7rem;margin:.25rem 0;overflow-wrap:anywhere}' +
-                '.iptv-settings-page{padding:1.2rem;color:#edf2fa}' +
-                '.iptv-settings-title{font-size:1.4rem;font-weight:800;margin-bottom:.5rem}' +
-                '.iptv-settings-description{color:#9aa9bd;margin-bottom:1rem}' +
-                '@media(max-width:900px){.iptv-toolbar{flex-wrap:wrap;padding:.6rem}.iptv-brand{width:100%}.iptv-action{font-size:.8rem;padding:.55rem}.iptv-groups{width:27%}.iptv-channels{width:43%}.iptv-info{width:30%;padding:.7rem}.iptv-item{padding:.65rem;margin:.25rem;font-size:.85rem}.iptv-logo{width:30px;height:30px}}' +
+                '.iptv-standalone-page{position:fixed;inset:0;z-index:1200;box-sizing:border-box;overflow-y:auto;padding:5rem 2rem 2rem;background:#0a0d13;color:#edf2fa;font-family:inherit}' +
+                '.iptv-standalone-inner{max-width:1050px;margin:0 auto}' +
+                '.iptv-standalone-title{font-size:1.7rem;font-weight:850;color:#fff;margin:0 0 .5rem}' +
+                '.iptv-standalone-subtitle{color:#9caec7;font-size:1rem;margin:0 0 1.3rem}' +
+                '.iptv-standalone-section{padding:.9rem 1rem;margin:.45rem 0;border:1px solid #222e40;border-radius:.65rem;background:#111824;overflow-wrap:anywhere;word-break:break-word}' +
+                '.iptv-standalone-section strong{display:block;color:#8fb6ff;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}' +
+                '.iptv-standalone-button{display:block;width:100%;text-align:left;padding:.95rem 1rem;margin:.55rem 0;border:1px solid #303b50;border-radius:.65rem;background:#171f2d;color:#edf2fa;font-size:1rem;box-sizing:border-box}' +
+                '.iptv-standalone-button.active{background:#244a89;border-color:#72a3ff;color:#fff;box-shadow:0 0 0 2px rgba(114,163,255,.18)}' +
+                '.iptv-standalone-button-primary{background:#2857a5;border-color:#3f73c8;font-weight:750}' +
+                '.iptv-standalone-error{color:#ffd0cb;background:#341e23;border-color:#643039}' +
+                '@media(max-width:900px){.iptv-toolbar{flex-wrap:wrap;padding:.6rem}.iptv-brand{width:100%}.iptv-action{font-size:.8rem;padding:.55rem}.iptv-groups{width:27%}.iptv-channels{width:43%}.iptv-info{width:30%;padding:.7rem}.iptv-item{padding:.65rem;margin:.25rem;font-size:.85rem}.iptv-logo{width:30px;height:30px}.iptv-standalone-page{padding:4.5rem 1rem 1rem}}' +
                 '</style>'
             );
         }
@@ -1544,14 +1530,7 @@
             panelMode = '';
 
             activeIPTVInstance = {
-                refresh: refreshEPG,
-                showDiagnostics: function () {
-                    showPanel('diagnostics');
-                },
-                showSettings: function () {
-                    showPanel('settings');
-                },
-                renderPanel: renderPanel
+                refresh: refreshEPG
             };
 
             root = $('<div class="iptv-root"></div>');
@@ -1779,48 +1758,562 @@
     }
 
     /*
+     * ОКРЕМІ СТОРІНКИ СИСТЕМНИХ НАЛАШТУВАНЬ
+     *
+     * Важливо:
+     * - сторінки не відкривають IPTVComponent;
+     * - вони мають власний компонент та власну навігацію;
+     * - кнопка «Назад» повертає до попереднього екрана Lampa;
+     * - оновлення EPG доступне без переходу до списку каналів.
+     */
+
+    function standalonePageFactory(pageType, componentName) {
+        return function IPTVStandalonePage() {
+            var root;
+            var inner;
+            var alive = true;
+            var selectedIndex = 0;
+            var pageButtons = [];
+
+            function section(label, value, extraClass) {
+                var el = $('<div></div>')
+                    .addClass('iptv-standalone-section')
+                    .addClass(extraClass || '');
+
+                $('<strong></strong>').text(label).appendTo(el);
+                $('<div></div>').text(value).appendTo(el);
+
+                return el;
+            }
+
+            function addButton(title, action, primary) {
+                var index = pageButtons.length;
+
+                var el = $('<div></div>')
+                    .addClass('iptv-standalone-button selector')
+                    .addClass(primary ? 'iptv-standalone-button-primary' : '')
+                    .attr('tabindex', '0')
+                    .text(title);
+
+                el.on('hover:focus mouseenter', function () {
+                    selectedIndex = index;
+                    setFocus();
+                });
+
+                el.on('click hover:enter', function () {
+                    if (alive) action();
+                });
+
+                pageButtons.push({
+                    element: el,
+                    action: action
+                });
+
+                inner.append(el);
+            }
+
+            function setFocus() {
+                if (!root) return;
+
+                root.find('.iptv-standalone-button').removeClass('active');
+
+                if (!pageButtons.length) return;
+
+                selectedIndex = Math.max(
+                    0,
+                    Math.min(selectedIndex, pageButtons.length - 1)
+                );
+
+                var target = pageButtons[selectedIndex].element;
+
+                target.addClass('active');
+
+                if (target[0] && target[0].scrollIntoView) {
+                    target[0].scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            function refreshPage() {
+                renderPage();
+                setFocus();
+            }
+
+            function refreshEPGFromPage() {
+                if (!EPG.playlistIds || !EPG.playlistIds.length) {
+                    notify(
+                        'Спочатку відкрий IPTV PRO, щоб завантажити плейлист і tvg-id каналів.'
+                    );
+                    return;
+                }
+
+                if (EPG.loading) {
+                    EPG.refreshQueued = true;
+                    notify('Оновлення EPG вже виконується. Повторний запит поставлено в чергу.');
+                    refreshPage();
+                    return;
+                }
+
+                EPG.status = 'Запуск ручного оновлення...';
+                EPG.error = '';
+                refreshPage();
+
+                epgLoad(function () {
+                    if (!alive) return;
+
+                    refreshPage();
+
+                    if (EPG.error) {
+                        notify('EPG: ' + EPG.error);
+                    } else {
+                        notify(
+                            'EPG оновлено: ' +
+                            EPG.programmeCount + ' передач'
+                        );
+                    }
+                }, true);
+            }
+
+            function openIPTV() {
+                Lampa.Activity.push({
+                    title: 'IPTV PRO',
+                    component: 'iptv_pro'
+                });
+            }
+
+            function renderSettings() {
+                var pl = cfg.playlists[cfg.current_pl_index] ||
+                    cfg.playlists[0];
+
+                inner.append(
+                    section('Версія', 'IPTV PRO 13.7 · XMLTV Edition')
+                );
+
+                inner.append(
+                    section('Джерело EPG', EPG_URL)
+                );
+
+                inner.append(
+                    section(
+                        'Поточний плейлист',
+                        pl && pl.name ? pl.name : 'Без назви'
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'URL плейлиста',
+                        pl && pl.url ? pl.url : 'URL не задано'
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Стан EPG',
+                        EPG.status
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Останнє успішне оновлення',
+                        formatDate(EPG.lastSuccess)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Період кешування',
+                        'До ' + EPG_CACHE_HOURS + ' годин розкладу'
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Автоматичне оновлення',
+                        'Повторне завантаження — не частіше ніж раз на 3 години'
+                    )
+                );
+
+                addButton(
+                    EPG.loading
+                        ? 'Оновлення EPG виконується...'
+                        : '↻ Оновити телепрограму EPG',
+                    refreshEPGFromPage,
+                    true
+                );
+
+                addButton(
+                    'Відкрити діагностику EPG',
+                    function () {
+                        Lampa.Activity.push({
+                            title: 'Діагностика EPG',
+                            component: 'iptv_pro_epg_diagnostics'
+                        });
+                    }
+                );
+
+                addButton(
+                    'Відкрити IPTV PRO',
+                    openIPTV,
+                    false
+                );
+
+                addButton(
+                    'Оновити інформацію на сторінці',
+                    refreshPage,
+                    false
+                );
+
+                addButton(
+                    'Назад',
+                    function () {
+                        Lampa.Activity.backward();
+                    },
+                    false
+                );
+            }
+
+            function renderDiagnostics() {
+                inner.append(
+                    section('Стан EPG', EPG.status)
+                );
+
+                inner.append(
+                    section('Результат останньої спроби', EPG.lastResult)
+                );
+
+                inner.append(
+                    section('Режим запиту', EPG.requestMode)
+                );
+
+                inner.append(
+                    section(
+                        'Каналів у M3U з tvg-id',
+                        String(EPG.requestedChannelCount)
+                    )
+                );
+
+                inner.append(
+                    section('Розмір пакета', BATCH_SIZE + ' tvg-id')
+                );
+
+                inner.append(
+                    section('GET-fallback', 'Вимкнено; використовується POST')
+                );
+
+                inner.append(
+                    section(
+                        'HTTP-статус останнього запиту',
+                        String(EPG.httpStatus || 'Немає відповіді')
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Остання спроба',
+                        formatDate(EPG.lastAttempt)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Останній успіх',
+                        formatDate(EPG.lastSuccess)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Тривалість останнього завантаження',
+                        durationText(EPG.lastDuration)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Каналів XMLTV',
+                        String(EPG.channelCount)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Передач у розкладі',
+                        String(EPG.programmeCount)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Каналів зіставлено',
+                        String(EPG.matchedChannels)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Каналів без збігу',
+                        String(EPG.unmatchedChannels)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Джерело даних',
+                        EPG.cacheSource
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Кеш збережено',
+                        formatDate(EPG.cacheSavedAt)
+                    )
+                );
+
+                inner.append(
+                    section(
+                        'Вік даних EPG',
+                        EPG.loaded
+                            ? durationText(now() - EPG.loaded) + ' тому'
+                            : 'Дані відсутні'
+                    )
+                );
+
+                if (EPG.error) {
+                    inner.append(
+                        section('Подробиці помилки EPG', EPG.error, 'iptv-standalone-error')
+                    );
+                }
+
+                addButton(
+                    EPG.loading
+                        ? 'Оновлення EPG виконується...'
+                        : '↻ Повторити перевірку EPG',
+                    refreshEPGFromPage,
+                    true
+                );
+
+                addButton(
+                    'Оновити діагностичні дані',
+                    refreshPage,
+                    false
+                );
+
+                addButton(
+                    'Відкрити налаштування EPG',
+                    function () {
+                        Lampa.Activity.push({
+                            title: 'Налаштування EPG',
+                            component: 'iptv_pro_settings_page'
+                        });
+                    },
+                    false
+                );
+
+                addButton(
+                    'Відкрити IPTV PRO',
+                    openIPTV,
+                    false
+                );
+
+                addButton(
+                    'Назад',
+                    function () {
+                        Lampa.Activity.backward();
+                    },
+                    false
+                );
+            }
+
+            function renderPage() {
+                if (!inner) return;
+
+                inner.empty();
+                pageButtons = [];
+                selectedIndex = 0;
+
+                if (pageType === 'settings') {
+                    $('<div class="iptv-standalone-title"></div>')
+                        .text('Налаштування EPG')
+                        .appendTo(inner);
+
+                    $('<div class="iptv-standalone-subtitle"></div>')
+                        .text('IPTV PRO · XMLTV Edition')
+                        .appendTo(inner);
+
+                    renderSettings();
+                } else {
+                    $('<div class="iptv-standalone-title"></div>')
+                        .text('Діагностика EPG')
+                        .appendTo(inner);
+
+                    $('<div class="iptv-standalone-subtitle"></div>')
+                        .text('Стан завантаження, кешу та зіставлення каналів')
+                        .appendTo(inner);
+
+                    renderDiagnostics();
+                }
+            }
+
+            this.create = function () {
+                alive = true;
+
+                buildStandaloneStyles();
+
+                root = $('<div class="iptv-standalone-page"></div>');
+                inner = $('<div class="iptv-standalone-inner"></div>');
+
+                root.append(inner);
+                renderPage();
+
+                return root;
+            };
+
+            this.start = function () {
+                Lampa.Controller.add(componentName, {
+                    up: function () {
+                        selectedIndex = Math.max(0, selectedIndex - 1);
+                        setFocus();
+                    },
+
+                    down: function () {
+                        selectedIndex = Math.min(
+                            Math.max(0, pageButtons.length - 1),
+                            selectedIndex + 1
+                        );
+                        setFocus();
+                    },
+
+                    left: function () {
+                        selectedIndex = Math.max(0, selectedIndex - 1);
+                        setFocus();
+                    },
+
+                    right: function () {
+                        selectedIndex = Math.min(
+                            Math.max(0, pageButtons.length - 1),
+                            selectedIndex + 1
+                        );
+                        setFocus();
+                    },
+
+                    enter: function () {
+                        if (
+                            pageButtons[selectedIndex] &&
+                            pageButtons[selectedIndex].action
+                        ) {
+                            pageButtons[selectedIndex].action();
+                        }
+                    },
+
+                    back: function () {
+                        Lampa.Activity.backward();
+                    }
+                });
+
+                Lampa.Controller.toggle(componentName);
+                setFocus();
+            };
+
+            this.render = function () {
+                return root;
+            };
+
+            this.destroy = function () {
+                alive = false;
+
+                Lampa.Controller.remove(componentName);
+
+                if (root) {
+                    root.remove();
+                    root = null;
+                }
+
+                inner = null;
+                pageButtons = [];
+            };
+        };
+    }
+
+    function buildStandaloneStyles() {
+        if ($('#iptv-pro-137-css').length) return;
+
+        $('head').append(
+            '<style id="iptv-pro-137-css">' +
+            '.iptv-standalone-page{position:fixed;inset:0;z-index:1200;box-sizing:border-box;overflow-y:auto;padding:5rem 2rem 2rem;background:#0a0d13;color:#edf2fa;font-family:inherit}' +
+            '.iptv-standalone-inner{max-width:1050px;margin:0 auto}' +
+            '.iptv-standalone-title{font-size:1.7rem;font-weight:850;color:#fff;margin:0 0 .5rem}' +
+            '.iptv-standalone-subtitle{color:#9caec7;font-size:1rem;margin:0 0 1.3rem}' +
+            '.iptv-standalone-section{padding:.9rem 1rem;margin:.45rem 0;border:1px solid #222e40;border-radius:.65rem;background:#111824;overflow-wrap:anywhere;word-break:break-word}' +
+            '.iptv-standalone-section strong{display:block;color:#8fb6ff;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}' +
+            '.iptv-standalone-button{display:block;width:100%;text-align:left;padding:.95rem 1rem;margin:.55rem 0;border:1px solid #303b50;border-radius:.65rem;background:#171f2d;color:#edf2fa;font-size:1rem;box-sizing:border-box}' +
+            '.iptv-standalone-button.active{background:#244a89;border-color:#72a3ff;color:#fff;box-shadow:0 0 0 2px rgba(114,163,255,.18)}' +
+            '.iptv-standalone-button-primary{background:#2857a5;border-color:#3f73c8;font-weight:750}' +
+            '.iptv-standalone-error{color:#ffd0cb;background:#341e23;border-color:#643039}' +
+            '@media(max-width:900px){.iptv-standalone-page{padding:4.5rem 1rem 1rem}}' +
+            '</style>'
+        );
+    }
+
+    /*
      * СИСТЕМНІ НАЛАШТУВАННЯ IPTV PRO
      *
-     * Кнопки додаються через SettingsApi.addParam.
-     * Якщо IPTV уже відкрито, команда виконується одразу.
-     * Якщо IPTV закрито, команда передається компоненту
-     * і виконується після відкриття та завантаження M3U.
+     * Кожна команда відкриває потрібну сторінку окремо.
+     * «Налаштування EPG» та «Діагностика EPG» не відкривають
+     * список IPTV-каналів.
      */
 
     function openIPTVSettingsPanel(mode) {
-        if (
-            mode === 'refresh' &&
-            activeIPTVInstance &&
-            activeIPTVInstance.refresh
-        ) {
-            activeIPTVInstance.refresh();
+        if (mode === 'open') {
+            Lampa.Activity.push({
+                title: 'IPTV PRO',
+                component: 'iptv_pro'
+            });
             return;
         }
 
-        if (
-            mode === 'diagnostics' &&
-            activeIPTVInstance &&
-            activeIPTVInstance.showDiagnostics
-        ) {
-            activeIPTVInstance.showDiagnostics();
+        if (mode === 'refresh') {
+            if (activeIPTVInstance && activeIPTVInstance.refresh) {
+                activeIPTVInstance.refresh();
+                return;
+            }
+
+            if (!EPG.playlistIds || !EPG.playlistIds.length) {
+                notify(
+                    'Спочатку відкрий IPTV PRO, щоб завантажити плейлист і tvg-id каналів.'
+                );
+                return;
+            }
+
+            if (EPG.loading) {
+                EPG.refreshQueued = true;
+                notify('Оновлення EPG вже виконується. Повторний запит поставлено в чергу.');
+                return;
+            }
+
+            epgLoad(function () {
+                if (EPG.error) notify('EPG: ' + EPG.error);
+                else notify('EPG оновлено: ' + EPG.programmeCount + ' передач');
+            }, true);
+
             return;
         }
 
-        if (
-            mode === 'settings' &&
-            activeIPTVInstance &&
-            activeIPTVInstance.showSettings
-        ) {
-            activeIPTVInstance.showSettings();
+        if (mode === 'diagnostics') {
+            Lampa.Activity.push({
+                title: 'Діагностика EPG',
+                component: 'iptv_pro_epg_diagnostics'
+            });
             return;
         }
 
-        pendingIPTVAction = mode === 'open' ? '' : mode;
-
-        Lampa.Activity.push({
-            title: 'IPTV PRO',
-            component: 'iptv_pro'
-        });
+        if (mode === 'settings') {
+            Lampa.Activity.push({
+                title: 'Налаштування EPG',
+                component: 'iptv_pro_settings_page'
+            });
+        }
     }
 
     function addIPTVSettingButton(id, title, callback) {
@@ -1839,7 +2332,7 @@
 
     function registerIPTVSettings() {
         if (!Lampa.SettingsApi || !Lampa.SettingsApi.addComponent) {
-            console.warn('[IPTV PRO 13.6] SettingsApi недоступний');
+            console.warn('[IPTV PRO 13.7] SettingsApi недоступний');
             return;
         }
 
@@ -1850,7 +2343,7 @@
         });
 
         if (!Lampa.SettingsApi.addParam) {
-            console.warn('[IPTV PRO 13.6] SettingsApi.addParam недоступний');
+            console.warn('[IPTV PRO 13.7] SettingsApi.addParam недоступний');
             return;
         }
 
@@ -1915,7 +2408,7 @@
             }
         );
 
-        console.log('[IPTV PRO 13.6] Системні параметри зареєстровано');
+        console.log('[IPTV PRO 13.7] Системні параметри зареєстровано');
     }
 
     /*
@@ -1923,24 +2416,30 @@
      */
 
     function init() {
-        if (window.__iptv_pro_136_initialized) return;
+        if (window.__iptv_pro_137_initialized) return;
 
         var menu = $('.menu .menu__list');
 
         if (!menu.length) {
-            console.warn('[IPTV PRO 13.6] Меню Lampa ще не готове');
+            console.warn('[IPTV PRO 13.7] Меню Lampa ще не готове');
             return;
         }
 
-        window.__iptv_pro_136_initialized = true;
+        window.__iptv_pro_137_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
-        registerIPTVSettings();
+        Lampa.Component.add(
+            'iptv_pro_settings_page',
+            standalonePageFactory('settings', 'iptv_pro_settings_page')
+        );
 
-        /*
-         * Основний пункт у лівому меню.
-         */
+        Lampa.Component.add(
+            'iptv_pro_epg_diagnostics',
+            standalonePageFactory('diagnostics', 'iptv_pro_epg_diagnostics')
+        );
+
+        registerIPTVSettings();
 
         menu.find('.iptv-pro-menu').remove();
 
@@ -1951,8 +2450,6 @@
         );
 
         entry.on('hover:enter click', function () {
-            pendingIPTVAction = '';
-
             Lampa.Activity.push({
                 title: 'IPTV PRO',
                 component: 'iptv_pro'
@@ -1961,7 +2458,7 @@
 
         menu.append(entry);
 
-        console.log('[IPTV PRO 13.6] Ініціалізовано');
+        console.log('[IPTV PRO 13.7] Ініціалізовано');
     }
 
     function waitForInit() {
