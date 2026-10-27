@@ -1,6 +1,6 @@
 // ==Lampa==
 // name: IPTV PRO (XMLTV Edition)
-// version: 13.0
+// version: 13.1
 
 (function () {
     'use strict';
@@ -8,27 +8,33 @@
     if (!window.Lampa || !window.$) return;
 
     /*
-     * IPTV PRO 13.0 PREMIUM
+     * IPTV PRO 13.1 PREMIUM
      *
      * Збережено:
      * - Сумісність зі сховищем iptv_pro_v12
      * - Формат плейлистів M3U
      * - Cloudflare XMLTV Worker
-     * - Поточну систему груп і каналів
+     * - Систему груп і каналів
      * - Lampa.Player.play()
+     * - Налаштування та діагностику версії 13.0
      *
-     * Нове:
-     * - Преміальний інтерфейс
-     * - Ручне оновлення EPG
-     * - Панель налаштувань
-     * - Панель діагностики
-     * - Захист від паралельних оновлень
-     * - Збереження останнього успішного EPG у пам'яті
-     * - Статистика каналів і передач
-     * - Контроль життєвого циклу компонента
+     * Нове у 13.1:
+     * - Постійний локальний кеш EPG у Lampa.Storage
+     * - Відновлення телепрограми після перезапуску Lampa
+     * - Показ збережених даних під час фонового оновлення
+     * - Збереження лише після успішного розбору XMLTV
+     * - Захист від порожнього або некоректного кешу
+     * - Обмеження обсягу збережених передач
+     * - Відображення джерела EPG у діагностиці
      */
 
     var KEY = 'iptv_pro_v12';
+
+    var EPG_CACHE_KEY = 'iptv_pro_epg_cache_v131';
+
+    var EPG_CACHE_HOURS = 36;
+
+    var EPG_CACHE_MAX_BYTES = 1500000;
 
     var EPG_URL =
         'https://iptv-epg-proxy.unclezhenya24.workers.dev/epg.xml';
@@ -63,16 +69,13 @@
         cfg.current_pl_index = 0;
     }
 
-    // Не змінюємо джерело EPG на старий HTTP-адрес.
+    // Джерело EPG зафіксоване на робочому Cloudflare Worker.
     cfg.epg_url = EPG_URL;
 
     Lampa.Storage.set(KEY, cfg);
 
     /*
      * EPG MANAGER
-     *
-     * channels і aliases зберігають останні успішні дані.
-     * Помилка нового запиту не очищає робочий розклад.
      */
 
     var EPG = {
@@ -93,10 +96,11 @@
         lastResult: 'Ще не завантажувалось',
         loading: false,
         refreshQueued: false,
-        callbacks: []
-    };
+        callbacks: [],
 
-    var globalAlive = true;
+        cacheSource: 'Немає',
+        cacheSavedAt: 0
+    };
 
     function now() {
         return Date.now();
@@ -171,7 +175,7 @@
         try {
             fn();
         } catch (e) {
-            console.error('[IPTV PRO 13.0] Callback error:', e);
+            console.error('[IPTV PRO 13.1] Callback error:', e);
         }
     }
 
@@ -184,6 +188,210 @@
             safeCall(fn);
         });
     }
+
+    /*
+     * PERSISTENT EPG CACHE
+     *
+     * Зберігаємо вже розібраний XMLTV, а не вихідний XML.
+     * Кеш не прив'язаний до життєвого циклу компонента.
+     */
+
+    function restoreEPGCache() {
+        var cache;
+
+        try {
+            cache = Lampa.Storage.get(EPG_CACHE_KEY, null);
+        } catch (e) {
+            console.warn(
+                '[IPTV PRO 13.1] Не вдалося прочитати кеш:',
+                e
+            );
+
+            return false;
+        }
+
+        if (
+            !cache ||
+            cache.version !== 1 ||
+            !cache.channels ||
+            typeof cache.channels !== 'object' ||
+            !cache.savedAt
+        ) {
+            return false;
+        }
+
+        var channelIds = Object.keys(cache.channels);
+        var restoredChannels = {};
+        var totalPrograms = 0;
+
+        if (!channelIds.length) return false;
+
+        var cutoffStart = now() - 2 * 60 * 60 * 1000;
+        var cutoffStop = now() + EPG_CACHE_HOURS * 60 * 60 * 1000;
+
+        channelIds.forEach(function (id) {
+            var programs = cache.channels[id];
+
+            if (!Array.isArray(programs)) return;
+
+            var valid = programs.filter(function (p) {
+                return p &&
+                    isFinite(p.start) &&
+                    isFinite(p.stop) &&
+                    p.stop > p.start &&
+                    p.stop > cutoffStart &&
+                    p.start < cutoffStop;
+            });
+
+            if (valid.length) {
+                restoredChannels[id] = valid;
+                totalPrograms += valid.length;
+            }
+        });
+
+        if (!totalPrograms) {
+            console.warn(
+                '[IPTV PRO 13.1] У кеші немає актуальних передач'
+            );
+
+            return false;
+        }
+
+        EPG.channels = restoredChannels;
+        EPG.aliases =
+            cache.aliases &&
+            typeof cache.aliases === 'object'
+                ? cache.aliases
+                : {};
+
+        EPG.loaded = cache.savedAt;
+        EPG.lastSuccess = cache.savedAt;
+        EPG.cacheSavedAt = cache.savedAt;
+        EPG.cacheSource = 'Локальний кеш';
+        EPG.channelCount =
+            cache.channelCount || Object.keys(restoredChannels).length;
+        EPG.programmeCount = totalPrograms;
+        EPG.status = 'Відновлено з локального кешу';
+        EPG.lastResult = 'Локальний кеш';
+
+        console.log(
+            '[IPTV PRO 13.1] EPG відновлено з кешу:',
+            Object.keys(restoredChannels).length,
+            'каналів;',
+            totalPrograms,
+            'передач'
+        );
+
+        return true;
+    }
+
+    function saveEPGCache() {
+        var cutoffStart = now() - 2 * 60 * 60 * 1000;
+        var cutoffStop = now() + EPG_CACHE_HOURS * 60 * 60 * 1000;
+
+        var compactChannels = {};
+        var totalPrograms = 0;
+
+        Object.keys(EPG.channels).forEach(function (id) {
+            var source = EPG.channels[id] || [];
+
+            var programs = source.filter(function (p) {
+                return p &&
+                    p.stop > cutoffStart &&
+                    p.start < cutoffStop;
+            });
+
+            if (!programs.length) return;
+
+            // Не зберігаємо надмірну кількість записів одного каналу.
+            programs = programs.slice(0, 80).map(function (p) {
+                return {
+                    start: p.start,
+                    stop: p.stop,
+                    title: String(p.title || '').slice(0, 300),
+                    desc: String(p.desc || '').slice(0, 500)
+                };
+            });
+
+            compactChannels[id] = programs;
+            totalPrograms += programs.length;
+        });
+
+        if (!totalPrograms) {
+            console.warn(
+                '[IPTV PRO 13.1] Кеш не збережено: немає передач'
+            );
+
+            return false;
+        }
+
+        var cache = {
+            version: 1,
+            savedAt: EPG.loaded || now(),
+            channelCount: EPG.channelCount,
+            channels: compactChannels,
+            aliases: EPG.aliases
+        };
+
+        try {
+            var json = JSON.stringify(cache);
+
+            // Якщо обсяг завеликий, прибираємо описи передач.
+            if (json.length > EPG_CACHE_MAX_BYTES) {
+                Object.keys(cache.channels).forEach(function (id) {
+                    cache.channels[id].forEach(function (p) {
+                        p.desc = '';
+                    });
+                });
+
+                json = JSON.stringify(cache);
+            }
+
+            if (json.length > EPG_CACHE_MAX_BYTES) {
+                console.warn(
+                    '[IPTV PRO 13.1] Кеш завеликий для збереження:',
+                    json.length,
+                    'символів'
+                );
+
+                EPG.cacheSource = 'Кеш завеликий для збереження';
+
+                return false;
+            }
+
+            Lampa.Storage.set(EPG_CACHE_KEY, cache);
+
+            EPG.cacheSavedAt = cache.savedAt;
+            EPG.cacheSource = 'Мережа + локальний кеш';
+
+            console.log(
+                '[IPTV PRO 13.1] Кеш EPG збережено:',
+                totalPrograms,
+                'передач;',
+                json.length,
+                'символів'
+            );
+
+            return true;
+        } catch (e) {
+            console.warn(
+                '[IPTV PRO 13.1] Помилка збереження кешу:',
+                e
+            );
+
+            EPG.cacheSource = 'Помилка збереження кешу';
+
+            return false;
+        }
+    }
+
+    // Відновлення виконується під час запуску скрипту.
+    // Компонент ще не відкрито, тому кеш доступний відразу.
+    restoreEPGCache();
+
+    /*
+     * XMLTV PARSER
+     */
 
     function parseEPG(body) {
         if (!body || !String(body).trim()) {
@@ -281,11 +489,6 @@
             throw new Error('Не знайдено каналів у XMLTV');
         }
 
-        /*
-         * Нуль валідних передач не вважаємо успішним
-         * оновленням. Старі дані залишаються доступними.
-         */
-
         if (!validProgrammes) {
             throw new Error(
                 'XML завантажено, але валідних передач не знайдено. ' +
@@ -301,6 +504,10 @@
         };
     }
 
+    /*
+     * EPG LOADER
+     */
+
     function epgLoad(done, force) {
         if (done) EPG.callbacks.push(done);
 
@@ -315,12 +522,6 @@
 
             return;
         }
-
-        /*
-         * Якщо запит уже виконується, не запускаємо другий
-         * одночасно. Для примусового оновлення ставимо
-         * новий запит у чергу після поточного.
-         */
 
         if (EPG.request) {
             if (force) EPG.refreshQueued = true;
@@ -357,8 +558,8 @@
                     var result = parseEPG(body);
 
                     /*
-                     * Замінюємо дані тільки після повного
-                     * успішного розбору XMLTV.
+                     * Міняємо робочий розклад лише після того,
+                     * як XMLTV успішно розібрано.
                      */
 
                     EPG.channels = result.channels;
@@ -370,22 +571,25 @@
                     EPG.error = '';
                     EPG.status = 'EPG успішно оновлено';
                     EPG.lastResult = 'Успішно';
+                    EPG.cacheSource = 'Мережа';
+
+                    // Постійний кеш оновлюємо лише після успішного парсингу.
+                    saveEPGCache();
 
                     console.log(
-                        '[IPTV PRO 13.0] EPG оновлено:',
+                        '[IPTV PRO 13.1] EPG оновлено:',
                         EPG.channelCount,
                         'каналів;',
                         EPG.programmeCount,
                         'передач'
                     );
-
                 } catch (e) {
                     EPG.status = 'Помилка XMLTV';
                     EPG.error = String(e.message || e);
                     EPG.lastResult = 'Помилка обробки XMLTV';
 
                     console.error(
-                        '[IPTV PRO 13.0] Помилка XMLTV:',
+                        '[IPTV PRO 13.1] Помилка XMLTV:',
                         e
                     );
                 }
@@ -408,7 +612,7 @@
                 EPG.lastResult = 'Помилка запиту';
 
                 console.error(
-                    '[IPTV PRO 13.0] Помилка EPG:',
+                    '[IPTV PRO 13.1] Помилка EPG:',
                     EPG.error
                 );
             },
@@ -417,12 +621,6 @@
                 EPG.lastDuration = now() - startedAt;
                 EPG.loading = false;
                 EPG.request = null;
-
-                /*
-                 * Примусове оновлення, поставлене в чергу,
-                 * виконується після завершення активного.
-                 * Callback-и залишаються в черзі до його кінця.
-                 */
 
                 if (EPG.refreshQueued) {
                     EPG.refreshQueued = false;
@@ -438,6 +636,10 @@
 
         EPG.request = request;
     }
+
+    /*
+     * PROGRAM MATCHING
+     */
 
     function findPrograms(c) {
         var id = EPG.channels[c.tvg_id]
@@ -482,7 +684,7 @@
     }
 
     /*
-     * COMPONENT
+     * IPTV COMPONENT
      */
 
     function IPTVComponent() {
@@ -653,7 +855,7 @@
 
                 box.append(
                     item(
-                        'IPTV PRO 13.0 Premium',
+                        'IPTV PRO 13.1 Premium',
                         'iptv-panel-subtitle'
                     )
                 );
@@ -689,7 +891,16 @@
 
                 box.append(
                     item(
-                        'Автоматичне кешування: 3 години',
+                        'Автоматичне оновлення: кожні 3 години',
+                        'iptv-muted'
+                    )
+                );
+
+                box.append(
+                    item(
+                        'Локальний кеш: до ' +
+                        EPG_CACHE_HOURS +
+                        ' годин розкладу',
                         'iptv-muted'
                     )
                 );
@@ -805,7 +1016,22 @@
 
                 box.append(
                     item(
-                        'Поточний кеш: ' +
+                        'Джерело даних: ' + EPG.cacheSource,
+                        'iptv-value'
+                    )
+                );
+
+                box.append(
+                    item(
+                        'Кеш збережено: ' +
+                        formatDate(EPG.cacheSavedAt),
+                        'iptv-value'
+                    )
+                );
+
+                box.append(
+                    item(
+                        'Вік кешу: ' +
                         (
                             EPG.loaded
                                 ? durationText(now() - EPG.loaded) + ' тому'
@@ -1080,6 +1306,10 @@
             }
         }
 
+        /*
+         * M3U PARSER
+         */
+
         function parse(body) {
             groups = {
                 '⭐ Обране': []
@@ -1142,11 +1372,6 @@
                 });
             });
 
-            /*
-             * Статистика зіставлення: рахуємо канали плейлиста,
-             * для яких існує хоча б один відповідний EPG-ID.
-             */
-
             var matched = 0;
             var unmatched = 0;
 
@@ -1176,6 +1401,10 @@
                 renderChannels(groups[names[gi]]);
             }
         }
+
+        /*
+         * PLAYLIST LOADER
+         */
 
         function load() {
             var pl = cfg.playlists[cfg.current_pl_index] ||
@@ -1225,18 +1454,22 @@
                     notify('Не вдалося завантажити IPTV плейлист');
 
                     console.error(
-                        '[IPTV PRO 13.0] Playlist error:',
+                        '[IPTV PRO 13.1] Playlist error:',
                         loadError
                     );
                 }
             });
         }
 
+        /*
+         * PREMIUM STYLES
+         */
+
         function buildStyles() {
-            if ($('#iptv-pro-130-css').length) return;
+            if ($('#iptv-pro-131-css').length) return;
 
             $('head').append(
-                '<style id="iptv-pro-130-css">' +
+                '<style id="iptv-pro-131-css">' +
 
                 '.iptv-root{' +
                     'position:fixed;inset:0;z-index:1000;' +
@@ -1463,6 +1696,10 @@
             );
         }
 
+        /*
+         * TOOLBAR
+         */
+
         function buildToolbar() {
             toolbar = $('<div class="iptv-toolbar"></div>');
 
@@ -1504,6 +1741,10 @@
             }
         }
 
+        /*
+         * COMPONENT LIFECYCLE
+         */
+
         this.create = function () {
             alive = true;
             panelMode = '';
@@ -1523,8 +1764,17 @@
 
             root.append(toolbar, flex);
 
+            /*
+             * Спочатку запускаємо завантаження плейлиста.
+             * EPG-кеш уже відновлено на рівні скрипту.
+             */
             load();
 
+            /*
+             * Якщо кеш свіжий, epgLoad поверне його без мережевого
+             * запиту. Якщо застарілий — покаже старі дані й оновить
+             * їх у фоні.
+             */
             epgLoad(function () {
                 if (!alive) return;
 
@@ -1536,7 +1786,7 @@
 
                 if (EPG.error) {
                     console.warn(
-                        '[IPTV PRO 13.0] EPG:',
+                        '[IPTV PRO 13.1] EPG:',
                         EPG.status,
                         EPG.error
                     );
@@ -1546,9 +1796,7 @@
             timer = setInterval(function () {
                 if (!alive) return;
 
-                if (panelMode) {
-                    return;
-                }
+                if (panelMode) return;
 
                 if (chosen) details(chosen);
             }, 60000);
@@ -1725,9 +1973,9 @@
      */
 
     function init() {
-        if (window.__iptv_pro_130_initialized) return;
+        if (window.__iptv_pro_131_initialized) return;
 
-        window.__iptv_pro_130_initialized = true;
+        window.__iptv_pro_131_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
@@ -1735,16 +1983,13 @@
 
         if (!menu.length) {
             console.warn(
-                '[IPTV PRO 13.0] Меню Lampa не знайдено під час init'
+                '[IPTV PRO 13.1] Меню Lampa не знайдено під час init'
             );
 
             return;
         }
 
-        /*
-         * Прибираємо тільки дублікати власного пункту меню.
-         */
-
+        // Прибираємо тільки дублікати нашого пункту меню.
         menu.find('.iptv-pro-menu').remove();
 
         var entry = $(
@@ -1762,7 +2007,7 @@
 
         menu.append(entry);
 
-        console.log('[IPTV PRO 13.0] Ініціалізовано');
+        console.log('[IPTV PRO 13.1] Ініціалізовано');
     }
 
     if (window.app_ready) {
