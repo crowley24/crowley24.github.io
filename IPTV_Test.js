@@ -1,6 +1,7 @@
-// ==Lampa==
-// name: IPTV PRO (XMLTV Edition)
-// version: 14.0.0
+
+ // ==Lampa==
+ // name: IPTV PRO (XMLTV Edition)
+ // version: 14.0.1
 
 (function () {
     'use strict';
@@ -83,7 +84,7 @@
     }
 
     function logPrefix() {
-        return '[IPTV PRO 14.0.0]';
+        return '[IPTV PRO 14.0.1]';
     }
 
     function formatDate(timestamp) {
@@ -190,11 +191,6 @@
         return (hash >>> 0).toString(16);
     }
 
-    /*
-     * Новий підпис враховує і адресу плейлиста, і його tvg-id.
-     * Це не дозволяє різним плейлистам з однаковими ID
-     * випадково використовувати один кеш.
-     */
     function makePlaylistSignature(ids, playlistUrl) {
         var sortedIds = (ids || []).slice().sort();
 
@@ -206,10 +202,6 @@
         return 'iptv140_' + hashString(source) + '_' + source.length;
     }
 
-    /*
-     * Підпис попередньої версії потрібен для одноразового
-     * відновлення сумісності зі старим локальним кешем.
-     */
     function makeLegacySignature(ids, playlistUrl) {
         var source = ids && ids.length
             ? ids.slice().sort().join('\n')
@@ -223,11 +215,6 @@
      */
 
     function cancelEPGLoad(reason) {
-        /*
-         * Спочатку змінюємо generation. Якщо abort викличе
-         * error/complete старого AJAX, його обробники побачать
-         * невідповідність generation і не продовжать чергу.
-         */
         EPG.generation++;
 
         var request = EPG.request;
@@ -586,10 +573,7 @@
 
     /*
      * ЗАВАНТАЖЕННЯ EPG
-     *
-     * Використовується тільки POST із масивом ids.
-     * Максимальний розмір пакета — 40 tvg-id.
-     * GET-fallback відсутній.
+     * Тільки POST; пакети по 40 tvg-id; без GET-fallback.
      */
 
     function epgLoad(done, force) {
@@ -627,10 +611,6 @@
         var generation = EPG.generation;
         var signature = EPG.playlistSignature;
 
-        /*
-         * Зберігаємо попередні дані до завершення оновлення.
-         * При повній помилці мережі вони залишаться доступними.
-         */
         var previousChannels = EPG.channels;
         var previousAliases = EPG.aliases;
         var previousLoaded = EPG.loaded;
@@ -681,11 +661,6 @@
 
             if (EPG.refreshQueued) {
                 EPG.refreshQueued = false;
-
-                /*
-                 * Повторне оновлення запускається тільки для того самого
-                 * актуального покоління запитів.
-                 */
                 epgLoad(null, true);
                 return;
             }
@@ -733,10 +708,6 @@
 
             if (batchIndex >= batches.length) {
                 if (totalProgrammes > 0) {
-                    /*
-                     * При частковому успіху доповнюємо нові результати
-                     * попередніми даними, щоб невдалі пакети не зникли.
-                     */
                     if (failedBatches > 0) mergePreviousData();
 
                     Object.keys(allChannels).forEach(function (id) {
@@ -777,10 +748,6 @@
                         EPG.lastResult = 'Успішно';
                     }
 
-                    /*
-                     * Передаємо підпис саме цього запуску, а не читаємо
-                     * його з глобального стану під час запису кешу.
-                     */
                     if (generation === EPG.generation) {
                         saveEPGCache(signature);
                     }
@@ -798,10 +765,6 @@
                         'передач'
                     );
                 } else {
-                    /*
-                     * Нічого не перезаписуємо, якщо оновлення повністю
-                     * провалилося. Старі дані залишаються в пам'яті.
-                     */
                     EPG.channels = previousChannels;
                     EPG.aliases = previousAliases;
                     EPG.loaded = previousLoaded;
@@ -923,10 +886,6 @@
                     },
 
                     complete: function () {
-                        /*
-                         * Старий запит не має права запускати наступний
-                         * пакет після зміни плейлиста або destroy().
-                         */
                         if (!isCurrentRun()) return;
 
                         EPG.request = null;
@@ -1066,7 +1025,7 @@
         var pl = getPlaylist();
 
         return [
-            'IPTV PRO 14.0.0 · XMLTV Edition',
+            'IPTV PRO 14.0.1 · XMLTV Edition',
             '',
             'Джерело EPG: ' + EPG_URL,
             'Плейлист: ' + (pl.name || 'Без назви'),
@@ -1117,7 +1076,7 @@
         updateMatchCounts();
 
         return [
-            'IPTV PRO 14.0.0 — ДІАГНОСТИКА EPG',
+            'IPTV PRO 14.0.1 — ДІАГНОСТИКА EPG',
             '',
             'Стан: ' + EPG.status,
             'Результат: ' + EPG.lastResult,
@@ -1156,7 +1115,7 @@
 
         if (!EPG.playlistIds || !EPG.playlistIds.length) {
             notify(
-                'Спочатку відкрий IPTV PRO, щоб завантажити плейлист і tvg-id каналів.'
+                'Спочатку відкрий ТБ, щоб завантажити плейлист і tvg-id каналів.'
             );
             return;
         }
@@ -1324,7 +1283,7 @@
 
             if (panelMode === 'settings') {
                 box.append(item('НАЛАШТУВАННЯ', 'iptv-panel-title'));
-                box.append(item('IPTV PRO 14.0.0', 'iptv-panel-subtitle'));
+                box.append(item('IPTV PRO 14.0.1', 'iptv-panel-subtitle'));
                 box.append(item('Джерело телепрограми', 'iptv-label'));
                 box.append(item(EPG_URL, 'iptv-url'));
 
@@ -1591,10 +1550,6 @@
         function parse(body) {
             var source = String(body || '').replace(/^\uFEFF/, '').trim();
 
-            /*
-             * Захист від HTML-сторінок помилки, JSON-відповідей
-             * та інших відповідей, які не є M3U.
-             */
             if (
                 !source ||
                 (
@@ -1675,10 +1630,6 @@
             var oldSignature = EPG.playlistSignature;
             var changedPlaylist = newSignature !== oldSignature;
 
-            /*
-             * Якщо попередній EPG ще завантажується, скасовуємо його
-             * перед тим, як змінити глобальний підпис плейлиста.
-             */
             if (changedPlaylist || EPG.loading || EPG.request) {
                 cancelEPGLoad('зміна або повторне завантаження плейлиста');
             }
@@ -1811,9 +1762,6 @@
         function reloadPlaylist() {
             if (!alive) return;
 
-            /*
-             * Інвалідуємо стару відповідь M3U до abort.
-             */
             playlistGeneration++;
 
             if (plRequest && plRequest.readyState !== 4) {
@@ -1824,9 +1772,6 @@
 
             plRequest = null;
 
-            /*
-             * Старий EPG не повинен записати дані під новим підписом.
-             */
             cancelEPGLoad('перезавантаження плейлиста');
 
             if (colG) colG.empty();
@@ -1899,7 +1844,7 @@
             toolbar = $('<div class="iptv-toolbar"></div>');
 
             toolbar.append(
-                '<div class="iptv-brand">IPTV PRO<small>PREMIUM · XMLTV</small></div>'
+                '<div class="iptv-brand">ТБ<small>ТЕЛЕПРОГРАМА · XMLTV</small></div>'
             );
 
             toolbarActions.forEach(function (action, i) {
@@ -2145,10 +2090,6 @@
 
             plRequest = null;
 
-            /*
-             * Інвалідуємо поточне покоління EPG до abort.
-             * Старий complete не зможе запустити наступний пакет.
-             */
             cancelEPGLoad('компонент знищено');
 
             Lampa.Controller.remove('iptv_pro');
@@ -2166,13 +2107,17 @@
     }
 
     /*
-     * СИСТЕМНІ НАЛАШТУВАННЯ IPTV PRO
+     * СИСТЕМНІ НАЛАШТУВАННЯ IPTV
+     *
+     * Реєстрація SettingsApi навмисно не викликається,
+     * щоб не створювати другий пункт IPTV у меню налаштувань.
+     * Самі функції залишені для сумісності з поточною версією.
      */
 
     function openIPTVSettingsPanel(mode) {
         if (mode === 'open') {
             Lampa.Activity.push({
-                title: 'IPTV PRO',
+                title: 'ТБ',
                 component: 'iptv_pro'
             });
 
@@ -2317,19 +2262,32 @@
         window.__iptv_pro_140_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
-        registerIPTVSettings();
+
+        /*
+         * registerIPTVSettings() навмисно не викликаємо:
+         * пункт меню буде тільки один — власний пункт «ТБ».
+         */
 
         menu.find('.iptv-pro-menu').remove();
 
         var entry = $(
             '<li class="menu__item selector iptv-pro-menu">' +
-                '<div class="menu__text">IPTV PRO</div>' +
+                '<div class="menu__ico">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ' +
+                        'width="24" height="24" fill="none" stroke="currentColor" ' +
+                        'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                        '<rect x="3" y="7" width="18" height="13" rx="2"/>' +
+                        '<path d="M8 3l4 4 4-4"/>' +
+                        '<path d="M10 11l5 3-5 3z" fill="currentColor" stroke="none"/>' +
+                    '</svg>' +
+                '</div>' +
+                '<div class="menu__text">ТБ</div>' +
             '</li>'
         );
 
         entry.on('hover:enter click', function () {
             Lampa.Activity.push({
-                title: 'IPTV PRO',
+                title: 'ТБ',
                 component: 'iptv_pro'
             });
         });
