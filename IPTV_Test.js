@@ -763,62 +763,59 @@
     }
 
     function editPlaylistUrl() {
-        var pl = getPlaylist();
+    var pl = getPlaylist();
 
-        if (!pl) {
-            notify('Плейлист не знайдено.');
-            return;
-        }
-
-        if (!Lampa.Input || typeof Lampa.Input.show !== 'function') {
-            notify(
-                'У цій версії Lampa немає доступного вікна введення. ' +
-                'URL не змінено.'
-            );
-            return;
-        }
-
-        Lampa.Input.show({
-            title: 'URL плейлиста M3U',
-            value: pl.url || '',
-            placeholder: 'https://example.com/playlist.m3u',
-            free: true,
-
-            onBack: function () {},
-
-            onSelect: function (value) {
-                var url = String(value || '').trim();
-
-                if (!url) {
-                    notify('URL не може бути порожнім.');
-                    return;
-                }
-
-                if (!/^https?:\/\/\S+$/i.test(url)) {
-                    notify('Введи коректну HTTP або HTTPS адресу.');
-                    return;
-                }
-
-                if (url === pl.url) {
-                    notify('URL не змінився.');
-                    return;
-                }
-
-                pl.url = url;
-
-                if (!saveConfig()) return;
-
-                notify('URL плейлиста збережено.');
-
-                if (
-                    activeIPTVInstance &&
-                    typeof activeIPTVInstance.reloadPlaylist === 'function'
-                ) {
-                    activeIPTVInstance.reloadPlaylist();
-                }
-            }
-        });
+    if (!pl) {
+        notify('Плейлист не знайдено.');
+        return;
     }
+
+    function saveUrl(value) {
+        var url = String(value || '').trim();
+
+        if (!url) {
+            notify('Адреса M3U не може бути порожньою.');
+            return;
+        }
+
+        if (!/^https?:\/\/\S+$/i.test(url)) {
+            notify('Введи коректну HTTP або HTTPS адресу.');
+            return;
+        }
+
+        pl.url = url;
+
+        try {
+            Lampa.Storage.set(KEY, cfg);
+        } catch (e) {
+            notify('Не вдалося зберегти адресу M3U.');
+            console.error('[IPTV PRO] Помилка збереження:', e);
+            return;
+        }
+
+        notify('Адресу M3U збережено.');
+
+        if (
+            activeIPTVInstance &&
+            typeof activeIPTVInstance.reloadPlaylist === 'function'
+        ) {
+            activeIPTVInstance.reloadPlaylist();
+        }
+    }
+
+    if (Lampa.Input && typeof Lampa.Input.edit === 'function') {
+        Lampa.Input.edit({
+            title: 'Ввести адресу M3U-плейлиста',
+            value: pl.url || '',
+            free: true,
+            nosave: true
+        }, function (value) {
+            saveUrl(value);
+        });
+    } else {
+        notify('У цій збірці Lampa недоступне введення тексту.');
+    }
+}
 
     function getSettingsInfo() {
         var pl = getPlaylist();
