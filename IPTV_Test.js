@@ -1,13 +1,12 @@
-
- // ==Lampa==
- // name: IPTV PRO (XMLTV Edition)
- // version: 13.9
+// ==Lampa==
+// name: IPTV PRO (XMLTV Edition)
+// version: 14.0.0
 
 (function () {
     'use strict';
 
     if (!window.Lampa || !window.$) return;
-    if (window.__iptv_pro_139_initialized) return;
+    if (window.__iptv_pro_140_initialized) return;
 
     var KEY = 'iptv_pro_v12';
     var EPG_CACHE_KEY = 'iptv_pro_epg_cache_v132';
@@ -44,6 +43,7 @@
     }
 
     if (!cfg.epg_url) cfg.epg_url = EPG_URL;
+
     Lampa.Storage.set(KEY, cfg);
 
     var EPG = {
@@ -71,7 +71,9 @@
         playlistIds: [],
         requestMode: 'Не виконувався',
         fallbackUsed: false,
-        requestedChannelCount: 0
+        requestedChannelCount: 0,
+        generation: 0,
+        run: null
     };
 
     var activeIPTVInstance = null;
@@ -80,8 +82,13 @@
         return Date.now();
     }
 
+    function logPrefix() {
+        return '[IPTV PRO 14.0.0]';
+    }
+
     function formatDate(timestamp) {
         if (!timestamp) return 'Немає даних';
+
         var d = new Date(timestamp);
 
         return (
@@ -122,6 +129,7 @@
         );
 
         var off = (+m[8] * 60 + +m[9]) * 60000;
+
         return t + (m[7] === '+' ? -off : off);
     }
 
@@ -142,16 +150,17 @@
 
         list.forEach(function (fn) {
             if (typeof fn !== 'function') return;
+
             try {
                 fn();
             } catch (e) {
-                console.error('[IPTV PRO 13.9] Callback:', e);
+                console.error(logPrefix(), 'Callback:', e);
             }
         });
     }
 
     /*
-     * TVG-ID
+     * TVG-ID І ПІДПИС ПЛЕЙЛИСТА
      */
 
     function uniqueIds(ids) {
@@ -160,7 +169,9 @@
 
         (ids || []).forEach(function (value) {
             var id = String(value || '').trim();
+
             if (!id || seen[id]) return;
+
             seen[id] = true;
             result.push(id);
         });
@@ -168,11 +179,7 @@
         return result;
     }
 
-    function makePlaylistSignature(ids, playlistUrl) {
-        var source = ids && ids.length
-            ? ids.slice().sort().join('\n')
-            : 'NO_TVG_IDS\n' + String(playlistUrl || '');
-
+    function hashString(source) {
         var hash = 2166136261;
 
         for (var i = 0; i < source.length; i++) {
@@ -180,7 +187,68 @@
             hash = Math.imul(hash, 16777619);
         }
 
-        return 'iptv139_' + (hash >>> 0).toString(16) + '_' + source.length;
+        return (hash >>> 0).toString(16);
+    }
+
+    /*
+     * Новий підпис враховує і адресу плейлиста, і його tvg-id.
+     * Це не дозволяє різним плейлистам з однаковими ID
+     * випадково використовувати один кеш.
+     */
+    function makePlaylistSignature(ids, playlistUrl) {
+        var sortedIds = (ids || []).slice().sort();
+
+        var source = [
+            'URL=' + String(playlistUrl || '').trim(),
+            'IDS=' + sortedIds.join('\n')
+        ].join('\n');
+
+        return 'iptv140_' + hashString(source) + '_' + source.length;
+    }
+
+    /*
+     * Підпис попередньої версії потрібен для одноразового
+     * відновлення сумісності зі старим локальним кешем.
+     */
+    function makeLegacySignature(ids, playlistUrl) {
+        var source = ids && ids.length
+            ? ids.slice().sort().join('\n')
+            : 'NO_TVG_IDS\n' + String(playlistUrl || '');
+
+        return 'iptv139_' + hashString(source) + '_' + source.length;
+    }
+
+    /*
+     * КЕРУВАННЯ ЗАВАНТАЖЕННЯМ EPG
+     */
+
+    function cancelEPGLoad(reason) {
+        /*
+         * Спочатку змінюємо generation. Якщо abort викличе
+         * error/complete старого AJAX, його обробники побачать
+         * невідповідність generation і не продовжать чергу.
+         */
+        EPG.generation++;
+
+        var request = EPG.request;
+
+        EPG.request = null;
+        EPG.loading = false;
+        EPG.refreshQueued = false;
+        EPG.run = null;
+        EPG.callbacks = [];
+
+        if (request && request.readyState !== 4) {
+            try {
+                request.abort();
+            } catch (e) {
+                console.warn(logPrefix(), 'Не вдалося скасувати EPG-запит:', e);
+            }
+        }
+
+        if (reason) {
+            console.log(logPrefix(), 'Завантаження EPG скасовано:', reason);
+        }
     }
 
     /*
@@ -197,13 +265,13 @@
         EPG.cacheSavedAt = 0;
     }
 
-    function restoreEPGCache(expectedSignature) {
+    function restoreEPGCache(expectedSignature, legacySignature) {
         var cache;
 
         try {
             cache = Lampa.Storage.get(EPG_CACHE_KEY, null);
         } catch (e) {
-            console.warn('[IPTV PRO 13.9] Читання кешу:', e);
+            console.warn(logPrefix(), 'Читання кешу:', e);
             return false;
         }
 
@@ -212,9 +280,19 @@
             cache.version !== 2 ||
             !cache.channels ||
             typeof cache.channels !== 'object' ||
-            !cache.savedAt ||
-            cache.playlistSignature !== expectedSignature
+            !cache.savedAt
         ) {
+            return false;
+        }
+
+        var isCurrentSignature =
+            cache.playlistSignature === expectedSignature;
+
+        var isLegacySignature =
+            legacySignature &&
+            cache.playlistSignature === legacySignature;
+
+        if (!isCurrentSignature && !isLegacySignature) {
             return false;
         }
 
@@ -225,15 +303,24 @@
 
         Object.keys(cache.channels).forEach(function (id) {
             var programs = cache.channels[id];
+
             if (!Array.isArray(programs)) return;
 
             var valid = programs.filter(function (p) {
                 return p &&
+                    typeof p.title === 'string' &&
                     isFinite(p.start) &&
                     isFinite(p.stop) &&
                     p.stop > p.start &&
                     p.stop > cutoffStart &&
                     p.start < cutoffStop;
+            }).map(function (p) {
+                return {
+                    start: Number(p.start),
+                    stop: Number(p.stop),
+                    title: String(p.title || ''),
+                    desc: String(p.desc || '')
+                };
             });
 
             if (valid.length) {
@@ -249,7 +336,10 @@
         if (cache.aliases && typeof cache.aliases === 'object') {
             Object.keys(cache.aliases).forEach(function (alias) {
                 var target = cache.aliases[alias];
-                if (restoredChannels[target]) restoredAliases[alias] = target;
+
+                if (restoredChannels[target]) {
+                    restoredAliases[alias] = target;
+                }
             });
         }
 
@@ -258,14 +348,17 @@
         EPG.loaded = cache.savedAt;
         EPG.lastSuccess = cache.savedAt;
         EPG.cacheSavedAt = cache.savedAt;
-        EPG.cacheSource = 'Локальний кеш';
+        EPG.cacheSource = isLegacySignature
+            ? 'Старий локальний кеш'
+            : 'Локальний кеш';
         EPG.channelCount = Object.keys(restoredChannels).length;
         EPG.programmeCount = totalPrograms;
         EPG.status = 'Відновлено з локального кешу';
         EPG.lastResult = 'Локальний кеш';
 
         console.log(
-            '[IPTV PRO 13.9] Кеш відновлено:',
+            logPrefix(),
+            'Кеш відновлено:',
             EPG.channelCount,
             'каналів;',
             totalPrograms,
@@ -275,7 +368,7 @@
         return true;
     }
 
-    function saveEPGCache() {
+    function saveEPGCache(signature) {
         var cutoffStart = now() - 2 * 60 * 60 * 1000;
         var cutoffStop = now() + EPG_CACHE_HOURS * 60 * 60 * 1000;
         var compactChannels = {};
@@ -309,7 +402,7 @@
         });
 
         if (!totalPrograms) {
-            console.warn('[IPTV PRO 13.9] Кеш не збережено: немає передач');
+            console.warn(logPrefix(), 'Кеш не збережено: немає передач');
             return false;
         }
 
@@ -317,13 +410,14 @@
 
         Object.keys(EPG.aliases).forEach(function (alias) {
             var id = EPG.aliases[alias];
+
             if (compactChannels[id]) compactAliases[alias] = id;
         });
 
         var cache = {
             version: 2,
             savedAt: EPG.loaded || now(),
-            playlistSignature: EPG.playlistSignature,
+            playlistSignature: signature || EPG.playlistSignature,
             channelCount: Object.keys(compactChannels).length,
             channels: compactChannels,
             aliases: compactAliases
@@ -338,6 +432,7 @@
                         p.desc = '';
                     });
                 });
+
                 json = JSON.stringify(cache);
             }
 
@@ -345,6 +440,7 @@
                 Object.keys(cache.channels).forEach(function (id) {
                     cache.channels[id] = cache.channels[id].slice(0, 40);
                 });
+
                 json = JSON.stringify(cache);
             }
 
@@ -352,6 +448,7 @@
                 Object.keys(cache.channels).forEach(function (id) {
                     cache.channels[id] = cache.channels[id].slice(0, 20);
                 });
+
                 json = JSON.stringify(cache);
             }
 
@@ -361,11 +458,13 @@
             }
 
             Lampa.Storage.set(EPG_CACHE_KEY, cache);
+
             EPG.cacheSavedAt = cache.savedAt;
             EPG.cacheSource = 'Мережа + локальний кеш';
 
             console.log(
-                '[IPTV PRO 13.9] Кеш збережено:',
+                logPrefix(),
+                'Кеш збережено:',
                 Object.keys(cache.channels).length,
                 'каналів;',
                 json.length,
@@ -374,7 +473,7 @@
 
             return true;
         } catch (e) {
-            console.warn('[IPTV PRO 13.9] Помилка збереження кешу:', e);
+            console.warn(logPrefix(), 'Помилка збереження кешу:', e);
             EPG.cacheSource = 'Помилка збереження кешу';
             return false;
         }
@@ -389,7 +488,14 @@
             throw new Error('Отримано порожню відповідь');
         }
 
-        var xml = $.parseXML(body);
+        var xml;
+
+        try {
+            xml = $.parseXML(body);
+        } catch (e) {
+            throw new Error('Не вдалося розібрати XML: ' + String(e.message || e));
+        }
+
         if (!xml) throw new Error('Не вдалося розібрати XML');
 
         var parserErrors = xml.getElementsByTagName('parsererror');
@@ -414,6 +520,7 @@
 
         for (var i = 0; i < ch.length; i++) {
             var id = ch[i].getAttribute('id');
+
             if (!id) continue;
 
             map[id] = map[id] || [];
@@ -423,6 +530,7 @@
 
             for (var j = 0; j < names.length; j++) {
                 var displayName = (names[j].textContent || '').trim();
+
                 if (displayName) aliases[norm(displayName)] = id;
             }
         }
@@ -430,6 +538,7 @@
         for (var k = 0; k < pr.length; k++) {
             var p = pr[k];
             var cid = p.getAttribute('channel');
+
             if (!cid) continue;
 
             var start = stamp(p.getAttribute('start'));
@@ -477,8 +586,10 @@
 
     /*
      * ЗАВАНТАЖЕННЯ EPG
-     * POST-пакети максимум по 40 tvg-id.
-     * GET-fallback не використовується.
+     *
+     * Використовується тільки POST із масивом ids.
+     * Максимальний розмір пакета — 40 tvg-id.
+     * GET-fallback відсутній.
      */
 
     function epgLoad(done, force) {
@@ -513,6 +624,20 @@
             batches.push(ids.slice(i, i + BATCH_SIZE));
         }
 
+        var generation = EPG.generation;
+        var signature = EPG.playlistSignature;
+
+        /*
+         * Зберігаємо попередні дані до завершення оновлення.
+         * При повній помилці мережі вони залишаться доступними.
+         */
+        var previousChannels = EPG.channels;
+        var previousAliases = EPG.aliases;
+        var previousLoaded = EPG.loaded;
+        var previousChannelCount = EPG.channelCount;
+        var previousProgrammeCount = EPG.programmeCount;
+        var previousCacheSource = EPG.cacheSource;
+
         EPG.loading = true;
         EPG.status = 'Завантаження EPG пакетами...';
         EPG.error = '';
@@ -533,16 +658,34 @@
         var allAliases = {};
         var totalProgrammes = 0;
 
+        var run = {
+            generation: generation,
+            signature: signature,
+            startedAt: startedAt
+        };
+
+        EPG.run = run;
+
+        function isCurrentRun() {
+            return !completed && generation === EPG.generation;
+        }
+
         function finishAll() {
-            if (completed) return;
+            if (completed || generation !== EPG.generation) return;
 
             completed = true;
             EPG.lastDuration = now() - startedAt;
             EPG.loading = false;
             EPG.request = null;
+            EPG.run = null;
 
             if (EPG.refreshQueued) {
                 EPG.refreshQueued = false;
+
+                /*
+                 * Повторне оновлення запускається тільки для того самого
+                 * актуального покоління запитів.
+                 */
                 epgLoad(null, true);
                 return;
             }
@@ -550,11 +693,52 @@
             finishCallbacks();
         }
 
+        function mergePreviousData() {
+            Object.keys(previousChannels || {}).forEach(function (id) {
+                var oldPrograms = previousChannels[id] || [];
+
+                if (!allChannels[id]) allChannels[id] = [];
+
+                var existing = Object.create(null);
+
+                allChannels[id].forEach(function (p) {
+                    existing[p.start + ':' + p.stop + ':' + p.title] = true;
+                });
+
+                oldPrograms.forEach(function (p) {
+                    var key = p.start + ':' + p.stop + ':' + p.title;
+
+                    if (!existing[key]) {
+                        allChannels[id].push(p);
+                        existing[key] = true;
+                    }
+                });
+            });
+
+            Object.keys(previousAliases || {}).forEach(function (alias) {
+                if (!allAliases[alias]) {
+                    allAliases[alias] = previousAliases[alias];
+                }
+            });
+
+            Object.keys(allChannels).forEach(function (id) {
+                allChannels[id].sort(function (a, b) {
+                    return a.start - b.start;
+                });
+            });
+        }
+
         function processNextBatch() {
-            if (completed) return;
+            if (!isCurrentRun()) return;
 
             if (batchIndex >= batches.length) {
                 if (totalProgrammes > 0) {
+                    /*
+                     * При частковому успіху доповнюємо нові результати
+                     * попередніми даними, щоб невдалі пакети не зникли.
+                     */
+                    if (failedBatches > 0) mergePreviousData();
+
                     Object.keys(allChannels).forEach(function (id) {
                         allChannels[id].sort(function (a, b) {
                             return a.start - b.start;
@@ -564,7 +748,14 @@
                     EPG.channels = allChannels;
                     EPG.aliases = allAliases;
                     EPG.channelCount = Object.keys(allChannels).length;
-                    EPG.programmeCount = totalProgrammes;
+
+                    var programmeCount = 0;
+
+                    Object.keys(allChannels).forEach(function (id) {
+                        programmeCount += allChannels[id].length;
+                    });
+
+                    EPG.programmeCount = programmeCount;
                     EPG.loaded = now();
                     EPG.lastSuccess = EPG.loaded;
                     EPG.cacheSource = 'Мережа';
@@ -586,27 +777,49 @@
                         EPG.lastResult = 'Успішно';
                     }
 
-                    saveEPGCache();
+                    /*
+                     * Передаємо підпис саме цього запуску, а не читаємо
+                     * його з глобального стану під час запису кешу.
+                     */
+                    if (generation === EPG.generation) {
+                        saveEPGCache(signature);
+                    }
 
                     console.log(
-                        '[IPTV PRO 13.9] EPG завершено:',
+                        logPrefix(),
+                        'EPG завершено:',
                         successfulBatches,
                         'успішних пакетів;',
                         failedBatches,
                         'помилок;',
                         EPG.channelCount,
                         'каналів;',
-                        totalProgrammes,
+                        EPG.programmeCount,
                         'передач'
                     );
                 } else {
-                    EPG.status = 'Не вдалося отримати EPG';
-                    EPG.lastResult = 'Немає валідних передач';
+                    /*
+                     * Нічого не перезаписуємо, якщо оновлення повністю
+                     * провалилося. Старі дані залишаються в пам'яті.
+                     */
+                    EPG.channels = previousChannels;
+                    EPG.aliases = previousAliases;
+                    EPG.loaded = previousLoaded;
+                    EPG.channelCount = previousChannelCount;
+                    EPG.programmeCount = previousProgrammeCount;
+                    EPG.cacheSource = previousCacheSource;
+
+                    EPG.status = previousLoaded
+                        ? 'Оновлення не вдалося — використано попередні дані'
+                        : 'Не вдалося отримати EPG';
+
+                    EPG.lastResult = 'Немає нових валідних передач';
+
                     EPG.error = errors.length
                         ? errors.slice(0, 5).join(' | ')
                         : 'У відповідях Worker немає валідних передач.';
 
-                    console.error('[IPTV PRO 13.9] EPG:', EPG.error);
+                    console.error(logPrefix(), 'EPG:', EPG.error);
                 }
 
                 finishAll();
@@ -615,90 +828,125 @@
 
             var currentBatch = batches[batchIndex];
             var currentNumber = batchIndex + 1;
+
             batchIndex++;
 
             EPG.status =
                 'Завантаження пакета ' +
                 currentNumber + '/' + batches.length;
 
-            EPG.request = $.ajax({
-                url: EPG_URL,
-                method: 'POST',
-                dataType: 'text',
-                timeout: 60000,
-                cache: false,
-                contentType: 'application/json; charset=utf-8',
-                processData: false,
-                data: JSON.stringify({ ids: currentBatch }),
+            var request;
 
-                success: function (body, textStatus, responseXHR) {
-                    EPG.httpStatus = responseXHR ? responseXHR.status : 200;
+            try {
+                request = $.ajax({
+                    url: EPG_URL,
+                    method: 'POST',
+                    dataType: 'text',
+                    timeout: 60000,
+                    cache: false,
+                    contentType: 'application/json; charset=utf-8',
+                    processData: false,
+                    data: JSON.stringify({ ids: currentBatch }),
 
-                    try {
-                        var result = parseEPG(body);
+                    success: function (body, textStatus, responseXHR) {
+                        if (!isCurrentRun()) return;
 
-                        Object.keys(result.channels).forEach(function (id) {
-                            if (!allChannels[id]) allChannels[id] = [];
+                        EPG.httpStatus = responseXHR
+                            ? responseXHR.status
+                            : 200;
 
-                            var existing = Object.create(null);
+                        try {
+                            var result = parseEPG(body);
 
-                            allChannels[id].forEach(function (p) {
-                                existing[p.start + ':' + p.stop + ':' + p.title] = true;
+                            Object.keys(result.channels).forEach(function (id) {
+                                if (!allChannels[id]) allChannels[id] = [];
+
+                                var existing = Object.create(null);
+
+                                allChannels[id].forEach(function (p) {
+                                    existing[
+                                        p.start + ':' + p.stop + ':' + p.title
+                                    ] = true;
+                                });
+
+                                (result.channels[id] || []).forEach(function (p) {
+                                    var key =
+                                        p.start + ':' + p.stop + ':' + p.title;
+
+                                    if (!existing[key]) {
+                                        allChannels[id].push(p);
+                                        existing[key] = true;
+                                        totalProgrammes++;
+                                    }
+                                });
                             });
 
-                            (result.channels[id] || []).forEach(function (p) {
-                                var key = p.start + ':' + p.stop + ':' + p.title;
-
-                                if (!existing[key]) {
-                                    allChannels[id].push(p);
-                                    existing[key] = true;
-                                    totalProgrammes++;
-                                }
+                            Object.keys(result.aliases).forEach(function (alias) {
+                                allAliases[alias] = result.aliases[alias];
                             });
-                        });
 
-                        Object.keys(result.aliases).forEach(function (alias) {
-                            allAliases[alias] = result.aliases[alias];
-                        });
+                            successfulBatches++;
+                        } catch (e) {
+                            failedBatches++;
 
-                        successfulBatches++;
-                    } catch (e) {
+                            errors.push(
+                                'Пакет ' + currentNumber + ': ' +
+                                String(e.message || e)
+                            );
+
+                            console.warn(
+                                logPrefix(),
+                                'Помилка пакета:',
+                                currentNumber,
+                                e
+                            );
+                        }
+                    },
+
+                    error: function (xhr, status, err) {
+                        if (!isCurrentRun() || status === 'abort') return;
+
+                        EPG.httpStatus = xhr ? xhr.status || 0 : 0;
                         failedBatches++;
+
                         errors.push(
                             'Пакет ' + currentNumber + ': ' +
-                            String(e.message || e)
+                            status + (err ? ' / ' + err : '') +
+                            ' (HTTP ' + EPG.httpStatus + ')'
                         );
 
                         console.warn(
-                            '[IPTV PRO 13.9] Помилка пакета:',
-                            currentNumber,
-                            e
+                            logPrefix(),
+                            'HTTP-помилка:',
+                            errors[errors.length - 1]
                         );
+                    },
+
+                    complete: function () {
+                        /*
+                         * Старий запит не має права запускати наступний
+                         * пакет після зміни плейлиста або destroy().
+                         */
+                        if (!isCurrentRun()) return;
+
+                        EPG.request = null;
+                        processNextBatch();
                     }
-                },
+                });
+            } catch (e) {
+                if (!isCurrentRun()) return;
 
-                error: function (xhr, status, err) {
-                    EPG.httpStatus = xhr ? xhr.status || 0 : 0;
-                    failedBatches++;
+                failedBatches++;
+                errors.push(
+                    'Пакет ' + currentNumber + ': ' +
+                    String(e.message || e)
+                );
 
-                    errors.push(
-                        'Пакет ' + currentNumber + ': ' +
-                        status + (err ? ' / ' + err : '') +
-                        ' (HTTP ' + EPG.httpStatus + ')'
-                    );
+                processNextBatch();
+                return;
+            }
 
-                    console.warn(
-                        '[IPTV PRO 13.9] HTTP-помилка:',
-                        errors[errors.length - 1]
-                    );
-                },
-
-                complete: function () {
-                    if (completed) return;
-                    EPG.request = null;
-                    processNextBatch();
-                }
-            });
+            if (isCurrentRun()) EPG.request = request;
         }
 
         processNextBatch();
@@ -737,6 +985,7 @@
 
     function clock(t) {
         var d = new Date(t);
+
         return (
             ('0' + d.getHours()).slice(-2) + ':' +
             ('0' + d.getMinutes()).slice(-2)
@@ -748,7 +997,9 @@
      */
 
     function getPlaylist() {
-        return cfg.playlists[cfg.current_pl_index] || cfg.playlists[0] || {};
+        return cfg.playlists[cfg.current_pl_index] ||
+            cfg.playlists[0] ||
+            {};
     }
 
     function saveConfig() {
@@ -756,72 +1007,66 @@
             Lampa.Storage.set(KEY, cfg);
             return true;
         } catch (e) {
-            console.error('[IPTV PRO 13.9] Помилка збереження налаштувань:', e);
+            console.error(logPrefix(), 'Помилка збереження налаштувань:', e);
             notify('Не вдалося зберегти налаштування.');
             return false;
         }
     }
 
     function editPlaylistUrl() {
-    var pl = getPlaylist();
+        var pl = getPlaylist();
 
-    if (!pl) {
-        notify('Плейлист не знайдено.');
-        return;
-    }
-
-    function saveUrl(value) {
-        var url = String(value || '').trim();
-
-        if (!url) {
-            notify('Адреса M3U не може бути порожньою.');
+        if (!pl) {
+            notify('Плейлист не знайдено.');
             return;
         }
 
-        if (!/^https?:\/\/\S+$/i.test(url)) {
-            notify('Введи коректну HTTP або HTTPS адресу.');
-            return;
+        function saveUrl(value) {
+            var url = String(value || '').trim();
+
+            if (!url) {
+                notify('Адреса M3U не може бути порожньою.');
+                return;
+            }
+
+            if (!/^https?:\/\/\S+$/i.test(url)) {
+                notify('Введи коректну HTTP або HTTPS адресу.');
+                return;
+            }
+
+            pl.url = url;
+
+            if (!saveConfig()) return;
+
+            notify('Адресу M3U збережено.');
+
+            if (
+                activeIPTVInstance &&
+                typeof activeIPTVInstance.reloadPlaylist === 'function'
+            ) {
+                activeIPTVInstance.reloadPlaylist();
+            }
         }
 
-        pl.url = url;
-
-        try {
-            Lampa.Storage.set(KEY, cfg);
-        } catch (e) {
-            notify('Не вдалося зберегти адресу M3U.');
-            console.error('[IPTV PRO] Помилка збереження:', e);
-            return;
-        }
-
-        notify('Адресу M3U збережено.');
-
-        if (
-            activeIPTVInstance &&
-            typeof activeIPTVInstance.reloadPlaylist === 'function'
-        ) {
-            activeIPTVInstance.reloadPlaylist();
+        if (Lampa.Input && typeof Lampa.Input.edit === 'function') {
+            Lampa.Input.edit({
+                title: 'Ввести адресу M3U-плейлиста',
+                value: pl.url || '',
+                free: true,
+                nosave: true
+            }, function (value) {
+                saveUrl(value);
+            });
+        } else {
+            notify('У цій збірці Lampa недоступне введення тексту.');
         }
     }
-
-    if (Lampa.Input && typeof Lampa.Input.edit === 'function') {
-        Lampa.Input.edit({
-            title: 'Ввести адресу M3U-плейлиста',
-            value: pl.url || '',
-            free: true,
-            nosave: true
-        }, function (value) {
-            saveUrl(value);
-        });
-    } else {
-        notify('У цій збірці Lampa недоступне введення тексту.');
-    }
-}
 
     function getSettingsInfo() {
         var pl = getPlaylist();
 
         return [
-            'IPTV PRO 13.9 · XMLTV Edition',
+            'IPTV PRO 14.0.0 · XMLTV Edition',
             '',
             'Джерело EPG: ' + EPG_URL,
             'Плейлист: ' + (pl.name || 'Без назви'),
@@ -839,8 +1084,8 @@
         var unmatched = 0;
 
         if (!activeIPTVInstance || !activeIPTVInstance.getGroups) {
-            EPG.matchedChannels = EPG.matchedChannels || 0;
-            EPG.unmatchedChannels = EPG.unmatchedChannels || 0;
+            EPG.matchedChannels = 0;
+            EPG.unmatchedChannels = 0;
             return;
         }
 
@@ -872,7 +1117,7 @@
         updateMatchCounts();
 
         return [
-            'IPTV PRO 13.9 — ДІАГНОСТИКА EPG',
+            'IPTV PRO 14.0.0 — ДІАГНОСТИКА EPG',
             '',
             'Стан: ' + EPG.status,
             'Результат: ' + EPG.lastResult,
@@ -924,6 +1169,7 @@
 
         EPG.status = 'Запуск ручного оновлення...';
         EPG.error = '';
+
         notify('Запущено оновлення EPG.');
 
         epgLoad(function () {
@@ -961,6 +1207,7 @@
         var alive = true;
         var panelMode = '';
         var loadError = '';
+        var playlistGeneration = 0;
 
         var toolbarActions = [
             { id: 'refresh', title: 'Оновити EPG' },
@@ -986,7 +1233,10 @@
 
             el.on('hover:focus mouseenter', function () {
                 if (toolbar) toolbar.find('.iptv-action').removeClass('active');
-                if (el.closest('.iptv-toolbar').length) el.addClass('active');
+
+                if (el.closest('.iptv-toolbar').length) {
+                    el.addClass('active');
+                }
             });
 
             return el;
@@ -1074,7 +1324,7 @@
 
             if (panelMode === 'settings') {
                 box.append(item('НАЛАШТУВАННЯ', 'iptv-panel-title'));
-                box.append(item('IPTV PRO 13.9', 'iptv-panel-subtitle'));
+                box.append(item('IPTV PRO 14.0.0', 'iptv-panel-subtitle'));
                 box.append(item('Джерело телепрограми', 'iptv-label'));
                 box.append(item(EPG_URL, 'iptv-url'));
 
@@ -1084,16 +1334,22 @@
                 box.append(item(pl && pl.name ? pl.name : 'Без назви', 'iptv-value'));
                 box.append(item(pl && pl.url ? pl.url : 'URL не задано', 'iptv-url'));
 
-                box.append(button('✎ Змінити URL плейлиста M3U', editPlaylistUrl, 'iptv-action-primary'));
+                box.append(button(
+                    '✎ Змінити URL плейлиста M3U',
+                    editPlaylistUrl,
+                    'iptv-action-primary'
+                ));
 
                 box.append(item(
                     'EPG оновлюється не частіше ніж раз на 3 години',
                     'iptv-muted'
                 ));
+
                 box.append(item(
                     'Локальний кеш: до ' + EPG_CACHE_HOURS + ' годин розкладу',
                     'iptv-muted'
                 ));
+
                 box.append(item(
                     'Останнє успішне оновлення: ' + formatDate(EPG.lastSuccess),
                     'iptv-muted'
@@ -1118,20 +1374,37 @@
                     'Стан завантаження, кешу та зіставлення каналів',
                     'iptv-panel-subtitle'
                 ));
+
                 box.append(item('EPG: ' + EPG.status, 'iptv-status'));
                 box.append(item('Режим запиту: ' + EPG.requestMode, 'iptv-value'));
+
                 box.append(item(
                     'Каналів у M3U з tvg-id: ' + EPG.requestedChannelCount,
                     'iptv-value'
                 ));
+
                 box.append(item('GET-fallback: вимкнено', 'iptv-value'));
+
                 box.append(item(
                     'HTTP-статус: ' + (EPG.httpStatus || 'Немає відповіді'),
                     'iptv-value'
                 ));
-                box.append(item('Остання спроба: ' + formatDate(EPG.lastAttempt), 'iptv-value'));
-                box.append(item('Останній успіх: ' + formatDate(EPG.lastSuccess), 'iptv-value'));
-                box.append(item('Тривалість: ' + durationText(EPG.lastDuration), 'iptv-value'));
+
+                box.append(item(
+                    'Остання спроба: ' + formatDate(EPG.lastAttempt),
+                    'iptv-value'
+                ));
+
+                box.append(item(
+                    'Останній успіх: ' + formatDate(EPG.lastSuccess),
+                    'iptv-value'
+                ));
+
+                box.append(item(
+                    'Тривалість: ' + durationText(EPG.lastDuration),
+                    'iptv-value'
+                ));
+
                 box.append(item('Результат: ' + EPG.lastResult, 'iptv-value'));
                 box.append(item('Каналів XMLTV: ' + EPG.channelCount, 'iptv-value'));
                 box.append(item('Передач у розкладі: ' + EPG.programmeCount, 'iptv-value'));
@@ -1139,10 +1412,13 @@
                 box.append(item('Каналів без збігу: ' + EPG.unmatchedChannels, 'iptv-value'));
                 box.append(item('Джерело даних: ' + EPG.cacheSource, 'iptv-value'));
                 box.append(item('Кеш збережено: ' + formatDate(EPG.cacheSavedAt), 'iptv-value'));
+
                 box.append(item(
-                    'Вік кешу: ' + (EPG.loaded
-                        ? durationText(now() - EPG.loaded) + ' тому'
-                        : 'Відсутній'),
+                    'Вік даних: ' + (
+                        EPG.loaded
+                            ? durationText(now() - EPG.loaded) + ' тому'
+                            : 'Відсутні'
+                    ),
                     'iptv-value'
                 ));
 
@@ -1218,7 +1494,9 @@
 
                 box.append(progress);
 
-                if (p.desc) box.append(item(p.desc, 'iptv-description'));
+                if (p.desc) {
+                    box.append(item(p.desc, 'iptv-description'));
+                }
             }
 
             if (n) {
@@ -1261,12 +1539,16 @@
             ci = 0;
             active = 'channels';
             panelMode = '';
+
             colC.empty();
 
             list.forEach(function (c, i) {
                 var el = $('<div class="iptv-item iptv-channel"></div>');
 
-                if (c.logo) el.append($('<img class="iptv-logo">').attr('src', c.logo));
+                if (c.logo) {
+                    el.append($('<img class="iptv-logo">').attr('src', c.logo));
+                }
+
                 el.append(item(c.name, 'iptv-channel-name'));
 
                 el.on('hover:focus mouseenter', function () {
@@ -1307,10 +1589,28 @@
          */
 
         function parse(body) {
-            groups = { '⭐ Обране': [] };
+            var source = String(body || '').replace(/^\uFEFF/, '').trim();
 
-            var lines = String(body || '').split(/\r?\n/);
+            /*
+             * Захист від HTML-сторінок помилки, JSON-відповідей
+             * та інших відповідей, які не є M3U.
+             */
+            if (
+                !source ||
+                (
+                    !/^#EXTM3U\b/i.test(source) &&
+                    !/^#EXTINF:/im.test(source)
+                )
+            ) {
+                throw new Error(
+                    'Сервер не повернув M3U. Перевір URL плейлиста та відповідь сервера.'
+                );
+            }
+
+            var nextGroups = { '⭐ Обране': [] };
+            var lines = source.split(/\r?\n/);
             var pending = null;
+            var parsedCount = 0;
 
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
@@ -1319,7 +1619,9 @@
                     var comma = line.indexOf(',');
 
                     pending = {
-                        name: comma >= 0 ? line.slice(comma + 1).trim() : 'Без назви',
+                        name: comma >= 0
+                            ? line.slice(comma + 1).trim()
+                            : 'Без назви',
                         group: (line.match(/group-title="([^"]*)"/i) || [])[1] || 'ЗАГАЛЬНІ',
                         logo: (line.match(/tvg-logo="([^"]*)"/i) || [])[1] || '',
                         tvg_id: (line.match(/tvg-id="([^"]*)"/i) || [])[1] || ''
@@ -1327,10 +1629,20 @@
                 } else if (pending && /^https?:\/\//i.test(line)) {
                     pending.url = line;
 
-                    if (!groups[pending.group]) groups[pending.group] = [];
-                    groups[pending.group].push(pending);
+                    if (!nextGroups[pending.group]) {
+                        nextGroups[pending.group] = [];
+                    }
+
+                    nextGroups[pending.group].push(pending);
+                    parsedCount++;
                     pending = null;
                 }
+            }
+
+            if (!parsedCount) {
+                throw new Error(
+                    'M3U отримано, але жодного каналу не знайдено. Перевір формат плейлиста.'
+                );
             }
 
             var fav = {};
@@ -1339,35 +1651,48 @@
                 if (f && f.url) fav[f.url] = true;
             });
 
-            Object.keys(groups).forEach(function (g) {
+            Object.keys(nextGroups).forEach(function (g) {
                 if (g === '⭐ Обране') return;
 
-                groups[g].forEach(function (c) {
-                    if (fav[c.url]) groups['⭐ Обране'].push(c);
+                nextGroups[g].forEach(function (c) {
+                    if (fav[c.url]) nextGroups['⭐ Обране'].push(c);
                 });
             });
 
             var ids = [];
 
-            Object.keys(groups).forEach(function (g) {
+            Object.keys(nextGroups).forEach(function (g) {
                 if (g === '⭐ Обране') return;
 
-                groups[g].forEach(function (c) {
+                nextGroups[g].forEach(function (c) {
                     if (c.tvg_id) ids.push(c.tvg_id);
                 });
             });
 
-            EPG.playlistIds = uniqueIds(ids);
-
+            var newIds = uniqueIds(ids);
             var pl = getPlaylist();
+            var newSignature = makePlaylistSignature(newIds, pl && pl.url);
+            var oldSignature = EPG.playlistSignature;
+            var changedPlaylist = newSignature !== oldSignature;
 
-            EPG.playlistSignature = makePlaylistSignature(
-                EPG.playlistIds,
-                pl && pl.url
-            );
+            /*
+             * Якщо попередній EPG ще завантажується, скасовуємо його
+             * перед тим, як змінити глобальний підпис плейлиста.
+             */
+            if (changedPlaylist || EPG.loading || EPG.request) {
+                cancelEPGLoad('зміна або повторне завантаження плейлиста');
+            }
+
+            groups = nextGroups;
+            EPG.playlistIds = newIds;
+            EPG.playlistSignature = newSignature;
 
             clearLoadedEPG();
-            restoreEPGCache(EPG.playlistSignature);
+
+            restoreEPGCache(
+                newSignature,
+                makeLegacySignature(newIds, pl && pl.url)
+            );
 
             updateMatchCounts();
             renderGroups();
@@ -1386,7 +1711,7 @@
                 else if (chosen) details(chosen);
 
                 if (EPG.error) {
-                    console.warn('[IPTV PRO 13.9] EPG:', EPG.status, EPG.error);
+                    console.warn(logPrefix(), 'EPG:', EPG.status, EPG.error);
                 }
             });
         }
@@ -1397,11 +1722,13 @@
 
         function load() {
             var pl = getPlaylist();
+            var requestGeneration = ++playlistGeneration;
 
             loadError = '';
 
             if (!pl || !pl.url) {
                 loadError = 'URL плейлиста не задано';
+
                 colG.empty().append(item(loadError, 'iptv-error'));
                 return;
             }
@@ -1412,16 +1739,47 @@
                 url: pl.url,
                 dataType: 'text',
                 timeout: 30000,
+                cache: false,
 
                 success: function (data) {
-                    if (!alive) return;
+                    if (!alive || requestGeneration !== playlistGeneration) return;
+
                     loadError = '';
-                    parse(data);
-                    if (panelMode) renderPanel();
+
+                    try {
+                        parse(data);
+
+                        if (panelMode) renderPanel();
+                    } catch (e) {
+                        loadError = String(e.message || e);
+
+                        groups = {};
+                        names = [];
+                        list = [];
+                        chosen = null;
+
+                        colG.empty().append(
+                            item('Помилка формату плейлиста', 'iptv-error')
+                        );
+
+                        colC.empty();
+                        colE.empty().append(item(loadError, 'iptv-error'));
+
+                        notify('Не вдалося прочитати M3U-плейлист.');
+                        console.error(logPrefix(), 'M3U parse error:', e);
+
+                        if (panelMode) renderPanel();
+                    }
                 },
 
                 error: function (xhr, status, err) {
-                    if (!alive || status === 'abort') return;
+                    if (
+                        !alive ||
+                        requestGeneration !== playlistGeneration ||
+                        status === 'abort'
+                    ) {
+                        return;
+                    }
 
                     loadError =
                         'Запит: ' + status +
@@ -1432,10 +1790,20 @@
                         item('Помилка завантаження плейлиста', 'iptv-error')
                     );
 
+                    colC.empty();
+                    colE.empty().append(item(loadError, 'iptv-error'));
+
                     notify('Не вдалося завантажити IPTV плейлист');
-                    console.error('[IPTV PRO 13.9] Playlist error:', loadError);
+
+                    console.error(logPrefix(), 'Playlist error:', loadError);
 
                     if (panelMode) renderPanel();
+                },
+
+                complete: function () {
+                    if (requestGeneration === playlistGeneration) {
+                        plRequest = null;
+                    }
                 }
             });
         }
@@ -1443,9 +1811,23 @@
         function reloadPlaylist() {
             if (!alive) return;
 
+            /*
+             * Інвалідуємо стару відповідь M3U до abort.
+             */
+            playlistGeneration++;
+
             if (plRequest && plRequest.readyState !== 4) {
-                plRequest.abort();
+                try {
+                    plRequest.abort();
+                } catch (e) {}
             }
+
+            plRequest = null;
+
+            /*
+             * Старий EPG не повинен записати дані під новим підписом.
+             */
+            cancelEPGLoad('перезавантаження плейлиста');
 
             if (colG) colG.empty();
             if (colC) colC.empty();
@@ -1465,10 +1847,10 @@
          */
 
         function buildStyles() {
-            if ($('#iptv-pro-139-css').length) return;
+            if ($('#iptv-pro-140-css').length) return;
 
             $('head').append(
-                '<style id="iptv-pro-139-css">' +
+                '<style id="iptv-pro-140-css">' +
                 '.iptv-root{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:#0a0d13;color:#edf2fa;padding-top:4rem;box-sizing:border-box;font-family:inherit}' +
                 '.iptv-toolbar{display:flex;align-items:center;gap:.65rem;padding:.85rem 1.15rem;background:linear-gradient(110deg,#141c2b,#10141d);border-bottom:1px solid #293345;flex-shrink:0}' +
                 '.iptv-brand{font-size:1.25rem;font-weight:800;letter-spacing:.05em;margin-right:auto;white-space:nowrap}' +
@@ -1503,7 +1885,7 @@
                 '.iptv-url{font-size:.8rem;color:#a8b8d0;background:#0c1119;border:1px solid #222c3b;border-radius:.5rem;padding:.65rem .75rem;margin:.2rem 0 .55rem;overflow-wrap:anywhere;word-break:break-all}' +
                 '.iptv-status{color:#9bc1ff;background:#172842;border:1px solid #294a77;border-radius:.55rem;padding:.75rem;margin:.35rem 0}' +
                 '.iptv-error-title{color:#ffb0a9;font-size:.8rem;font-weight:800;letter-spacing:.06em;margin-top:.7rem;background:none;border:0;padding:.25rem 0}' +
-                '.iptv-error{color:#ffd0cb;background:#341e23;border:1px solid #643039;border-radius:.5rem;padding:.7rem;margin:.25rem 0;overflow-wrap:anywhere}' +
+                '.iptv-error{color:#ffd0cb;background:#341e23;border:1px solid #643039;border-radius:.5rem;padding:.7rem;margin:.25rem 0;overflow-wrap:anywhere;word-break:break-word}' +
                 '@media(max-width:900px){.iptv-toolbar{flex-wrap:wrap;padding:.6rem}.iptv-brand{width:100%}.iptv-action{font-size:.8rem;padding:.55rem}.iptv-groups{width:27%}.iptv-channels{width:43%}.iptv-info{width:30%;padding:.7rem}.iptv-item{padding:.65rem;margin:.25rem;font-size:.85rem}.iptv-logo{width:30px;height:30px}}' +
                 '</style>'
             );
@@ -1515,7 +1897,10 @@
 
         function buildToolbar() {
             toolbar = $('<div class="iptv-toolbar"></div>');
-            toolbar.append('<div class="iptv-brand">IPTV PRO<small>PREMIUM · XMLTV</small></div>');
+
+            toolbar.append(
+                '<div class="iptv-brand">IPTV PRO<small>PREMIUM · XMLTV</small></div>'
+            );
 
             toolbarActions.forEach(function (action, i) {
                 var el = $('<div></div>')
@@ -1525,6 +1910,7 @@
 
                 el.on('hover:focus mouseenter', function () {
                     ti = i;
+
                     if (active === 'toolbar' && !panelMode) focus();
                 });
 
@@ -1588,8 +1974,11 @@
                 up: function () {
                     if (panelMode) {
                         var buttons = colE.find('.iptv-action');
+
                         ci = Math.max(0, ci - 1);
+
                         if (ci >= buttons.length) ci = buttons.length - 1;
+
                         focus();
                         return;
                     }
@@ -1616,12 +2005,19 @@
                     }
 
                     focus();
-                    if (active === 'channels' && list[ci]) details(list[ci]);
+
+                    if (active === 'channels' && list[ci]) {
+                        details(list[ci]);
+                    }
                 },
 
                 down: function () {
                     if (panelMode) {
-                        ci = Math.min(colE.find('.iptv-action').length - 1, ci + 1);
+                        ci = Math.min(
+                            colE.find('.iptv-action').length - 1,
+                            ci + 1
+                        );
+
                         ci = Math.max(0, ci);
                         focus();
                         return;
@@ -1634,13 +2030,22 @@
                     }
 
                     if (active === 'groups') {
-                        gi = Math.min(Math.max(0, names.length - 1), gi + 1);
+                        gi = Math.min(
+                            Math.max(0, names.length - 1),
+                            gi + 1
+                        );
                     } else {
-                        ci = Math.min(Math.max(0, list.length - 1), ci + 1);
+                        ci = Math.min(
+                            Math.max(0, list.length - 1),
+                            ci + 1
+                        );
                     }
 
                     focus();
-                    if (active === 'channels' && list[ci]) details(list[ci]);
+
+                    if (active === 'channels' && list[ci]) {
+                        details(list[ci]);
+                    }
                 },
 
                 right: function () {
@@ -1676,13 +2081,19 @@
                     if (panelMode) {
                         var buttons = colE.find('.iptv-action');
                         var selected = buttons.eq(ci);
-                        if (selected.length) selected.trigger('hover:enter');
+
+                        if (selected.length) {
+                            selected.trigger('hover:enter');
+                        }
+
                         return;
                     }
 
                     if (active === 'toolbar') {
                         var action = toolbarActions[ti];
+
                         if (action) runToolbarAction(action.id);
+
                         return;
                     }
 
@@ -1715,8 +2126,11 @@
 
         this.destroy = function () {
             alive = false;
+            playlistGeneration++;
 
-            if (activeIPTVInstance) activeIPTVInstance = null;
+            if (activeIPTVInstance) {
+                activeIPTVInstance = null;
+            }
 
             if (timer) {
                 clearInterval(timer);
@@ -1724,14 +2138,18 @@
             }
 
             if (plRequest && plRequest.readyState !== 4) {
-                plRequest.abort();
+                try {
+                    plRequest.abort();
+                } catch (e) {}
             }
 
-            if (EPG.request && EPG.request.readyState !== 4) {
-                EPG.request.abort();
-                EPG.request = null;
-                EPG.loading = false;
-            }
+            plRequest = null;
+
+            /*
+             * Інвалідуємо поточне покоління EPG до abort.
+             * Старий complete не зможе запустити наступний пакет.
+             */
+            cancelEPGLoad('компонент знищено');
 
             Lampa.Controller.remove('iptv_pro');
 
@@ -1757,6 +2175,7 @@
                 title: 'IPTV PRO',
                 component: 'iptv_pro'
             });
+
             return;
         }
 
@@ -1772,6 +2191,7 @@
 
         if (mode === 'settings') {
             notify(getSettingsInfo());
+            return;
         }
 
         if (mode === 'edit_playlist') {
@@ -1795,7 +2215,7 @@
 
     function registerIPTVSettings() {
         if (!Lampa.SettingsApi || !Lampa.SettingsApi.addComponent) {
-            console.warn('[IPTV PRO 13.9] SettingsApi недоступний');
+            console.warn(logPrefix(), 'SettingsApi недоступний');
             return;
         }
 
@@ -1806,13 +2226,17 @@
         });
 
         if (!Lampa.SettingsApi.addParam) {
-            console.warn('[IPTV PRO 13.9] SettingsApi.addParam недоступний');
+            console.warn(logPrefix(), 'SettingsApi.addParam недоступний');
             return;
         }
 
-        addIPTVSettingButton('iptv_pro_open', 'Відкрити IPTV PRO', function () {
-            openIPTVSettingsPanel('open');
-        });
+        addIPTVSettingButton(
+            'iptv_pro_open',
+            'Відкрити IPTV PRO',
+            function () {
+                openIPTVSettingsPanel('open');
+            }
+        );
 
         addIPTVSettingButton(
             'iptv_pro_playlist_edit',
@@ -1822,37 +2246,58 @@
             }
         );
 
-        addIPTVSettingButton('iptv_pro_epg_refresh', 'Оновити телепрограму EPG', function () {
-            openIPTVSettingsPanel('refresh');
-        });
+        addIPTVSettingButton(
+            'iptv_pro_epg_refresh',
+            'Оновити телепрограму EPG',
+            function () {
+                openIPTVSettingsPanel('refresh');
+            }
+        );
 
-        addIPTVSettingButton('iptv_pro_epg_diagnostics', 'Діагностика EPG', function () {
-            openIPTVSettingsPanel('diagnostics');
-        });
+        addIPTVSettingButton(
+            'iptv_pro_epg_diagnostics',
+            'Діагностика EPG',
+            function () {
+                openIPTVSettingsPanel('diagnostics');
+            }
+        );
 
-        addIPTVSettingButton('iptv_pro_epg_settings', 'Налаштування EPG', function () {
-            openIPTVSettingsPanel('settings');
-        });
+        addIPTVSettingButton(
+            'iptv_pro_epg_settings',
+            'Налаштування EPG',
+            function () {
+                openIPTVSettingsPanel('settings');
+            }
+        );
 
-        addIPTVSettingButton('iptv_pro_epg_status', 'Поточний стан EPG', function () {
-            notify(
-                'Стан: ' + EPG.status +
-                '. Каналів XMLTV: ' + EPG.channelCount +
-                '. Передач: ' + EPG.programmeCount +
-                '. Останній успіх: ' + formatDate(EPG.lastSuccess)
-            );
-        });
+        addIPTVSettingButton(
+            'iptv_pro_epg_status',
+            'Поточний стан EPG',
+            function () {
+                notify(
+                    'Стан: ' + EPG.status +
+                    '. Каналів XMLTV: ' + EPG.channelCount +
+                    '. Передач: ' + EPG.programmeCount +
+                    '. Останній успіх: ' + formatDate(EPG.lastSuccess)
+                );
+            }
+        );
 
-        addIPTVSettingButton('iptv_pro_playlist_info', 'Інформація про плейлист', function () {
-            var pl = getPlaylist();
+        addIPTVSettingButton(
+            'iptv_pro_playlist_info',
+            'Інформація про плейлист',
+            function () {
+                var pl = getPlaylist();
 
-            notify(
-                'Плейлист: ' + (pl && pl.name ? pl.name : 'Без назви') +
-                '. Каналів із tvg-id: ' + EPG.playlistIds.length
-            );
-        });
+                notify(
+                    'Плейлист: ' +
+                    (pl && pl.name ? pl.name : 'Без назви') +
+                    '. Каналів із tvg-id: ' + EPG.playlistIds.length
+                );
+            }
+        );
 
-        console.log('[IPTV PRO 13.9] Системні параметри зареєстровано');
+        console.log(logPrefix(), 'Системні параметри зареєстровано');
     }
 
     /*
@@ -1860,16 +2305,16 @@
      */
 
     function init() {
-        if (window.__iptv_pro_139_initialized) return;
+        if (window.__iptv_pro_140_initialized) return;
 
         var menu = $('.menu .menu__list');
 
         if (!menu.length) {
-            console.warn('[IPTV PRO 13.9] Меню Lampa ще не готове');
+            console.warn(logPrefix(), 'Меню Lampa ще не готове');
             return;
         }
 
-        window.__iptv_pro_139_initialized = true;
+        window.__iptv_pro_140_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
         registerIPTVSettings();
@@ -1891,7 +2336,7 @@
 
         menu.append(entry);
 
-        console.log('[IPTV PRO 13.9] Ініціалізовано');
+        console.log(logPrefix(), 'Ініціалізовано');
     }
 
     function waitForInit() {
