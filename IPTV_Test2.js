@@ -2243,6 +2243,10 @@
      */
 
     function init() {
+        // Захист від повторного запуску — перевіряємо і ставимо прапорець на самому початку
+        if (window.__iptv_pro_140_initialized) return;
+        window.__iptv_pro_140_initialized = true;
+
         var menu = $('.menu .menu__list');
 
         if (!menu.length) {
@@ -2250,18 +2254,8 @@
             return;
         }
 
-        // Повністю прибираємо всі попередні створення нашого пункту меню за унікальним класом
+        // Про всяк випадок вичищаємо будь-які залишки нашого пункту меню за класом
         menu.find('.iptv-pro-menu').remove();
-
-        // Також додатково вичищаємо дублікати за назвою «ТБ»
-        menu.find('.menu__item').filter(function () {
-            var txt = $(this).find('.menu__text').text().trim();
-            return txt === 'ТБ' && !$(this).hasClass('iptv-pro-menu');
-        }).remove();
-
-        // Захист від повторного запуску цього екземпляра плагіна
-        if (window.__iptv_pro_140_initialized) return;
-        window.__iptv_pro_140_initialized = true;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
