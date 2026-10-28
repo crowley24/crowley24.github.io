@@ -1,7 +1,6 @@
-
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Compact EPG Cache
+ * Custom EPG Edition — Compact EPG Cache (with TV Remote Long Press Fix)
  *
  * Based on IPTV 3.3.1
  * EPG Proxy 2.0.2 — POST batches
@@ -19,6 +18,7 @@
  * - Compact EPG cache without programme descriptions
  * - Cache write verification and size diagnostics
  * - Existing playlist and storage keys preserved
+ * - Added Lampa.Controller 'long' method for TV remotes
  */
 (function () {
     'use strict';
@@ -1815,7 +1815,7 @@
             );
 
             metaEl.text(
-                list.length + ' каналів · довго затисніть ОК для архіву'
+                list.length + ' каналів · затисніть ОК для архіву'
             );
 
             if (!list.length) {
@@ -2097,6 +2097,17 @@
                         : channelItems[focusIndex];
 
                     if (el) el.trigger('hover:enter');
+                },
+
+                // Додано підтримку довгого натискання кнопки ОК на пульті телевізора
+                long: function () {
+                    if (STATE.panelFocus === 'channels') {
+                        var list = currentChannels();
+                        var ch = list[focusIndex];
+                        if (ch) {
+                            showArchivePrograms(ch);
+                        }
+                    }
                 },
 
                 back: function () {
