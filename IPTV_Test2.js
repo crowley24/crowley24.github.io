@@ -169,21 +169,15 @@
     }
 
     function catchupTemplate(channel) {
-        if (!channel || !channel.catchup) return false;
-        var type = String(channel.catchup.type || '').toLowerCase();
-        var source = normalizeCatchupVariables(channel.catchup.source || '');
+        if (!channel) return false;
+        var type = String(channel.catchup && channel.catchup.type || '').toLowerCase();
+        var source = normalizeCatchupVariables(channel.catchup && channel.catchup.source || '');
         var url = normalizeCatchupVariables(channel.url);
 
-        if (!type) {
-            if (source) type = /^https?:\/\//i.test(source) ? 'default' : 'append';
-            else if (channel.catchup.days > 0) type = 'shift';
-            else return false;
-        }
-
         if (type === 'disabled' || type === 'none') return false;
-        if (type === 'default') return source || url;
-        if (type === 'append') return (source && /^https?:\/\//i.test(source) ? '' : url) + (source || '');
-        if (type === 'shift') return shiftTemplate(source || url);
+        if (type === 'default' || type === 'append' || type === 'shift') {
+            return source || shiftTemplate(url);
+        }
         if (type === 'flussonic' || type === 'fs') {
             return url.replace(/\/(video\d*|mono\d*)\.(m3u8|ts)(\?|$)/, '/$1-${start}-${durationfs}.$2$3');
         }
@@ -219,8 +213,12 @@
     }
 
     function canArchive(channel, program) {
-        if (!program || !channel.catchup || !channel.catchup.days || !catchupTemplate(channel)) return false;
-        var oldest = Date.now() - channel.catchup.days * 864e5;
+        if (!program || !program.start) return false;
+        var template = catchupTemplate(channel);
+        if (!template) return false;
+
+        var days = (channel.catchup && channel.catchup.days) || 3;
+        var oldest = Date.now() - days * 864e5;
         return program.start >= oldest && program.start <= Date.now();
     }
 
@@ -467,7 +465,7 @@
         var names = result.names;
         var progs = result.progs;
         var now = Date.now();
-        var from = now - 7 * 24 * 3600000; // Підтримка архіву до 7 днів назад у кеші
+        var from = now - 7 * 24 * 3600000;
         var to = now + 36 * 3600000;
 
         var channels = doc.getElementsByTagName('channel');
@@ -681,19 +679,15 @@
                 var available = canArchive(ch.original || ch, p);
                 return {
                     title: fmtTime(p.start) + ' – ' + fmtTime(p.stop) + '  ' + p.title,
-                    subtitle: available ? 'Доступно в архіві' : 'Тільки програма',
+                    subtitle: available ? 'Доступно в архіві' : 'Натисніть для запуску',
                     program: p,
-                    available: available
+                    available: true
                 };
             }),
             onSelect: function (item) {
-                if (!item.available) {
-                    return noty('Ця передача недоступна в архіві (вийшла за межі днів зберігання)');
-                }
-                
                 var archiveUrl = buildArchiveUrl(ch.original || ch, item.program);
                 if (!archiveUrl) {
-                    return noty('Не вдалося сформувати посилання на архів');
+                    return noty('Не вдалося сформувати посилання на архів для цієї передачі');
                 }
 
                 Lampa.Player.play({
