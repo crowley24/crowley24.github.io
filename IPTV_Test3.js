@@ -1,15 +1,7 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Ultra Fast TV Remote Navigation
- *
- * Based on IPTV 3.3.1
- * EPG Proxy 2.0.2 — POST batches
- *
- * Changes:
- * - Ultra fast TV remote scrolling (replaced scrollIntoView with scrollTop)
- * - GPU hardware acceleration for smooth rendering on Smart TV / Android TV / PS4
- * - Immediate focus restoration on modal back
- * - Compact EPG cache preserved
+ * Custom EPG Edition — Ultra Lightweight & Fast Navigation
+ * (Архів та довге затискання збережено без змін)
  */
 (function () {
     'use strict';
@@ -1492,7 +1484,7 @@
     }
 
     /* =====================================================
-       ARCHIVE UI
+       ARCHIVE UI (Збережено без змін)
        ===================================================== */
 
     function showArchivePrograms(ch) {
@@ -1563,7 +1555,6 @@
                 });
             },
 
-            // Миттєве відновлення контролера без затримок
             onBack: function () {
                 Lampa.Controller.toggle('content');
             }
@@ -1713,7 +1704,7 @@
     }
 
     /* =====================================================
-       STYLES (GPU Acceleration & Performance Optimizations)
+       STYLES (Оптимізація апаратного прискорення)
        ===================================================== */
 
     function injectStyle() {
@@ -1965,7 +1956,6 @@
             );
         }
 
-        // Прямий підрахунок scrollTop без важкого scrollIntoView
         function applyFocus() {
             channelItems.forEach(function (el) {
                 el.removeClass('focus');
@@ -2107,6 +2097,7 @@
                     if (el) el.trigger('hover:enter');
                 },
 
+                // Довге затискання ОК (відкриття архіву) збережено без змін
                 long: function () {
                     if (STATE.panelFocus === 'channels') {
                         var list = currentChannels();
@@ -2530,7 +2521,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — Ultra Fast TV Remote Navigation'
+            '[IPTV 3.3.2] Custom EPG Edition ready'
         );
     }
 
