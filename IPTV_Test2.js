@@ -2254,8 +2254,8 @@
             return;
         }
 
-        // Про всяк випадок вичищаємо будь-які залишки нашого пункту меню за класом
-        menu.find('.iptv-pro-menu').remove();
+        // Перевіряємо, чи пункт меню вже існує в DOM, щоб уникнути будь-яких дублікатів
+        if (menu.find('.iptv-pro-menu').length > 0) return;
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
@@ -2291,7 +2291,7 @@
     }
 
     function waitForInit() {
-        if (window.app_ready) {
+        if (window.app_ready || window.appready) {
             init();
         } else {
             Lampa.Listener.follow('app', function (e) {
