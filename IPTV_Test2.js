@@ -1,1 +1,1267 @@
-(function(){"use strict";if(window.lampa_iptv_plus_ready){if(typeof window.lampa_iptv_plus_restore_menu==="function"){window.lampa_iptv_plus_restore_menu()}return}window.lampa_iptv_plus_ready=true;var PLUGIN="iptv_plus";var VERSION="1.2.0";var AUTO_EPG_URL="https://cdn.epg.one/edem.xml.gz";var AUTO_EPG_RU_URL="https://cdn.epg.one/ru.xml.gz";var AUTO_EPG_LITE_URL="https://cdn.epg.one/epg.xml";var FFLATE_URL="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js";var CHANNEL_PAGE_SIZE=80;var network=new Lampa.Reguest;var state={channels:[],visible:[],groups:[],groupCounts:{},epg:{},epgNames:{},playlistEpg:"",archiveHint:false,autoEpg:false,guideMode:"none",guideLoading:false,guidePromise:null,guideTicket:0,archiveLoading:{},archiveReady:{},archiveFailed:{},selectedChannel:"",selectedDay:"",loadedAt:0,component:null};var ICON='<svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="7" width="34" height="23" rx="4" stroke="currentColor" stroke-width="3"/><path d="M14 2l4 5 6-5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M10 34h18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';function text(value){return value==null?"":String(value)}function escapeHtml(value){return text(value).replace(/[&<>"']/g,function(character){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[character]})}function normalizeExact(value){return text(value).toLowerCase().replace(/[ё]/g,"е").replace(/[^a-zа-я0-9]+/gi," ").trim()}function normalize(value){return normalizeExact(value).replace(/\b(hd|fhd|uhd|4k|sd)\b/gi,"").replace(/\s+/g," ").trim()}function rememberGuideName(target,name,id){var exact=normalizeExact(name);var relaxed=normalize(name);if(exact&&!target["exact:"+exact])target["exact:"+exact]=id;if(relaxed&&!target["relaxed:"+relaxed])target["relaxed:"+relaxed]=id}function storage(name,fallback){return Lampa.Storage.get(PLUGIN+"_"+name,fallback)}function field(name){return Lampa.Storage.field(PLUGIN+"_"+name)}function notify(message){Lampa.Noty.show(message)}function channelKey(channel){if(channel.id)return"id:"+channel.id;return"name:"+normalizeExact(channel.name)+":"+normalizeExact(channel.group)}function legacyChannelKey(channel){return channel.url?"url:"+channel.url:""}function favoriteIds(){var saved=storage("favorites",[]);return Array.isArray(saved)?saved:[]}function favoriteLookup(){var lookup={};favoriteIds().forEach(function(key){lookup[key]=true});return lookup}function favoriteInLookup(channel,lookup){var legacy=legacyChannelKey(channel);return Boolean(lookup[channelKey(channel)]||legacy&&lookup[legacy])}function isFavorite(channel){var favorites=favoriteIds();return favorites.indexOf(channelKey(channel))>=0||legacyChannelKey(channel)&&favorites.indexOf(legacyChannelKey(channel))>=0}function setFavorite(channel,enabled){var key=channelKey(channel);var legacy=legacyChannelKey(channel);var favorites=favoriteIds().filter(function(item){return item!==key&&item!==legacy});if(enabled)favorites.unshift(key);Lampa.Storage.set(PLUGIN+"_favorites",favorites);if(state.component&&state.component.onFavoritesChanged)state.component.onFavoritesChanged();return enabled}function historyIds(){var saved=storage("history",[]);return Array.isArray(saved)?saved:[]}function addToHistory(channel){var key=channelKey(channel);var history=historyIds().filter(function(item){return item!==key});history.unshift(key);Lampa.Storage.set(PLUGIN+"_history",history.slice(0,40));Lampa.Storage.set(PLUGIN+"_last_channel",key);if(state.component){state.component.historyDirty=true}}function historyChannels(){var order=historyIds();var channels={};state.channels.forEach(function(channel){channels[channelKey(channel)]=channel});return order.map(function(key){return channels[key]}).filter(Boolean)}function requestText(url){return new Promise(function(resolve,reject){if(!url)return reject(new Error("URL не указан"));network.timeout(3e4);network.native(url,function(data){if(typeof data==="string")resolve(data);else if(data&&typeof data.responseText==="string")resolve(data.responseText);else reject(new Error("Сервер вернул не текстовый документ"))},function(error){reject(error instanceof Error?error:new Error("Не удалось загрузить "+url))},false,{dataType:"text"})})}function attr(source,name){var match=new RegExp("(?:^|\\s)"+name.replace(/[-/\\^$*+?.()|[\]{}]/g,"\\$&")+"=(?:\"([^\"]*)\"|'([^']*)'|([^\\s]+))","i").exec(source);return match?match[1]||match[2]||match[3]||"":""}function archiveDays(daysValue,recValue,timeshiftValue,secondsValue){var explicitDays=parseFloat(daysValue);if(isFinite(explicitDays)&&explicitDays>0)return Math.ceil(explicitDays);var rec=parseFloat(recValue);if(isFinite(rec)&&rec>1)return Math.ceil(rec);if(rec===1)return Math.max(1,parseInt(field("archive_days")||3,10)||3);var timeshift=parseFloat(timeshiftValue);if(isFinite(timeshift)&&timeshift>0)return Math.ceil(timeshift);var seconds=parseFloat(secondsValue);if(isFinite(seconds)&&seconds>0)return Math.max(1,Math.ceil(seconds/86400));return 0}function epgShiftMilliseconds(value){var shift=parseFloat(value);if(!isFinite(shift)||!shift)return 0;return Math.abs(shift)<=12?shift*36e5:shift*1e3}function splitUrlHeaders(source){var parts=text(source).split("|");var headers={};if(parts.length>1){parts.slice(1).join("|").split("&").forEach(function(pair){var index=pair.indexOf("=");if(index>0)headers[decodeURIComponent(pair.slice(0,index))]=decodeURIComponent(pair.slice(index+1))})}return{url:parts[0].trim(),headers}}function parseM3U(source){source=text(source).replace(/^\uFEFF/,"");if(!/^#EXTM3U/i.test(source.trim()))throw new Error("Файл не похож на M3U-плейлист");var lines=source.split(/\r?\n/);var header=lines[0]||"";var headerCatchup={type:attr(header,"catchup"),source:attr(header,"catchup-source"),days:attr(header,"catchup-days"),rec:attr(header,"tvg-rec"),timeshift:attr(header,"timeshift"),seconds:attr(header,"catchup-time"),epgShift:attr(header,"tvg-shift")};var epgUrl=attr(header,"url-tvg")||attr(header,"x-tvg-url");var channels=[];var pending=null;lines.slice(1).forEach(function(rawLine){var line=rawLine.trim();if(!line)return;if(line.indexOf("#EXTINF:")===0){var comma=line.lastIndexOf(",");var channelName=comma>=0?line.slice(comma+1).trim():"Без названия";var recDays=attr(line,"tvg-rec")||headerCatchup.rec;var days=archiveDays(attr(line,"catchup-days")||headerCatchup.days,recDays,attr(line,"timeshift")||headerCatchup.timeshift,attr(line,"catchup-time")||headerCatchup.seconds);var type=attr(line,"catchup")||headerCatchup.type;var sourceValue=attr(line,"catchup-source")||headerCatchup.source;if(!type&&sourceValue)type=/^https?:\/\//i.test(sourceValue)?"default":"append";if(!type&&!sourceValue&&recDays)type="shift";pending={id:attr(line,"tvg-id"),tvgName:attr(line,"tvg-name"),name:channelName,logo:attr(line,"tvg-logo"),group:attr(line,"group-title")||"Без группы",url:"",headers:{},epgShift:epgShiftMilliseconds(attr(line,"tvg-shift")||headerCatchup.epgShift),catchup:{type,source:sourceValue,days}};return}if(!pending)return;if(line.indexOf("#EXTGRP:")===0){pending.group=line.slice(8).trim()||pending.group}else if(line.indexOf("#EXTVLCOPT:")===0){var option=line.slice(11);var optionIndex=option.indexOf("=");if(optionIndex>0)pending.headers[option.slice(0,optionIndex).trim()]=option.slice(optionIndex+1).trim()}else if(line.charAt(0)!=="#"){var parsedUrl=splitUrlHeaders(line);pending.url=parsedUrl.url;Object.keys(parsedUrl.headers).forEach(function(key){pending.headers[key]=parsedUrl.headers[key]});if(pending.url){pending.index=channels.length;channels.push(pending)}pending=null}});return{channels,epgUrl,archiveHint:channels.some(function(channel){return channel.catchup.days>0||Boolean(channel.catchup.type||channel.catchup.source)})}}function parseXmltvDate(value){var match=/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?(?:\s*([+-])(\d{2})(\d{2}))?/.exec(text(value));if(!match)return 0;if(!match[7]){return new Date(+match[1],+match[2]-1,+match[3],+match[4],+match[5],+(match[6]||0)).getTime()}var utc=Date.UTC(+match[1],+match[2]-1,+match[3],+match[4],+match[5],+(match[6]||0));var offset=(+match[8]*60+ +match[9])*6e4;return utc-(match[7]==="+"?offset:-offset)}function guidePastDays(selectedChannels){var configured=Math.max(1,parseInt(field("archive_days")||3,10)||3);var channels=selectedChannels&&selectedChannels.length?selectedChannels:state.channels;(channels||[]).forEach(function(channel){configured=Math.max(configured,parseInt(channel&&channel.catchup&&channel.catchup.days||0,10)||0)});return configured}function childText(node,tag){var child=node.getElementsByTagName(tag)[0];return child?text(child.textContent).trim():""}function parseXmltv(source){var documentXml=(new DOMParser).parseFromString(text(source),"text/xml");if(documentXml.getElementsByTagName("parsererror").length)throw new Error("Ошибка разбора XMLTV");var epg={};var epgNames={};var channelNodes=documentXml.getElementsByTagName("channel");var programNodes=documentXml.getElementsByTagName("programme");var keepAfter=Date.now()-(guidePastDays()+1)*864e5;var keepBefore=Date.now()+2*864e5;var i;for(i=0;i<channelNodes.length;i++){var id=channelNodes[i].getAttribute("id")||"";var displays=channelNodes[i].getElementsByTagName("display-name");for(var displayIndex=0;id&&displayIndex<displays.length;displayIndex++){rememberGuideName(epgNames,text(displays[displayIndex].textContent).trim(),id)}}for(i=0;i<programNodes.length;i++){var node=programNodes[i];var channelId=node.getAttribute("channel")||"";var start=parseXmltvDate(node.getAttribute("start"));var stop=parseXmltvDate(node.getAttribute("stop"));if(!channelId||!start||!stop||stop<keepAfter||start>keepBefore)continue;if(!epg[channelId])epg[channelId]=[];epg[channelId].push({start,stop,title:childText(node,"title")||"Без названия",desc:childText(node,"desc"),category:childText(node,"category")})}Object.keys(epg).forEach(function(id){epg[id].sort(function(a,b){return a.start-b.start})});return{epg,names:epgNames}}function decodeXml(value){return text(value).replace(/<[^>]*>/g,"").replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi,function(full,entity){var named={amp:"&",lt:"<",gt:">",quot:'"',apos:"'"};if(named[entity])return named[entity];if(entity.indexOf("#x")===0)return String.fromCharCode(parseInt(entity.slice(2),16));if(entity.charAt(0)==="#")return String.fromCharCode(parseInt(entity.slice(1),10));return full}).trim()}function xmlAttribute(source,name){var match=new RegExp("(?:^|\\s)"+name+"=(?:\"([^\"]*)\"|'([^']*)')","i").exec(source);return match?decodeXml(match[1]||match[2]||""):""}function xmlValues(source,tag){var values=[];var expression=new RegExp("<"+tag+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/"+tag+"\\s*>","gi");var match;while(match=expression.exec(source))values.push(decodeXml(match[1]));return values}var fflatePromise=null;function loadFflate(){if(window.fflate&&window.fflate.Gunzip)return Promise.resolve(window.fflate);if(fflatePromise)return fflatePromise;fflatePromise=new Promise(function(resolve,reject){if(!window.document||!window.document.createElement){reject(new Error("Распаковка XMLTV.GZ не поддерживается"));return}var script=window.document.createElement("script");var timer=setTimeout(function(){script.onload=null;script.onerror=null;reject(new Error("Не удалось загрузить модуль распаковки архива"))},15e3);script.async=true;script.src=FFLATE_URL;script.setAttribute("data-iptv-plus-fflate","true");script.onload=function(){clearTimeout(timer);if(window.fflate&&window.fflate.Gunzip)resolve(window.fflate);else reject(new Error("Модуль распаковки архива не запустился"))};script.onerror=function(){clearTimeout(timer);reject(new Error("Не удалось загрузить модуль распаковки архива"))};(window.document.head||window.document.body).appendChild(script)}).catch(function(error){fflatePromise=null;throw error});return fflatePromise}function parseXmltvStream(url,gzip,selectedChannels,timeout){if(!window.fetch||!window.TextDecoder){return Promise.reject(new Error("Потоковая загрузка XMLTV не поддерживается"))}var result={epg:{},names:{}};var wantedExactNames={};var wantedNames={};var wantedIds={};var keepAfter=Date.now()-(guidePastDays(selectedChannels)+1)*864e5;var keepBefore=Date.now()+2*864e5;(selectedChannels||state.channels).forEach(function(channel){wantedExactNames[normalizeExact(channel.name)]=true;wantedNames[normalize(channel.name)]=true;if(channel.tvgName){wantedExactNames[normalizeExact(channel.tvgName)]=true;wantedNames[normalize(channel.tvgName)]=true}if(channel.id)wantedIds[channel.id]=true});function accept(kind,attributes,body){if(kind==="channel"){var id=xmlAttribute(attributes,"id");var names=xmlValues(body,"display-name");var matched=names.some(function(name){return wantedExactNames[normalizeExact(name)]||wantedNames[normalize(name)]});if(!id||!matched)return;wantedIds[id]=true;names.forEach(function(name){rememberGuideName(result.names,name,id)});return}var channelId=xmlAttribute(attributes,"channel");if(!wantedIds[channelId])return;var start=parseXmltvDate(xmlAttribute(attributes,"start"));var stop=parseXmltvDate(xmlAttribute(attributes,"stop"));if(!start||!stop||stop<keepAfter||start>keepBefore)return;if(!result.epg[channelId])result.epg[channelId]=[];result.epg[channelId].push({start,stop,title:xmlValues(body,"title")[0]||"Без названия",desc:xmlValues(body,"desc")[0]||"",category:xmlValues(body,"category")[0]||""})}var controller=window.AbortController?new window.AbortController:null;var timer;var timeoutPromise=new Promise(function(resolve,reject){timer=setTimeout(function(){if(controller)controller.abort();reject(new Error("Загрузка телепрограммы превысила "+Math.round((timeout||45e3)/1e3)+" секунд"))},timeout||45e3)});var options=controller?{signal:controller.signal}:{};var loading=window.fetch(url,options).then(function(response){if(!response.ok||!response.body)throw new Error("Не удалось загрузить автоматический EPG");var decoder=new window.TextDecoder("utf-8");var buffer="";function consume(final){var expression=/<(channel|programme)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi;var match;var consumed=0;while(match=expression.exec(buffer)){accept(match[1].toLowerCase(),match[2],match[3]);consumed=expression.lastIndex}if(consumed)buffer=buffer.slice(consumed);if(!final&&buffer.length>1048576){var channelStart=buffer.lastIndexOf("<channel");var programStart=buffer.lastIndexOf("<programme");var safeStart=Math.max(channelStart,programStart);if(safeStart>0)buffer=buffer.slice(safeStart)}}function finish(resolve){Object.keys(result.epg).forEach(function(id){result.epg[id].sort(function(a,b){return a.start-b.start})});clearTimeout(timer);resolve(result)}function readNative(stream){var reader=stream.getReader();return new Promise(function(resolve,reject){function read(){reader.read().then(function(chunk){if(chunk.done){buffer+=decoder.decode();consume(true);finish(resolve);return}buffer+=decoder.decode(chunk.value,{stream:true});consume(false);read()}).catch(function(error){clearTimeout(timer);reject(error)})}read()})}function readFflate(fflate){var reader=response.body.getReader();return new Promise(function(resolve,reject){var completed=false;var gunzip;try{gunzip=new fflate.Gunzip(function(chunk,final){try{buffer+=decoder.decode(chunk,{stream:!final});consume(Boolean(final));if(final&&!completed){completed=true;finish(resolve)}}catch(error){completed=true;clearTimeout(timer);reject(error)}})}catch(error){clearTimeout(timer);reject(error);return}function read(){reader.read().then(function(part){if(completed)return;try{gunzip.push(part.value||new Uint8Array(0),Boolean(part.done));if(!part.done)read()}catch(error){completed=true;clearTimeout(timer);reject(error)}}).catch(function(error){completed=true;clearTimeout(timer);reject(error)})}read()})}if(!gzip)return readNative(response.body);if(window.DecompressionStream)return readNative(response.body.pipeThrough(new window.DecompressionStream("gzip")));return loadFflate().then(readFflate)});return Promise.race([loading,timeoutPromise]).then(function(guide){clearTimeout(timer);return guide}).catch(function(error){clearTimeout(timer);throw error})}function parseXmltvGzip(url,selectedChannels,timeout){return parseXmltvStream(url,true,selectedChannels,timeout)}function loadGuide(url,selectedChannels,timeout){var gzip=/\.gz(?:$|[?#])/i.test(url);var canStream=window.fetch&&window.TextDecoder;if(canStream)return parseXmltvStream(url,gzip,selectedChannels,timeout);if(gzip)return Promise.reject(new Error("Это устройство не поддерживает XMLTV.GZ"));return requestText(url).then(parseXmltv)}function mergeGuide(guide,replace){if(replace){state.epg=guide.epg||{};state.epgNames=guide.names||{};return}Object.keys(guide.epg||{}).forEach(function(id){state.epg[id]=guide.epg[id]});Object.keys(guide.names||{}).forEach(function(name){state.epgNames[name]=guide.names[name]})}function refreshGuideUi(){if(!state.component)return;if(state.component.refreshOpenChannel&&state.component.refreshOpenChannel())return;if(state.component.build)state.component.build(true)}function startGuideLoad(url,automatic){var ticket=++state.guideTicket;state.guideLoading=true;state.guideMode=automatic?"today":"full";state.guidePromise=loadGuide(url,null,45e3).then(function(guide){if(ticket!==state.guideTicket)return state;mergeGuide(guide,true);state.guideLoading=false;state.guidePromise=null;refreshGuideUi();return state}).catch(function(error){if(ticket!==state.guideTicket)return state;console.log("IPTV+","EPG load error",error);state.guideLoading=false;state.guidePromise=null;refreshGuideUi();notify(automatic?"Каналы загружены, но программа передач недоступна":"Каналы загружены, но XMLTV недоступен");return state});return state.guidePromise}function guideCacheKey(channel){return normalizeExact(channel.name)+"|"+normalizeExact(channel.group)}function restoreArchiveGuide(channel){var key=guideCacheKey(channel);if(state.archiveReady[key])return true;var cache=storage("archive_cache",[]);if(!Array.isArray(cache))return false;var found=cache.filter(function(entry){return entry&&entry.key===key&&entry.time>Date.now()-216e5})[0];if(!found||!found.guide)return false;mergeGuide(found.guide,false);state.archiveReady[key]=true;return true}function saveArchiveGuide(channel,guide){var key=guideCacheKey(channel);var cache=storage("archive_cache",[]);if(!Array.isArray(cache))cache=[];cache=cache.filter(function(entry){return entry&&entry.key!==key});cache.unshift({key,time:Date.now(),guide});try{Lampa.Storage.set(PLUGIN+"_archive_cache",cache.slice(0,10))}catch(error){console.log("IPTV+","Archive cache save error",error)}}function guideProgramsForChannel(channel,guide){var id="";var names=guide.names||{};var epg=guide.epg||{};if(channel.id&&epg[channel.id])id=channel.id;else if(channel.tvgName&&names["exact:"+normalizeExact(channel.tvgName)])id=names["exact:"+normalizeExact(channel.tvgName)];else if(names["exact:"+normalizeExact(channel.name)])id=names["exact:"+normalizeExact(channel.name)];else if(channel.tvgName&&names["relaxed:"+normalize(channel.tvgName)])id=names["relaxed:"+normalize(channel.tvgName)];else if(names["relaxed:"+normalize(channel.name)])id=names["relaxed:"+normalize(channel.name)];return id&&epg[id]?epg[id]:[]}function loadArchiveGuide(channel){var key=guideCacheKey(channel);if(state.guideMode==="full"||restoreArchiveGuide(channel))return Promise.resolve(state);if(state.archiveLoading[key])return state.archiveLoading[key];var source=/[а-яё]/i.test(channel.name)?AUTO_EPG_RU_URL:AUTO_EPG_URL;var fallbackSource=source===AUTO_EPG_RU_URL?AUTO_EPG_URL:AUTO_EPG_RU_URL;function loadMatchingGuide(url){return loadGuide(url,[channel],6e4).then(function(guide){var oldest=Date.now()-(channel.catchup.days||1)*864e5;var hasHistory=guideProgramsForChannel(channel,guide).some(function(program){return program.start>=oldest&&program.stop<Date.now()});if(!hasHistory)throw new Error("В телегиде не найдены прошлые передачи этого канала");return guide})}state.archiveLoading[key]=loadMatchingGuide(source).catch(function(firstError){console.log("IPTV+","Primary archive guide mismatch",firstError);return loadMatchingGuide(fallbackSource)}).then(function(guide){mergeGuide(guide,false);state.archiveReady[key]=true;delete state.archiveFailed[key];saveArchiveGuide(channel,guide);delete state.archiveLoading[key];refreshGuideUi();return state}).catch(function(error){console.log("IPTV+","Archive guide load error",error);delete state.archiveLoading[key];state.archiveFailed[key]=error&&error.message?error.message:"Не удалось загрузить архив";refreshGuideUi();throw error});return state.archiveLoading[key]}function epgId(channel){if(channel.id&&state.epg[channel.id])return channel.id;if(channel.tvgName&&state.epgNames["exact:"+normalizeExact(channel.tvgName)])return state.epgNames["exact:"+normalizeExact(channel.tvgName)];if(state.epgNames["exact:"+normalizeExact(channel.name)])return state.epgNames["exact:"+normalizeExact(channel.name)];if(channel.tvgName&&state.epgNames["relaxed:"+normalize(channel.tvgName)])return state.epgNames["relaxed:"+normalize(channel.tvgName)];if(state.epgNames["relaxed:"+normalize(channel.name)])return state.epgNames["relaxed:"+normalize(channel.name)];return channel.id||""}function programs(channel){var list=state.epg[epgId(channel)]||[];var shift=channel&&channel.epgShift||0;if(!shift)return list;return list.map(function(program){return{start:program.start+shift,stop:program.stop+shift,title:program.title,desc:program.desc,category:program.category}})}function currentProgramIndex(channel,at,preparedPrograms){at=at||Date.now();var list=preparedPrograms||programs(channel);var low=0;var high=list.length-1;while(low<=high){var middle=low+high>>1;var program=list[middle];if(program.start>at)high=middle-1;else if(program.stop<=at)low=middle+1;else return middle}return-1}function programProgress(program,at){if(!program||!program.start||!program.stop||program.stop<=program.start)return 0;at=at||Date.now();return Math.max(0,Math.min(100,Math.round((at-program.start)/(program.stop-program.start)*100)))}function pad(value){return("0"+value).slice(-2)}function formatDate(timestamp,pattern,utc){var date=new Date(timestamp*1e3);var get=function(localName,utcName){return date[utc?utcName:localName]()};var values={yyyy:get("getFullYear","getUTCFullYear"),MM:pad(get("getMonth","getUTCMonth")+1),dd:pad(get("getDate","getUTCDate")),HH:pad(get("getHours","getUTCHours")),mm:pad(get("getMinutes","getUTCMinutes")),ss:pad(get("getSeconds","getUTCSeconds"))};return text(pattern||"yyyy-MM-dd:HH-mm").replace(/yyyy|MM|dd|HH|mm|ss/g,function(key){return values[key]})}function normalizeCatchupVariables(template){var aliases={utc:"start",lutc:"timestamp",current_utc:"timestamp",utcend:"end",start_iso:"start_iso",end_iso:"end_iso",now_iso:"now_iso"};return text(template).replace(/(^|[^$])\{([a-z_][a-z0-9_-]*)\}/gi,function(full,prefix,name){var normalized=aliases[name.toLowerCase()]||name;return prefix+"${"+normalized+"}"})}function setCatchupQuery(template,name,value){var hashIndex=template.indexOf("#");var hash=hashIndex>=0?template.slice(hashIndex):"";var base=hashIndex>=0?template.slice(0,hashIndex):template;var expression=new RegExp("([?&])"+name+"=[^&#]*","i");if(expression.test(base)){base=base.replace(expression,function(full,separator){return separator+name+"="+value})}else{base+=(base.indexOf("?")>=0?"&":"?")+name+"="+value}return base+hash}function shiftTemplate(url){var template=normalizeCatchupVariables(url);template=setCatchupQuery(template,"utc","${start}");template=setCatchupQuery(template,"lutc","${timestamp}");return template}function hasCatchupTimeVariables(template){return/\$\{(?:start|utc|end|utcend|timestamp|lutc|current_utc|now|offset|duration|durationfs|durmin|start_iso|end_iso|now_iso|start-|end-|\([ben])/i.test(template)}function catchupTemplate(channel){var type=text(channel.catchup.type).toLowerCase();var source=normalizeCatchupVariables(channel.catchup.source||"");var url=normalizeCatchupVariables(channel.url);if(!type){if(source)type=/^https?:\/\//i.test(source)?"default":"append";else if(url.indexOf("${")>=0)type="default";else if(channel.catchup.days>0)type="shift";else return false}if(type==="disabled"||type==="none")return false;if(type==="default"){var defaultUrl=source||url;return hasCatchupTimeVariables(defaultUrl)?defaultUrl:shiftTemplate(defaultUrl)}if(type==="append"){var appended=(source&&/^https?:\/\//i.test(source)?"":url)+(source||"");return hasCatchupTimeVariables(appended)?appended:shiftTemplate(appended)}if(type==="shift"){return shiftTemplate(source||url)}if(type==="timeshift"){var timeshifted=source||url;timeshifted=setCatchupQuery(timeshifted,"timeshift","${start}");return setCatchupQuery(timeshifted,"timenow","${timestamp}")}if(type==="archive"){var archived=source||url;archived=setCatchupQuery(archived,"archive","${start}");return setCatchupQuery(archived,"archive_end","${end}")}if(type==="flussonic"||type==="flussonic-hls"||type==="flussonic-ts"||type==="fs"){return url.replace(/\/(video\d*|mono\d*)\.(m3u8|ts)(\?|$)/,"/$1-${start}-${durationfs}.$2$3").replace(/\/(index|playlist)\.(m3u8|ts)(\?|$)/,"/archive-${start}-${durationfs}.$2$3").replace(/\/mpegts(\?|$)/,"/timeshift_abs-${start}.ts$1").replace(/\/live(\?|$)/,"/${start}.ts$1")}if(type==="xc"||type==="xtream"){return url.replace(/^(https?:\/\/[^/]+)(\/live)?(\/[^/]+\/[^/]+\/)([^/.]+)\.m3u8?$/,"$1/timeshift$3${(d)M}/${(b)yyyy-MM-dd:HH-mm}/$4.m3u8").replace(/^(https?:\/\/[^/]+)(\/live)?(\/[^/]+\/[^/]+\/)([^/.]+)(\.ts|)$/,"$1/timeshift$3${(d)M}/${(b)yyyy-MM-dd:HH-mm}/$4.ts")}return false}function buildArchiveUrl(channel,program){var template=catchupTemplate(channel);if(!template||!program)return false;var start=Math.floor(program.start/1e3);var end=Math.floor(program.stop/1e3);var now=Math.floor(Date.now()/1e3);var duration=Math.max(1,end-start);var values={start,utc:start,end,utcend:end,timestamp:now,lutc:now,now,offset:Math.max(0,now-start),duration,durationfs:end>now?"now":duration,durmin:Math.max(1,Math.floor(duration/60)),start_iso:new Date(start*1e3).toISOString(),end_iso:new Date(end*1e3).toISOString(),now_iso:new Date(now*1e3).toISOString()};var startParts={year:"yyyy",mon:"MM",day:"dd",hour:"HH",min:"mm",sec:"ss"};Object.keys(startParts).forEach(function(part){values["start-"+part]=formatDate(start,startParts[part],false);values["end-"+part]=formatDate(end,startParts[part],false)});return normalizeCatchupVariables(template).replace(/\$\{([^}]+)\}/g,function(full,expression){var dateMatch=/^\(([ben])(u)?\)(.+)$/.exec(expression);if(dateMatch){var stamp=dateMatch[1]==="b"?start:dateMatch[1]==="e"?end:now;return encodeURIComponent(formatDate(stamp,dateMatch[3],Boolean(dateMatch[2])))}if(expression==="(d)M")return Math.max(1,Math.ceil(duration/60));if(Object.prototype.hasOwnProperty.call(values,expression))return encodeURIComponent(values[expression]);return full})}function prepareLiveUrl(url){var now=Math.floor(Date.now()/1e3);return normalizeCatchupVariables(url).replace(/\$\{(start|utc|timestamp|lutc|current_utc|now)\}/gi,function(){return String(now)})}function canArchive(channel,program){if(!program||!channel.catchup.days||!catchupTemplate(channel))return false;var oldest=Date.now()-channel.catchup.days*864e5;return program.start>=oldest&&program.start<=Date.now()}function formatTime(timestamp){var date=new Date(timestamp);return pad(date.getHours())+":"+pad(date.getMinutes())}function dayKey(timestamp){var date=new Date(timestamp);return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate())}function dayLabel(key){var parts=text(key).split("-");var date=new Date(+parts[0],+parts[1]-1,+parts[2]);var today=dayKey(Date.now());var yesterday=dayKey(Date.now()-864e5);var tomorrow=dayKey(Date.now()+864e5);if(key===today)return"Сегодня";if(key===yesterday)return"Вчера";if(key===tomorrow)return"Завтра";return["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][date.getDay()]+", "+pad(date.getDate())+"."+pad(date.getMonth()+1)}function qualityLabel(channel){var match=/(?:^|[^a-zа-я0-9])(4k|uhd|fhd|hd)(?:$|[^a-zа-я0-9])/i.exec(channel.name);return match?match[1].toUpperCase():""}function playArchive(channel,program,archiveList){var url=buildArchiveUrl(channel,program);if(!url)return notify("Для этого канала не описан адрес архива");addToHistory(channel);function convert(item){return{title:formatTime(item.start)+" — "+item.title,url:buildArchiveUrl(channel,item),error:function(){notify("Архив не открылся. Попробуйте другую передачу или CDN провайдера")}}}Lampa.Player.runas(Lampa.Storage.field("player_iptv"));Lampa.Player.play(convert(program));setTimeout(function(){Lampa.Player.playlist((archiveList||[]).filter(function(item){return canArchive(channel,item)}).map(convert))},0)}function recentPrograms(channel){var now=Date.now();return programs(channel).filter(function(program){return program.start<=now+216e5&&program.stop>=now-(channel.catchup.days||1)*864e5})}function showPrograms(channel,returnController){var list=recentPrograms(channel).reverse();if(!list.length)return notify("Для канала нет телепрограммы");var enabled=returnController||Lampa.Controller.enabled().name;Lampa.Select.show({title:channel.name+" — архив",items:list.map(function(program){var available=canArchive(channel,program);return{title:formatTime(program.start)+"–"+formatTime(program.stop)+"  "+program.title,subtitle:program.desc||(available?"Доступно в архиве":"Только программа"),program,available}}),onSelect:function(item){if(!item.available)return notify("Эта передача недоступна в архиве");Lampa.Select.hide();playArchive(channel,item.program,list.slice().reverse())},onBack:function(){Lampa.Controller.toggle(enabled)}})}function showChannelSelect(channel,index){restoreArchiveGuide(channel);var enabled=Lampa.Controller.enabled().name;var now=Date.now();var guide=recentPrograms(channel);var current=currentProgramIndex(channel);var archiveKey=guideCacheKey(channel);var archiveError=state.archiveFailed[archiveKey];var needsHistory=state.autoEpg&&channel.catchup.days>0&&state.guideMode!=="full"&&!state.archiveReady[archiveKey]&&!archiveError;var items=[{title:"▶ Прямой эфир",subtitle:current>=0&&programs(channel)[current]?programs(channel)[current].title:"Смотреть канал сейчас",thumbnail:channel.logo,action:"live"},{title:"♥ Favorites",subtitle:isFavorite(channel)?"Канал добавлен в избранное":"Добавить канал в избранное",checkbox:true,checked:isFavorite(channel),action:"favorite"}];if(guide.length){items.push({title:"Программа передач и архив",separator:true});var ordered=guide.filter(function(program){return program.start<=now&&program.stop>now}).concat(guide.filter(function(program){return program.stop<=now}).reverse()).concat(guide.filter(function(program){return program.start>now}));ordered.forEach(function(program){var available=canArchive(channel,program);var isNow=program.start<=now&&program.stop>now;items.push({title:(available?"↶ ":isNow?"● ":"")+formatTime(program.start)+"–"+formatTime(program.stop)+"  "+program.title,subtitle:isNow?available?"Сейчас · можно смотреть с начала":"Сейчас в эфире":available?"Доступно в архиве":program.start>now?"Далее":"Архив недоступен",program,available,noenter:!available,action:"program"})})}else{items.push({title:state.guideLoading?"Телепрограмма загружается…":"Телепрограмма не найдена",subtitle:state.guideLoading?"Прямой эфир уже можно запускать":"Проверьте адрес XMLTV",noenter:true})}if(needsHistory){items.push({title:state.archiveLoading[archiveKey]?"Архив прошлых дней загружается…":"Подготовка архива прошлых дней…",subtitle:"Меню обновится автоматически; прямой эфир доступен сразу",noenter:true})}if(archiveError){items.push({title:"↻ Повторить загрузку архива",subtitle:archiveError,action:"retry-archive"})}state.selectedChannel=archiveKey;Lampa.Select.show({title:channel.name,items,nohide:true,onCheck:function(item){if(item.action==="favorite"){setFavorite(channel,item.checked);item.subtitle=item.checked?"Канал добавлен в избранное":"Добавить канал в избранное";notify(item.checked?"Канал добавлен в Favorites":"Канал удалён из Favorites")}},onSelect:function(item){if(item.action==="live"){state.selectedChannel="";Lampa.Select.hide();playLive(index)}else if(item.action==="program"&&item.available){state.selectedChannel="";Lampa.Select.hide();playArchive(channel,item.program,guide)}else if(item.action==="retry-archive"){delete state.archiveFailed[archiveKey];Lampa.Select.hide();showChannel(channel,index)}},onBack:function(){state.selectedChannel="";Lampa.Controller.toggle(enabled)}});if(needsHistory&&!state.archiveLoading[archiveKey]){loadArchiveGuide(channel).then(function(){if(state.selectedChannel===archiveKey){Lampa.Select.hide();showChannel(channel,index);notify("Архив канала загружен")}}).catch(function(){if(state.selectedChannel===archiveKey)notify("Не удалось загрузить архивную программу за 60 секунд")})}}function showChannel(channel,index){if(state.component&&state.component.openChannel){state.component.openChannel(channel,index);return}showChannelSelect(channel,index)}function playerIcons(channel){var current=programs(channel)[currentProgramIndex(channel)];var icons=[isFavorite(channel)?"♥":"♡"];if(canArchive(channel,current))icons.push("↶");return icons}function refreshPlayerIcons(channel){var name=$(".player-panel-iptv-item.active .player-panel-iptv-item__name");name.find(".player-panel-iptv-item__icons-item").remove();playerIcons(channel).forEach(function(icon){name.append('<div class="player-panel-iptv-item__icons-item">'+icon+"</div>")})}function showPlayerMenu(playerChannelObject){var channel=playerChannelObject.original;var enabled=Lampa.Controller.enabled().name;Lampa.Select.show({title:channel.name,nohide:true,items:[{title:"♥ Favorites",subtitle:isFavorite(channel)?"Канал добавлен в избранное":"Добавить канал в избранное",checkbox:true,checked:isFavorite(channel),action:"favorite"},{title:"Программа передач и архив",action:"program"}],onCheck:function(item){if(item.action==="favorite"){setFavorite(channel,item.checked);playerChannelObject.icons=playerIcons(channel);refreshPlayerIcons(channel);notify(item.checked?"Канал добавлен в Favorites":"Канал удалён из Favorites")}},onSelect:function(item){if(item.action==="program"){Lampa.Select.hide();showPrograms(channel,enabled)}},onBack:function(){Lampa.Controller.toggle(enabled)}})}function playerChannel(channel){return{name:channel.name,group:channel.group,logo:channel.logo,url:prepareLiveUrl(channel.url),original:channel,icons:playerIcons(channel)}}function playLive(index){var channels=state.visible;if(!channels.length||index<0||index>=channels.length)return notify("Канал больше не находится в выбранной категории");addToHistory(channels[index]);function getChannel(position){var original=channels[position];if(!original)return playerChannel(channels[index]);var channel=playerChannel(original);var list=programs(original);var current=currentProgramIndex(original,Date.now(),list);setTimeout(function(){Lampa.Player.programReady({channel,position:Math.max(0,current),total:list.length})},20);return channel}Lampa.Player.runas(Lampa.Storage.field("player_iptv"));Lampa.Player.iptv({title:channels[index].name,url:prepareLiveUrl(channels[index].url),position:index,total:channels.length,onGetChannel:getChannel,onGetProgram:function(channel,position,container){var original=channel.original;var list=programs(original);var current=currentProgramIndex(original,Date.now(),list);var start=Math.max(0,Math.min(position,list.length-1));var target=container&&container[0]?container[0]:container;var html="";list.slice(start,start+2).forEach(function(program,offset){html+='<div class="player-panel-iptv-item__prog-item'+(start+offset===current?" watch":"")+'"><span>'+escapeHtml(formatTime(program.start)+"–"+formatTime(program.stop)+"  "+program.title)+"</span></div>"});$(target).html(html||'<div class="player-panel-iptv-item__prog-load">Нет программы</div>')},onPlaylistProgram:function(channel){showPrograms(channel.original)},onMenu:function(channel){showPlayerMenu(channel)}})}function loadData(force){if(!force&&state.channels.length&&Date.now()-state.loadedAt<6e5)return Promise.resolve(state);var playlistUrl=field("playlist");if(!playlistUrl)return Promise.reject(new Error("Нажмите «Плейлист» и укажите URL M3U"));return requestText(playlistUrl).then(function(m3u){var parsed=parseM3U(m3u);state.channels=parsed.channels;state.visible=parsed.channels.slice();state.groups=[];state.groupCounts={};parsed.channels.forEach(function(channel){if(!Object.prototype.hasOwnProperty.call(state.groupCounts,channel.group)){state.groups.push(channel.group);state.groupCounts[channel.group]=0}state.groupCounts[channel.group]++});state.playlistEpg=parsed.epgUrl;state.archiveHint=parsed.archiveHint;state.loadedAt=Date.now();state.epg={};state.epgNames={};state.guideMode="none";state.guideLoading=false;state.guidePromise=null;state.archiveLoading={};state.archiveReady={};state.archiveFailed={};state.guideTicket++;var guideUrl=field("epg")||parsed.epgUrl;var automatic=false;if(!guideUrl&&parsed.archiveHint){guideUrl=AUTO_EPG_LITE_URL;automatic=true}state.autoEpg=automatic;if(guideUrl){var scheduledTicket=state.guideTicket;setTimeout(function(){if(scheduledTicket===state.guideTicket)startGuideLoad(guideUrl,automatic)},50)}return state})}function editAddress(component,type){var isPlaylist=type==="playlist";Lampa.Input.edit({title:isPlaylist?"URL M3U-плейлиста":"URL телепрограммы XMLTV",value:field(type)||"",free:true,nosave:true,nomic:true},function(value){Lampa.Controller.toggle("content");value=text(value).trim();if(!value&&isPlaylist)return;Lampa.Storage.set(PLUGIN+"_"+type,value);state.channels=[];state.visible=[];state.epg={};state.epgNames={};state.archiveHint=false;state.autoEpg=false;state.guideMode="none";state.guideLoading=false;state.guidePromise=null;state.archiveLoading={};state.archiveReady={};state.guideTicket++;state.loadedAt=0;component.activity.loader(true);loadData(true).then(function(){component.renderLimit=CHANNEL_PAGE_SIZE;component.build();component.activity.loader(false);component.start();notify(isPlaylist?"Плейлист IPTV+ сохранён":"Телепрограмма IPTV+ сохранена")}).catch(function(error){component.activity.loader(false);component.renderError(error);component.start();notify(error.message||(isPlaylist?"Не удалось загрузить плейлист":"Не удалось загрузить телепрограмму"))})})}function editPlaylist(component){editAddress(component,"playlist")}function editEpg(component){editAddress(component,"epg")}function Component(object){var self=this;this.object=object||{};this.category="all";this.searchQuery="";this.detailChannel=null;this.detailIndex=-1;this.detailDay="";this.detailLast=null;this.detailPendingFocus="";this.historyDirty=false;this.channelFocus={};this.html=$('<div class="iptv-plus-screen"><div class="iptv-plus-head"><div class="iptv-plus-title">IPTV+<span></span></div><div class="iptv-plus-clock"></div></div><div class="iptv-plus-toolbar"></div><div class="iptv-plus-layout"><div class="iptv-plus-sidebar"></div><div class="iptv-plus-list"></div></div><div class="iptv-plus-detail"></div></div>');this.last=null;this.clockTimer=0;this.archiveTimer=0;this.renderLimit=CHANNEL_PAGE_SIZE;this.updateClock=function(){var now=new Date;var days=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];self.html.find(".iptv-plus-clock").text(days[now.getDay()]+", "+pad(now.getDate())+"."+pad(now.getMonth()+1)+"  "+pad(now.getHours())+":"+pad(now.getMinutes()))};this.focused=function(element){self.last=element;if(element&&$(element).hasClass("iptv-plus-channel")){self.channelFocus[self.category]=$(element).data("channel-key")}if(element&&element.scrollIntoView)element.scrollIntoView({block:"nearest",inline:"nearest"})};this.focusElement=function(element,container){if(!element)return false;Lampa.Controller.collectionFocus(element,container||self.html);return true};this.focusedElement=function(container){var scope=container||self.html;return scope.find(".selector.focus")[0]||null};this.create=function(){state.component=self;self.updateClock();clearInterval(self.clockTimer);self.clockTimer=setInterval(self.updateClock,3e4);self.activity.loader(true);loadData(false).then(function(){self.build();self.activity.loader(false);self.activity.toggle()}).catch(function(error){self.activity.loader(false);self.renderError(error);self.activity.toggle()});return self.render()};this.buildToolbar=function(){var toolbar=self.html.find(".iptv-plus-toolbar").empty();var playlistButton=$('<div class="iptv-plus-button selector"><b>＋</b> Плейлист</div>');var epgButton=$('<div class="iptv-plus-button selector">'+(state.guideLoading?"EPG: загрузка…":state.autoEpg?"EPG: AUTO":"EPG вручную")+"</div>");var searchButton=$('<div class="iptv-plus-button selector">⌕ Поиск'+(self.searchQuery?": "+escapeHtml(self.searchQuery):"")+"</div>");var reloadButton=$('<div class="iptv-plus-button selector">↻ Обновить</div>');playlistButton.on("hover:enter",function(){editPlaylist(self)});epgButton.on("hover:enter",function(){editEpg(self)});searchButton.on("hover:enter",function(){Lampa.Input.edit({title:"Поиск телеканала",value:self.searchQuery,free:true,nosave:true,nomic:true},function(value){Lampa.Controller.toggle("content");self.searchQuery=text(value).trim();self.category=self.searchQuery?"search":"all";self.renderLimit=CHANNEL_PAGE_SIZE;self.build();self.start()})});reloadButton.on("hover:enter",function(){self.activity.loader(true);loadData(true).then(function(){self.renderLimit=CHANNEL_PAGE_SIZE;self.build();self.activity.loader(false);self.start();notify("IPTV+ обновлён")}).catch(function(error){self.activity.loader(false);self.renderError(error);notify(error.message||"Ошибка обновления")})});toolbar.append(playlistButton,searchButton,epgButton,reloadButton);toolbar.find(".selector").on("hover:focus",function(){self.focused(this)})};this.buildCategories=function(favorites){var sidebar=self.html.find(".iptv-plus-sidebar").empty();var favoritesCount=state.channels.filter(function(channel){return favoriteInLookup(channel,favorites)}).length;var categories=[{id:"favorites",title:"Favorites",icon:"♥",count:favoritesCount},{id:"all",title:"All",icon:"▦",count:state.channels.length},{id:"recent",title:"Недавние",icon:"◷",count:historyChannels().length}];if(self.searchQuery){categories.push({id:"search",title:"Поиск",icon:"⌕",count:state.channels.filter(function(channel){var query=normalizeExact(self.searchQuery);return normalizeExact(channel.name+" "+channel.group).indexOf(query)>=0}).length})}categories=categories.concat(state.groups.map(function(group){return{id:"group:"+group,title:group,icon:text(group).slice(0,1).toUpperCase(),count:state.groupCounts[group]||0}}));categories.forEach(function(item){var button=$('<div class="iptv-plus-category selector'+(item.id===self.category?" active":"")+'"><div class="iptv-plus-category-icon">'+escapeHtml(item.icon)+'</div><div class="iptv-plus-category-name">'+escapeHtml(item.title)+'</div><div class="iptv-plus-category-count">'+item.count+"</div></div>");button.on("hover:focus",function(){self.focused(this)});button.on("hover:enter",function(){self.category=item.id;if(item.id!=="search")self.searchQuery="";self.renderLimit=CHANNEL_PAGE_SIZE;self.build();self.last=self.html.find(".iptv-plus-category.active")[0];self.start()});sidebar.append(button)})};this.renderError=function(error){self.buildToolbar();self.html.find(".iptv-plus-title span").text(" / настройка");self.html.find(".iptv-plus-sidebar").empty();var list=self.html.find(".iptv-plus-list").empty();var empty=$('<div class="iptv-plus-empty"><div class="iptv-plus-empty-icon">TV</div><div class="iptv-plus-empty-copy"><div class="iptv-plus-empty-title">Добавьте IPTV-плейлист</div><div class="iptv-plus-empty-text">'+escapeHtml(error&&(error.message||error)||"Укажите прямую ссылку на M3U/M3U8")+'</div><div class="iptv-plus-empty-hint">После загрузки здесь появятся каналы, программа передач и архив.</div></div><div class="iptv-plus-empty-action selector">＋ Добавить M3U</div></div>');empty.find(".iptv-plus-empty-action").on("hover:focus",function(){self.focused(this)});empty.find(".iptv-plus-empty-action").on("hover:enter",function(){editPlaylist(self)});list.append(empty)};this.build=function(preserveCategoryFocus){self.last=null;var favorites=favoriteLookup();self.buildToolbar();self.buildCategories(favorites);var listContainer=self.html.find(".iptv-plus-list").empty();if(self.category==="favorites")state.visible=state.channels.filter(function(channel){return favoriteInLookup(channel,favorites)});else if(self.category==="recent")state.visible=historyChannels();else if(self.category==="search"){var query=normalizeExact(self.searchQuery);state.visible=state.channels.filter(function(channel){return normalizeExact(channel.name+" "+channel.group).indexOf(query)>=0})}else if(self.category.indexOf("group:")===0){var selectedGroup=self.category.slice(6);state.visible=state.channels.filter(function(channel){return channel.group===selectedGroup})}else state.visible=state.channels.slice();var categoryTitle=self.category==="favorites"?"Favorites":self.category==="recent"?"Недавние":self.category==="search"?"Поиск: "+self.searchQuery:self.category==="all"?"All":self.category.slice(6);self.html.find(".iptv-plus-title span").text(" / "+categoryTitle+" · "+state.visible.length);var displayed=state.visible.slice(0,self.renderLimit);displayed.forEach(function(channel,index){var channelPrograms=programs(channel);var currentPosition=currentProgramIndex(channel,Date.now(),channelPrograms);var current=currentPosition>=0?channelPrograms[currentPosition]:null;var progress=programProgress(current);var time=current?formatTime(current.start)+"–"+formatTime(current.stop):"Программа не найдена";var quality=qualityLabel(channel);var row=$('<div class="iptv-plus-channel selector"><div class="iptv-plus-number">'+pad((channel.index||0)+1)+'</div><div class="iptv-plus-logo"></div><div class="iptv-plus-channel-body"><div class="iptv-plus-name">'+escapeHtml(channel.name)+(quality?' <span class="iptv-plus-quality">'+quality+"</span>":"")+'</div><div class="iptv-plus-now">'+escapeHtml(current?current.title:channel.group)+'</div><div class="iptv-plus-time">'+escapeHtml(time)+'</div><div class="iptv-plus-progress"><i style="width:'+progress+'%"></i></div></div><div class="iptv-plus-channel-flags">'+(favoriteInLookup(channel,favorites)?'<div class="iptv-plus-heart">♥</div>':"")+(canArchive(channel,current)?'<div class="iptv-plus-archive">↶ Архив</div>':"")+'<div class="iptv-plus-chevron">›</div></div></div>');row.data("channel-key",channelKey(channel));var logo=row.find(".iptv-plus-logo");if(channel.logo)logo.append('<img loading="lazy" src="'+escapeHtml(channel.logo)+'">');else logo.text(channel.name.slice(0,2).toUpperCase());row.on("hover:focus",function(){self.focused(this)});row.on("hover:enter",function(){showChannel(channel,index)});listContainer.append(row)});if(displayed.length<state.visible.length){var remaining=state.visible.length-displayed.length;var more=$('<div class="iptv-plus-more selector"><b>Показать ещё</b><span>'+remaining+" каналов</span></div>");more.on("hover:focus",function(){self.focused(this)});more.on("hover:enter",function(){var firstNew=displayed.length;self.renderLimit+=CHANNEL_PAGE_SIZE;self.build();self.last=self.html.find(".iptv-plus-channel").eq(firstNew)[0];self.start()});listContainer.append(more)}if(!state.visible.length){var emptyTitle=self.category==="favorites"?"Favorites пока пуст":self.category==="recent"?"История просмотра пуста":self.category==="search"?"Каналы не найдены":"В этой категории нет каналов";var emptyText=self.category==="favorites"?"Откройте канал и нажмите ♥ Favorites.":self.category==="recent"?"Запущенные каналы появятся здесь автоматически.":self.category==="search"?"Измените поисковый запрос.":"Выберите другую категорию слева.";listContainer.html('<div class="iptv-plus-error"><b>'+emptyTitle+"</b><span>"+emptyText+"</span></div>")}if(!self.last){var rememberedChannelKey=self.channelFocus[self.category];var lastChannelKey=storage("last_channel","");self.html.find(".iptv-plus-channel").each(function(){var key=$(this).data("channel-key");if(!self.last&&rememberedChannelKey&&key===rememberedChannelKey)self.last=this;if(!self.last&&!rememberedChannelKey&&key===lastChannelKey)self.last=this})}if(preserveCategoryFocus)self.last=self.html.find(".iptv-plus-category.active")[0];if(!self.last)self.last=self.html.find(".iptv-plus-category.active")[0]||self.html.find(".iptv-plus-category")[0]};this.onFavoritesChanged=function(){if(self.detailChannel)self.renderChannel(true);else self.build(true)};this.refreshOpenChannel=function(){if(!self.detailChannel)return false;self.renderChannel(true);return true};this.closeChannel=function(forPlayback){clearTimeout(self.archiveTimer);self.detailChannel=null;self.detailIndex=-1;self.detailDay="";self.detailLast=null;state.selectedChannel="";state.selectedDay="";self.html.find(".iptv-plus-detail").removeClass("open").empty();if(!forPlayback){self.build();self.start()}else self.start()};this.detailFocusToken=function(element){if(!element)return"";var item=$(element);if(item.attr("data-detail-action"))return"action:"+item.attr("data-detail-action");if(item.attr("data-day"))return"day:"+item.attr("data-day");if(item.attr("data-program-start"))return"program:"+item.attr("data-program-start");return""};this.startDetail=function(){var panel=self.html.find(".iptv-plus-detail");Lampa.Controller.add("content",{link:self,toggle:function(){Lampa.Controller.collectionSet(panel);Lampa.Controller.collectionFocus(self.detailLast||false,panel)},left:function(){var focused=self.focusedElement(panel);if(focused&&$(focused).hasClass("iptv-plus-program")){self.focusElement(panel.find(".iptv-plus-day.active")[0]||panel.find(".iptv-plus-day")[0],panel)}else if(Navigator.canmove("left"))Navigator.move("left")},right:function(){var focused=self.focusedElement(panel);if(focused&&$(focused).hasClass("iptv-plus-day")){self.focusElement(panel.find(".iptv-plus-program.now.selector")[0]||panel.find(".iptv-plus-program.selector")[0],panel)}else if(Navigator.canmove("right"))Navigator.move("right")},up:function(){if(Navigator.canmove("up"))Navigator.move("up")},down:function(){if(Navigator.canmove("down"))Navigator.move("down")},back:function(){self.closeChannel(false)}});Lampa.Controller.toggle("content")};this.renderChannel=function(preserveFocus){var channel=self.detailChannel;if(!channel)return;var panel=self.html.find(".iptv-plus-detail");var focusToken=preserveFocus?self.detailFocusToken(self.detailLast):"";panel.empty().addClass("open");var now=Date.now();var archiveKey=guideCacheKey(channel);var archiveError=state.archiveFailed[archiveKey];var allPrograms=programs(channel).filter(function(program){return program.stop>=now-(channel.catchup.days||1)*864e5&&program.start<=now+2*864e5});var current=allPrograms.filter(function(program){return program.start<=now&&program.stop>now})[0];var days=[];allPrograms.forEach(function(program){var key=dayKey(program.start);if(days.indexOf(key)<0)days.push(key)});var todayKey=dayKey(now);var pastDays=days.filter(function(key){return key<=todayKey}).sort().reverse();var futureDays=days.filter(function(key){return key>todayKey}).sort();days=pastDays.concat(futureDays);if(!self.detailDay||days.indexOf(self.detailDay)<0){self.detailDay=days.indexOf(dayKey(now))>=0?dayKey(now):days[days.length-1]||dayKey(now)}state.selectedDay=self.detailDay;var header=$('<div class="iptv-plus-detail-head"><div class="iptv-plus-detail-logo"></div><div class="iptv-plus-detail-copy"><div class="iptv-plus-detail-name">'+escapeHtml(channel.name)+'</div><div class="iptv-plus-detail-meta"><span>'+escapeHtml(channel.group)+"</span>"+(qualityLabel(channel)?"<b>"+qualityLabel(channel)+"</b>":"")+(channel.catchup.days?'<b class="archive">↶ '+channel.catchup.days+" дн.</b>":"")+'</div><div class="iptv-plus-detail-now">'+escapeHtml(current?"Сейчас: "+current.title:"Прямой эфир доступен")+'</div></div><div class="iptv-plus-detail-clock">'+escapeHtml(dayLabel(dayKey(now)))+"<b>"+formatTime(now)+"</b></div></div>");var headerLogo=header.find(".iptv-plus-detail-logo");if(channel.logo)headerLogo.append('<img src="'+escapeHtml(channel.logo)+'">');else headerLogo.text(channel.name.slice(0,2).toUpperCase());var actions=$('<div class="iptv-plus-detail-actions"></div>');var back=$('<div class="iptv-plus-action selector" data-detail-action="back">← Каналы</div>');var live=$('<div class="iptv-plus-action primary selector" data-detail-action="live">▶ Прямой эфир</div>');var favorite=$('<div class="iptv-plus-action selector" data-detail-action="favorite">'+(isFavorite(channel)?"♥ В Favorites":"♡ В Favorites")+"</div>");actions.append(back,live,favorite);if(canArchive(channel,current))actions.append('<div class="iptv-plus-action selector" data-detail-action="restart">↶ С начала</div>');if(archiveError)actions.append('<div class="iptv-plus-action selector" data-detail-action="retry-archive">↻ Архив</div>');var body=$('<div class="iptv-plus-detail-body"><div class="iptv-plus-days"></div><div class="iptv-plus-schedule"></div></div>');var dayBar=body.find(".iptv-plus-days");var schedule=body.find(".iptv-plus-schedule");days.forEach(function(key){var day=$('<div class="iptv-plus-day selector'+(key===self.detailDay?" active":"")+'" data-day="'+escapeHtml(key)+'"><b>'+escapeHtml(dayLabel(key))+"</b><span>"+allPrograms.filter(function(program){return dayKey(program.start)===key}).length+" передач</span></div>");dayBar.append(day)});var selectedPrograms=allPrograms.filter(function(program){return dayKey(program.start)===self.detailDay});selectedPrograms.forEach(function(program){var available=canArchive(channel,program);var isNow=program.start<=now&&program.stop>now;var isFuture=program.start>now;var status=available?isNow?"Смотреть с начала":"Доступно в архиве":isNow?"Сейчас в эфире":isFuture?"Далее":"Архив недоступен";var selectable=available||isNow;var progress=isNow?programProgress(program,now):0;var item=$('<div class="iptv-plus-program'+(selectable?" selector":" disabled")+(isNow?" now":"")+(available?" archived":"")+'" data-program-start="'+program.start+'"><div class="iptv-plus-program-time">'+formatTime(program.start)+"<span>"+formatTime(program.stop)+'</span></div><div class="iptv-plus-program-copy"><div class="iptv-plus-program-title">'+escapeHtml(program.title)+'</div><div class="iptv-plus-program-desc">'+escapeHtml(program.desc||status)+"</div>"+(isNow?'<div class="iptv-plus-program-progress"><i style="width:'+progress+'%"></i></div>':"")+'</div><div class="iptv-plus-program-status">'+(available?"↶ ":isNow?"● ":"")+escapeHtml(status)+"</div></div>");if(selectable){item.on("hover:enter",function(){var index=self.detailIndex>=0?self.detailIndex:state.visible.indexOf(channel);self.closeChannel(true);if(available)playArchive(channel,program,allPrograms);else playLive(index)})}schedule.append(item)});var needsHistory=state.autoEpg&&channel.catchup.days>0&&state.guideMode!=="full"&&!state.archiveReady[archiveKey]&&!archiveError;if(!selectedPrograms.length){schedule.append('<div class="iptv-plus-schedule-empty"><b>'+(state.guideLoading||state.archiveLoading[archiveKey]?"Программа загружается…":"Нет программы на выбранный день")+"</b><span>Прямой эфир можно запустить сразу.</span></div>")}if(needsHistory){schedule.prepend('<div class="iptv-plus-schedule-loading"><i></i><span>'+(state.archiveLoading[archiveKey]?"Загружаю архив прошлых дней…":"Подготавливаю архив…")+"</span></div>")}if(archiveError){schedule.prepend('<div class="iptv-plus-schedule-empty"><b>Архивная программа не загрузилась</b><span>'+escapeHtml(archiveError)+"</span></div>")}panel.append(header,actions,body);panel.find(".selector").on("hover:focus",function(){self.detailLast=this;if(this.scrollIntoView)this.scrollIntoView({block:"nearest",inline:"nearest"})});back.on("hover:enter",function(){self.closeChannel(false)});live.on("hover:enter",function(){var index=self.detailIndex;self.closeChannel(true);playLive(index)});favorite.on("hover:enter",function(){setFavorite(channel,!isFavorite(channel))});actions.find('[data-detail-action="restart"]').on("hover:enter",function(){self.closeChannel(true);playArchive(channel,current,allPrograms)});actions.find('[data-detail-action="retry-archive"]').on("hover:enter",function(){delete state.archiveFailed[archiveKey];self.detailLast=null;self.renderChannel(false);self.startDetail()});dayBar.find(".iptv-plus-day").on("hover:enter",function(){self.detailDay=$(this).attr("data-day");self.detailLast=null;self.detailPendingFocus="schedule";self.renderChannel(false);self.startDetail()});var restored=null;if(focusToken.indexOf("action:")===0)restored=panel.find('[data-detail-action="'+focusToken.slice(7)+'"]')[0];else if(focusToken.indexOf("day:")===0)restored=panel.find('[data-day="'+focusToken.slice(4)+'"]')[0];else if(focusToken.indexOf("program:")===0)restored=panel.find('[data-program-start="'+focusToken.slice(8)+'"]')[0];if(self.detailPendingFocus==="schedule"){restored=schedule.find(".iptv-plus-program.now.selector")[0]||schedule.find(".iptv-plus-program.selector")[0]||dayBar.find(".iptv-plus-day.active")[0];self.detailPendingFocus=""}self.detailLast=restored||live[0];if(needsHistory&&!state.archiveLoading[archiveKey]){clearTimeout(self.archiveTimer);self.archiveTimer=setTimeout(function(){if(self.detailChannel!==channel)return;loadArchiveGuide(channel).then(function(){if(self.detailChannel===channel)self.renderChannel(true)}).catch(function(){if(self.detailChannel===channel)notify("Не удалось загрузить архивную программу")})},900)}};this.openChannel=function(channel,index){self.detailChannel=channel;self.detailIndex=index;self.detailDay=dayKey(Date.now());self.detailLast=null;state.selectedChannel=guideCacheKey(channel);restoreArchiveGuide(channel);self.renderChannel(false);self.startDetail()};this.start=function(){if(self.detailChannel){self.startDetail();return}if(self.historyDirty){self.historyDirty=false;self.build()}Lampa.Controller.add("content",{link:self,toggle:function(){if(self.historyDirty){self.historyDirty=false;self.build()}Lampa.Controller.collectionSet(self.html);Lampa.Controller.collectionFocus(self.last||false,self.html)},left:function(){var focused=self.focusedElement(self.html);if(focused&&($(focused).hasClass("iptv-plus-channel")||$(focused).hasClass("iptv-plus-more"))){self.focusElement(self.html.find(".iptv-plus-category.active")[0]||self.html.find(".iptv-plus-category")[0])}else if(focused&&$(focused).hasClass("iptv-plus-category")){Lampa.Controller.toggle("menu")}else if(Navigator.canmove("left"))Navigator.move("left");else Lampa.Controller.toggle("menu")},right:function(){var focused=self.focusedElement(self.html);if(focused&&$(focused).hasClass("iptv-plus-category")){var remembered=self.channelFocus[self.category];var target=null;self.html.find(".iptv-plus-channel").each(function(){if(!target&&remembered&&$(this).data("channel-key")===remembered)target=this});self.focusElement(target||self.html.find(".iptv-plus-channel")[0]||self.html.find(".iptv-plus-more")[0])}else if(Navigator.canmove("right"))Navigator.move("right")},up:function(){if(Navigator.canmove("up"))Navigator.move("up");else Lampa.Controller.toggle("head")},down:function(){if(Navigator.canmove("down"))Navigator.move("down")},back:function(){Lampa.Activity.backward()}});Lampa.Controller.toggle("content")};this.pause=function(){};this.stop=function(){};this.render=function(){return self.html};this.destroy=function(){clearInterval(self.clockTimer);clearTimeout(self.archiveTimer);self.detailChannel=null;if(state.component===self)state.component=null;self.html.remove()}}function addSettings(){Lampa.SettingsApi.addComponent({component:PLUGIN,icon:ICON,name:"IPTV+"});Lampa.SettingsApi.addParam({component:PLUGIN,param:{name:PLUGIN+"_playlist",type:"input",default:""},field:{name:"URL M3U-плейлиста",description:"Прямая ссылка на M3U/M3U8"}});Lampa.SettingsApi.addParam({component:PLUGIN,param:{name:PLUGIN+"_epg",type:"input",default:""},field:{name:"URL XMLTV",description:"Необязательно: для плейлистов с tvg-rec программа подбирается автоматически"}});Lampa.SettingsApi.addParam({component:PLUGIN,param:{name:PLUGIN+"_archive_days",type:"select",values:{1:"1 день",3:"3 дня",7:"7 дней",14:"14 дней"},default:"3"},field:{name:"Архив по умолчанию",description:"Используется, если в плейлисте нет catchup-days"}});Lampa.SettingsApi.addParam({component:PLUGIN,param:{type:"button"},field:{name:"Очистить кеш IPTV+"},onChange:function(){state.channels=[];state.visible=[];state.epg={};state.epgNames={};state.archiveHint=false;state.autoEpg=false;state.guideMode="none";state.guideLoading=false;state.guidePromise=null;state.archiveLoading={};state.archiveReady={};state.archiveFailed={};state.selectedChannel="";state.guideTicket++;state.loadedAt=0;Lampa.Storage.set(PLUGIN+"_archive_cache",[]);notify("Кеш IPTV+ очищен")}})}function addMenu(){if($(".menu .menu__list ."+PLUGIN+"-menu").length)return;var list=$(".menu .menu__list").eq(0);if(!list.length)return;var button=$('<li class="menu__item selector '+PLUGIN+'-menu"><div class="menu__ico">'+ICON+'</div><div class="menu__text">IPTV+</div></li>');button.on("hover:enter",function(){Lampa.Activity.push({url:"",title:"IPTV+",component:PLUGIN,page:1})});list.append(button)}function installMenu(){window.lampa_iptv_plus_restore_menu=addMenu;addMenu();setTimeout(addMenu,500);setTimeout(addMenu,2e3);Lampa.Listener.follow("menu",function(event){if(event.type==="end")addMenu()})}function addStyles(){if($("#iptv-plus-style").length)return;$("body").append('<style id="iptv-plus-style">'+".iptv-plus-screen{position:relative;height:100%;min-height:100%;padding:1.15em 2.2em 1.5em;box-sizing:border-box;overflow:hidden;color:#fff}"+".iptv-plus-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7em}"+".iptv-plus-title{font-size:1.55em;font-weight:600;letter-spacing:.01em}.iptv-plus-title span{font-size:.72em;font-weight:400;opacity:.58}"+".iptv-plus-clock{font-size:1em;opacity:.72}"+".iptv-plus-toolbar{display:flex;gap:.6em;margin-bottom:.75em}"+".iptv-plus-button{padding:.58em .9em;background:rgba(18,25,39,.72);border:1px solid rgba(255,255,255,.13);border-radius:.55em;font-size:.96em}"+".iptv-plus-button.focus,.iptv-plus-empty-action.focus{background:#fff;color:#111;border-color:#fff;box-shadow:0 0 0 .18em rgba(255,255,255,.2)}"+".iptv-plus-layout{display:grid;grid-template-columns:15.5em minmax(0,1fr);gap:.85em;height:calc(100% - 7.3em);min-height:24em}"+".iptv-plus-sidebar,.iptv-plus-list{min-height:0;overflow-y:auto;scrollbar-width:none}.iptv-plus-sidebar::-webkit-scrollbar,.iptv-plus-list::-webkit-scrollbar{display:none}"+".iptv-plus-sidebar{padding:.32em;border-radius:.75em;background:rgba(8,13,23,.66);border:1px solid rgba(255,255,255,.08)}"+".iptv-plus-category{display:grid;grid-template-columns:2.25em minmax(0,1fr) auto;align-items:center;gap:.55em;min-height:3.25em;padding:.42em .65em;margin-bottom:.28em;border-radius:.56em;box-sizing:border-box;color:rgba(255,255,255,.72)}"+".iptv-plus-category-icon{width:2em;height:2em;display:flex;align-items:center;justify-content:center;border-radius:.5em;background:rgba(255,255,255,.08);font-size:.92em;font-weight:700}.iptv-plus-category-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:570}.iptv-plus-category-count{font-size:.72em;opacity:.5}"+".iptv-plus-category.active{color:#74e2a8;background:rgba(60,196,127,.1)}.iptv-plus-category.active .iptv-plus-category-icon{background:rgba(60,196,127,.18)}"+".iptv-plus-category.focus{background:#fff;color:#10141d;box-shadow:0 .45em 1.5em rgba(0,0,0,.3)}.iptv-plus-category.focus .iptv-plus-category-icon{background:rgba(10,20,35,.08)}"+".iptv-plus-list{padding:.05em .28em .8em}"+".iptv-plus-channel{display:grid;grid-template-columns:2.7em 5.2em minmax(0,1fr) auto;align-items:center;gap:.85em;min-height:6.25em;padding:.55em .8em;margin-bottom:.52em;border-radius:.7em;background:linear-gradient(100deg,rgba(28,38,56,.92),rgba(12,18,30,.82));border:1px solid rgba(255,255,255,.09);box-sizing:border-box;transition:background .14s ease,transform .14s ease}"+".iptv-plus-channel.focus{background:linear-gradient(100deg,#f7f8fb,#dfe4ec);color:#10141d;border-color:#fff;transform:scale(1.008);box-shadow:0 .5em 1.7em rgba(0,0,0,.34);z-index:2}"+".iptv-plus-number{font-size:.82em;font-weight:700;letter-spacing:.08em;opacity:.46;text-align:center}"+".iptv-plus-logo{width:5.2em;height:4.7em;border-radius:.58em;background:rgba(255,255,255,.075);display:flex;align-items:center;justify-content:center;font-size:1.25em;font-weight:750;overflow:hidden}"+".iptv-plus-channel.focus .iptv-plus-logo{background:rgba(16,25,40,.07)}.iptv-plus-logo img{width:86%;height:86%;object-fit:contain}"+".iptv-plus-channel-body{min-width:0}.iptv-plus-name{font-size:1.08em;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"+".iptv-plus-quality{display:inline-flex;vertical-align:.12em;padding:.13em .34em;margin-left:.28em;border-radius:.3em;background:#388dff;color:#fff;font-size:.56em;line-height:1.2;letter-spacing:.04em}"+".iptv-plus-now{font-size:.84em;opacity:.72;margin-top:.28em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iptv-plus-time{font-size:.7em;opacity:.48;margin-top:.22em}"+".iptv-plus-progress{height:.18em;margin-top:.42em;background:rgba(255,255,255,.16);border-radius:1em;overflow:hidden}.iptv-plus-channel.focus .iptv-plus-progress{background:rgba(10,20,35,.14)}.iptv-plus-progress i{display:block;height:100%;background:#51c98a;border-radius:1em}"+".iptv-plus-channel-flags{display:flex;align-items:center;gap:.5em}.iptv-plus-heart{font-size:1.25em;color:#ef6c83}.iptv-plus-archive{padding:.28em .5em;border-radius:.4em;background:rgba(70,199,133,.16);color:#78e6aa;font-size:.72em;font-weight:650;white-space:nowrap}.iptv-plus-channel.focus .iptv-plus-archive{background:rgba(24,122,74,.12);color:#167448}.iptv-plus-chevron{font-size:1.8em;opacity:.35}"+".iptv-plus-more{display:flex;align-items:center;justify-content:space-between;padding:1em 1.2em;margin:.7em 0;border-radius:.65em;background:rgba(28,38,56,.88);border:1px solid rgba(255,255,255,.1)}.iptv-plus-more span{font-size:.78em;opacity:.55}.iptv-plus-more.focus{background:#fff;color:#10141d}"+".iptv-plus-empty{min-height:21em;display:flex;align-items:center;gap:1.3em;padding:2.2em;border-radius:.8em;background:linear-gradient(135deg,rgba(31,42,62,.9),rgba(12,18,30,.82));border:1px solid rgba(255,255,255,.1)}"+".iptv-plus-empty-icon{width:3.1em;height:2.4em;display:flex;align-items:center;justify-content:center;border:.12em solid rgba(255,255,255,.7);border-radius:.42em;font-size:1.4em;font-weight:800}"+".iptv-plus-empty-copy{flex:1}.iptv-plus-empty-title{font-size:1.42em;font-weight:650}.iptv-plus-empty-text{font-size:.98em;margin-top:.45em;opacity:.75}.iptv-plus-empty-hint{font-size:.8em;margin-top:.4em;opacity:.42}"+".iptv-plus-empty-action{padding:.72em 1em;border-radius:.55em;background:#4cc986;color:#0d2218;font-weight:700}"+".iptv-plus-error{display:flex;flex-direction:column;gap:.35em;font-size:1.05em;line-height:1.5;padding:2em;opacity:.75}.iptv-plus-error span{font-size:.82em;opacity:.65}"+".iptv-plus-detail{display:none;position:absolute;inset:0;z-index:20;padding:1.25em 2.2em 1.6em;box-sizing:border-box;background:linear-gradient(120deg,rgba(7,12,21,.985),rgba(16,25,40,.985));overflow:hidden}.iptv-plus-detail.open{display:flex;flex-direction:column}"+".iptv-plus-detail-head{display:grid;grid-template-columns:7.2em minmax(0,1fr) auto;align-items:center;gap:1.2em;min-height:7em}.iptv-plus-detail-logo{width:7.2em;height:6.2em;border-radius:.8em;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:1.5em;font-weight:800;overflow:hidden}.iptv-plus-detail-logo img{width:86%;height:86%;object-fit:contain}"+".iptv-plus-detail-copy{min-width:0}.iptv-plus-detail-name{font-size:1.7em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iptv-plus-detail-meta{display:flex;gap:.55em;align-items:center;margin-top:.45em;color:rgba(255,255,255,.6)}.iptv-plus-detail-meta b{padding:.2em .45em;border-radius:.35em;background:rgba(56,141,255,.22);color:#85b9ff;font-size:.75em}.iptv-plus-detail-meta b.archive{background:rgba(70,199,133,.17);color:#78e6aa}.iptv-plus-detail-now{margin-top:.55em;font-size:.92em;color:rgba(255,255,255,.72)}"+".iptv-plus-detail-clock{text-align:right;font-size:.78em;opacity:.62}.iptv-plus-detail-clock b{display:block;font-size:1.7em;margin-top:.15em;color:#fff}"+".iptv-plus-detail-actions{display:flex;gap:.65em;margin:.75em 0 1em}.iptv-plus-action{padding:.68em 1em;border-radius:.55em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);font-weight:650}.iptv-plus-action.primary{background:#49ca87;color:#092116;border-color:#49ca87}.iptv-plus-action.focus{background:#fff;color:#111;border-color:#fff;box-shadow:0 0 0 .18em rgba(255,255,255,.18)}"+".iptv-plus-detail-body{display:grid;grid-template-columns:13.8em minmax(0,1fr);gap:.9em;min-height:0;flex:1}.iptv-plus-days,.iptv-plus-schedule{min-height:0;overflow-y:auto;scrollbar-width:none}.iptv-plus-days::-webkit-scrollbar,.iptv-plus-schedule::-webkit-scrollbar{display:none}.iptv-plus-days{padding:.3em;border-radius:.72em;background:rgba(3,8,15,.48);border:1px solid rgba(255,255,255,.07)}"+".iptv-plus-day{padding:.7em .75em;margin-bottom:.28em;border-radius:.52em;color:rgba(255,255,255,.67)}.iptv-plus-day b,.iptv-plus-day span{display:block}.iptv-plus-day span{margin-top:.18em;font-size:.68em;opacity:.55}.iptv-plus-day.active{background:rgba(70,199,133,.12);color:#7ce5ad}.iptv-plus-day.focus{background:#fff;color:#111}"+".iptv-plus-schedule{padding:.05em .25em .8em}.iptv-plus-program{display:grid;grid-template-columns:4.5em minmax(0,1fr) auto;align-items:center;gap:.85em;min-height:4.7em;padding:.55em .8em;margin-bottom:.42em;border-radius:.65em;background:rgba(28,38,56,.78);border:1px solid rgba(255,255,255,.075)}.iptv-plus-program.now{border-left:.22em solid #4dce8b}.iptv-plus-program.disabled{opacity:.52}.iptv-plus-program.focus{background:#fff;color:#111;transform:scale(1.004)}"+".iptv-plus-program-time{font-size:1em;font-weight:700}.iptv-plus-program-time span{display:block;margin-top:.18em;font-size:.72em;font-weight:400;opacity:.55}.iptv-plus-program-copy{min-width:0}.iptv-plus-program-title{font-size:1.02em;font-weight:620;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iptv-plus-program-desc{font-size:.72em;margin-top:.26em;opacity:.56;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iptv-plus-program-status{font-size:.7em;color:#76dfa5;white-space:nowrap}.iptv-plus-program.focus .iptv-plus-program-status{color:#167448}"+".iptv-plus-program-progress{height:.18em;margin-top:.42em;background:rgba(255,255,255,.15);border-radius:1em;overflow:hidden}.iptv-plus-program-progress i{display:block;height:100%;background:#4dce8b}.iptv-plus-program.focus .iptv-plus-program-progress{background:rgba(0,0,0,.13)}"+".iptv-plus-schedule-loading,.iptv-plus-schedule-empty{display:flex;align-items:center;gap:.65em;padding:.85em 1em;margin-bottom:.5em;border-radius:.6em;background:rgba(70,199,133,.1);color:#83e7af}.iptv-plus-schedule-loading i{width:.65em;height:.65em;border:.12em solid currentColor;border-top-color:transparent;border-radius:50%;animation:iptv-plus-spin .8s linear infinite}.iptv-plus-schedule-empty{align-items:flex-start;flex-direction:column;color:rgba(255,255,255,.7)}.iptv-plus-schedule-empty span{font-size:.76em;opacity:.6}@keyframes iptv-plus-spin{to{transform:rotate(360deg)}}"+"@media(max-width:1050px){.iptv-plus-layout{grid-template-columns:12.5em minmax(0,1fr)}.iptv-plus-channel{grid-template-columns:2.2em 4.5em minmax(0,1fr) auto}.iptv-plus-logo{width:4.5em;height:4.1em}.iptv-plus-archive{display:none}}"+"@media(max-width:760px){.iptv-plus-screen{padding:1em}.iptv-plus-layout{grid-template-columns:9.3em minmax(0,1fr);height:calc(100% - 6.8em)}.iptv-plus-clock{display:none}.iptv-plus-category{grid-template-columns:2em minmax(0,1fr)}.iptv-plus-category-count,.iptv-plus-number{display:none}.iptv-plus-channel{grid-template-columns:3.8em minmax(0,1fr) auto;gap:.55em}.iptv-plus-logo{width:3.8em;height:3.5em}.iptv-plus-empty{align-items:flex-start;flex-direction:column}.iptv-plus-detail{padding:1em}.iptv-plus-detail-head{grid-template-columns:5em minmax(0,1fr)}.iptv-plus-detail-logo{width:5em;height:4.5em}.iptv-plus-detail-clock{display:none}.iptv-plus-detail-body{grid-template-columns:9em minmax(0,1fr)}.iptv-plus-program{grid-template-columns:3.5em minmax(0,1fr)}.iptv-plus-program-status{display:none}}"+"</style>")}function startPlugin(){Lampa.Component.add(PLUGIN,Component);addSettings();addStyles();installMenu();console.log("IPTV+","plugin ready",VERSION)}if(window.appready)startPlugin();else Lampa.Listener.follow("app",function(event){if(event.type==="ready")startPlugin()})})();
+/**
+ * IPTV for Lampa 3.3.1 — Custom EPG Edition with Archive
+ *
+ * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive Support
+ * EPG Proxy 2.0.2 — POST batches
+ */
+(function () {
+    'use strict';
+
+    if (!window.Lampa || !window.$) return;
+    if (window.plugin_iptv_player_331_ready) return;
+    window.plugin_iptv_player_331_ready = true;
+
+    var ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 2l4 4 4-4"/></svg>';
+
+    var EPG_URL = 'https://iptv-epg-proxy.unclezhenya24.workers.dev/epg.xml';
+
+    var CACHE_LIMIT = 2000000;
+    var CACHE_TTL = 24 * 3600 * 1000;
+
+    var EPG_TTL = 6 * 3600 * 1000;
+    var EPG_CACHE_LIMIT = 1500000;
+    var BATCH_SIZE = 40;
+
+    var UNLOCK_MS = 30 * 60 * 1000;
+    var EPG_KEY = 'iptv_33_epg_cache';
+
+    var STATE = {
+        channels: [],
+        groupOrder: [],
+        loaded: false,
+        loadedId: null,
+
+        epg: null,
+        epgLoading: false,
+        epgWaiters: [],
+        epgForcePending: false,
+        epgStats: null,
+
+        unlockedUntil: 0,
+        current: null,
+        playlist: [],
+        playlistIndex: -1,
+        activeGroup: null,
+        panelFocus: 'channels',
+        started: false
+    };
+
+    /* =====================================================
+       UTILITIES & ARCHIVE HELPERS
+       ===================================================== */
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function noty(t) {
+        try {
+            Lampa.Noty.show(t);
+        } catch (e) {}
+    }
+
+    function sget(k, d) {
+        try {
+            var v = Lampa.Storage.get(k, d);
+            return v == null ? d : v;
+        } catch (e) {
+            return d;
+        }
+    }
+
+    function sset(k, v) {
+        try {
+            Lampa.Storage.set(k, v);
+        } catch (e) {}
+    }
+
+    function toSet(arr) {
+        var o = Object.create(null);
+        (Array.isArray(arr) ? arr : []).forEach(function (x) {
+            o[x] = true;
+        });
+        return o;
+    }
+
+    function pad(n) {
+        return n < 10 ? '0' + n : '' + n;
+    }
+
+    function fmtTime(t) {
+        var d = new Date(t);
+        return pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function norm(s) {
+        return String(s || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9а-яёіїєґ]+/g, '');
+    }
+
+    function truthy(v) {
+        return v === true || v === 'true' || v === 1 || v === '1';
+    }
+
+    function flag(k, def) {
+        return truthy(sget(k, def));
+    }
+
+    function gridMode() {
+        return flag('iptv_grid', false);
+    }
+
+    function ask(title, value, cb) {
+        if (!Lampa.Input || !Lampa.Input.edit) {
+            noty('IPTV: введення недоступне');
+            cb(null);
+            return;
+        }
+
+        Lampa.Input.edit({
+            value: value || '',
+            free: true,
+            title: title
+        }, function (v) {
+            setTimeout(function () {
+                cb(v == null ? null : String(v).trim());
+            }, 200);
+        });
+    }
+
+    function selectShow(o) {
+        Lampa.Select.show(o);
+    }
+
+    // --- Логіка архівоутворення (Catch-up) ---
+
+    function normalizeCatchupVariables(template) {
+        var aliases = { utc: 'start', lutc: 'timestamp', current_utc: 'timestamp', utcend: 'end' };
+        return String(template).replace(/(^|[^$])\{([a-z_][a-z0-9_-]*)\}/gi, function (full, prefix, name) {
+            var normalized = aliases[name.toLowerCase()] || name;
+            return prefix + '${' + normalized + '}';
+        });
+    }
+
+    function setCatchupQuery(template, name, value) {
+        var hashIndex = template.indexOf('#');
+        var hash = hashIndex >= 0 ? template.slice(hashIndex) : '';
+        var base = hashIndex >= 0 ? template.slice(0, hashIndex) : template;
+        var expression = new RegExp('([?&])' + name + '=[^&#]*', 'i');
+        if (expression.test(base)) {
+            base = base.replace(expression, function (full, separator) {
+                return separator + name + '=' + value;
+            });
+        } else {
+            base += (base.indexOf('?') >= 0 ? '&' : '?') + name + '=' + value;
+        }
+        return base + hash;
+    }
+
+    function shiftTemplate(url) {
+        var template = normalizeCatchupVariables(url);
+        template = setCatchupQuery(template, 'utc', '${start}');
+        template = setCatchupQuery(template, 'lutc', '${timestamp}');
+        return template;
+    }
+
+    function catchupTemplate(channel) {
+        if (!channel || !channel.catchup) return false;
+        var type = String(channel.catchup.type || '').toLowerCase();
+        var source = normalizeCatchupVariables(channel.catchup.source || '');
+        var url = normalizeCatchupVariables(channel.url);
+
+        if (!type) {
+            if (source) type = /^https?:\/\//i.test(source) ? 'default' : 'append';
+            else if (channel.catchup.days > 0) type = 'shift';
+            else return false;
+        }
+
+        if (type === 'disabled' || type === 'none') return false;
+        if (type === 'default') return source || url;
+        if (type === 'append') return (source && /^https?:\/\//i.test(source) ? '' : url) + (source || '');
+        if (type === 'shift') return shiftTemplate(source || url);
+        if (type === 'flussonic' || type === 'fs') {
+            return url.replace(/\/(video\d*|mono\d*)\.(m3u8|ts)(\?|$)/, '/$1-${start}-${durationfs}.$2$3');
+        }
+        return shiftTemplate(source || url);
+    }
+
+    function buildArchiveUrl(channel, program) {
+        var template = catchupTemplate(channel);
+        if (!template || !program) return false;
+        
+        var start = Math.floor(program.start / 1e3);
+        var end = Math.floor(program.stop / 1e3);
+        var now = Math.floor(Date.now() / 1e3);
+        var duration = Math.max(1, end - start);
+
+        var values = {
+            start: start,
+            utc: start,
+            end: end,
+            utcend: end,
+            timestamp: now,
+            lutc: now,
+            duration: duration,
+            durationfs: duration
+        };
+
+        return normalizeCatchupVariables(template).replace(/\$\{([^}]+)\}/g, function (full, expression) {
+            if (Object.prototype.hasOwnProperty.call(values, expression)) {
+                return encodeURIComponent(values[expression]);
+            }
+            return full;
+        });
+    }
+
+    function canArchive(channel, program) {
+        if (!program || !channel.catchup || !channel.catchup.days || !catchupTemplate(channel)) return false;
+        var oldest = Date.now() - channel.catchup.days * 864e5;
+        return program.start >= oldest && program.start <= Date.now();
+    }
+
+    /* =====================================================
+       PLAYLISTS & M3U PARSING
+       ===================================================== */
+
+    function getLists() {
+        var lists = sget('iptv_lists', []);
+        if (!Array.isArray(lists)) lists = [];
+
+        if (!lists.length) {
+            var old = String(sget('iptv_url', '') || '').trim();
+            if (old) {
+                lists = [{ id: 'l1', name: 'Основний', url: old }];
+                sset('iptv_lists', lists);
+                sset('iptv_active', 'l1');
+            }
+        }
+        return lists;
+    }
+
+    function activeList() {
+        var lists = getLists();
+        var id = sget('iptv_active', '');
+        for (var i = 0; i < lists.length; i++) {
+            if (lists[i].id === id) return lists[i];
+        }
+        return lists[0] || null;
+    }
+
+    function addPlaylist(cb) {
+        ask('Посилання на плейлист M3U', '', function (url) {
+            if (!url) return cb(false);
+
+            if (!/^https?:\/\//i.test(url)) {
+                noty('Посилання має починатися з http:// або https://');
+                return cb(false);
+            }
+
+            var lists = getLists();
+            if (lists.some(function (l) { return l.url === url; })) {
+                noty('Цей плейлист уже додано');
+                return cb(false);
+            }
+
+            var m = /^https?:\/\/([^\/?#]+)/i.exec(url);
+            var name = (lists.length ? 'Плейлист ' + (lists.length + 1) : 'Основний') + (m ? ' (' + m[1] + ')' : '');
+            var id = 'l' + Date.now();
+
+            lists.push({ id: id, name: name, url: url });
+            sset('iptv_lists', lists);
+            sset('iptv_active', id);
+
+            STATE.loaded = false;
+            STATE.loadedId = null;
+
+            noty('Плейлист додано');
+            cb(true);
+        });
+    }
+
+    function parseM3U(text) {
+        text = String(text).replace(/^\uFEFF/, '');
+        var lines = text.split(/\r?\n/);
+        var header = lines[0] || '';
+        
+        var headerCatchup = {
+            type: /catchup="([^"]*)"/i.exec(header)?.[1] || '',
+            source: /catchup-source="([^"]*)"/i.exec(header)?.[1] || '',
+            days: /catchup-days="([^"]*)"/i.exec(header)?.[1] || ''
+        };
+
+        var channels = [];
+        var order = [];
+        var groups = Object.create(null);
+        var cur = null;
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+
+            if (line.indexOf('#EXTINF') === 0) {
+                var g = /group-title="([^"]*)"/i.exec(line);
+                var logo = /tvg-logo="([^"]*)"/i.exec(line);
+                var tid = /tvg-id="([^"]*)"/i.exec(line);
+                
+                var recDays = /tvg-rec="([^"]*)"/i.exec(line)?.[1] || headerCatchup.days;
+                var days = parseFloat(/catchup-days="([^"]*)"/i.exec(line)?.[1] || recDays) || 0;
+                var type = /catchup="([^"]*)"/i.exec(line)?.[1] || headerCatchup.type;
+                var source = /catchup-source="([^"]*)"/i.exec(line)?.[1] || headerCatchup.source;
+
+                cur = {
+                    name: line.substring(line.lastIndexOf(',') + 1).trim() || 'Без назви',
+                    group: g && g[1] || 'Без групи',
+                    logo: logo && logo[1] || '',
+                    id: tid && tid[1] || '',
+                    catchup: { type: type, source: source, days: days }
+                };
+            } else if (line.charAt(0) === '#') {
+                if (cur && line.indexOf('#EXTGRP:') === 0) {
+                    cur.group = line.substring(8).trim() || cur.group;
+                }
+            } else if (cur) {
+                cur.url = line;
+                channels.push(cur);
+
+                if (!groups[cur.group]) {
+                    groups[cur.group] = true;
+                    order.push(cur.group);
+                }
+
+                cur = null;
+            }
+        }
+
+        return { channels: channels, order: order };
+    }
+
+    function applyParsed(text) {
+        var p = parseM3U(text);
+        STATE.channels = p.channels;
+        STATE.groupOrder = p.order;
+        STATE.loaded = p.channels.length > 0;
+        return STATE.loaded;
+    }
+
+    function proxiedUrl(url) {
+        var p = String(sget('iptv_proxy', '') || '').trim();
+        return p ? p + encodeURIComponent(url) : null;
+    }
+
+    function download(url, ok, fail) {
+        var alt = proxiedUrl(url);
+
+        function attempt(target, viaProxy) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', target, true);
+            xhr.timeout = 40000;
+
+            function bad(reason) {
+                if (!viaProxy && alt) return attempt(alt, true);
+                fail(reason);
+            }
+
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    ok(xhr.responseText);
+                } else {
+                    bad('HTTP ' + xhr.status);
+                }
+            };
+            xhr.onerror = function () { bad('мережа або CORS'); };
+            xhr.ontimeout = function () { bad('таймаут'); };
+
+            try { xhr.send(); } catch (e) { bad(String(e)); }
+        }
+
+        attempt(url, false);
+    }
+
+    function loadPlaylist(force, done, skipEpg) {
+        var list = activeList();
+
+        if (!list) {
+            return addPlaylist(function (ok) {
+                if (ok) loadPlaylist(true, done, skipEpg);
+                else done();
+            });
+        }
+
+        if (!force && STATE.loaded && STATE.loadedId === list.id) {
+            if (!skipEpg) maybeLoadEpg(false);
+            return done();
+        }
+
+        var cacheKey = 'iptv_cache_' + list.id;
+        var timeKey = 'iptv_cache_t_' + list.id;
+        var cached = sget(cacheKey, '');
+        var age = Date.now() - (parseInt(sget(timeKey, 0), 10) || 0);
+
+        if (!force && cached && age < CACHE_TTL && applyParsed(String(cached))) {
+            STATE.loadedId = list.id;
+            if (!skipEpg) maybeLoadEpg(false);
+            return done();
+        }
+
+        noty('IPTV: завантаження плейлиста...');
+
+        download(list.url, function (text) {
+            if (!applyParsed(text)) {
+                noty('IPTV: канали не знайдено');
+                return done();
+            }
+
+            STATE.loadedId = list.id;
+            if (text.length < CACHE_LIMIT) {
+                sset(cacheKey, text);
+                sset(timeKey, Date.now());
+            }
+
+            if (!skipEpg) maybeLoadEpg(force);
+            done();
+        }, function (reason) {
+            if (cached && applyParsed(String(cached))) {
+                STATE.loadedId = list.id;
+                noty('Відкрито збережений плейлист: ' + reason);
+                if (!skipEpg) maybeLoadEpg(false);
+            } else {
+                STATE.loaded = false;
+                noty('Помилка плейлиста: ' + reason);
+            }
+            done();
+        });
+    }
+
+    /* =====================================================
+       EPG PROXY & PARSING
+       ===================================================== */
+
+    function parseXmltvTime(s) {
+        var m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?\s*([+-]\d{4})?/.exec(String(s));
+        if (!m) return 0;
+
+        var t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+        if (m[7]) {
+            var sign = m[7].charAt(0) === '-' ? -1 : 1;
+            t -= sign * (parseInt(m[7].substr(1, 2), 10) * 60 + parseInt(m[7].substr(3, 2), 10)) * 60000;
+        }
+        return t;
+    }
+
+    function xmlText(node, tag) {
+        var el = node.getElementsByTagName(tag)[0];
+        return el ? String(el.textContent || '').trim() : '';
+    }
+
+    function parseEpgXml(text, result) {
+        var doc = new DOMParser().parseFromString(text, 'application/xml');
+        if (doc.getElementsByTagName('parsererror').length) {
+            throw new Error('Некоректний XMLTV');
+        }
+
+        var names = result.names;
+        var progs = result.progs;
+        var now = Date.now();
+        var from = now - 7 * 24 * 3600000; // Підтримка архіву до 7 днів назад у кеші
+        var to = now + 36 * 3600000;
+
+        var channels = doc.getElementsByTagName('channel');
+        for (var i = 0; i < channels.length; i++) {
+            var id = channels[i].getAttribute('id');
+            if (!id) continue;
+            var display = channels[i].getElementsByTagName('display-name');
+            for (var j = 0; j < display.length; j++) {
+                var key = norm(display[j].textContent);
+                if (key) names[key] = id;
+            }
+        }
+
+        var programmes = doc.getElementsByTagName('programme');
+        for (var k = 0; k < programmes.length; k++) {
+            var p = programmes[k];
+            var cid = p.getAttribute('channel');
+            var start = parseXmltvTime(p.getAttribute('start'));
+            var stop = parseXmltvTime(p.getAttribute('stop'));
+
+            if (!cid || !start || !stop || stop < from || start > to) continue;
+
+            var title = xmlText(p, 'title');
+            if (!title) continue;
+
+            if (!progs[cid]) progs[cid] = [];
+            progs[cid].push({ start: start, stop: stop, title: title, desc: xmlText(p, 'desc') });
+        }
+    }
+
+    function epgIds() {
+        var seen = Object.create(null);
+        var ids = [];
+        STATE.channels.forEach(function (ch) {
+            var id = String(ch.id || '').trim();
+            if (id && id.length <= 250 && !seen[id]) {
+                seen[id] = true;
+                ids.push(id);
+            }
+        });
+        return ids;
+    }
+
+    function idsSignature(ids) {
+        return ids.slice().sort().join('\n');
+    }
+
+    function loadEpgCache(ids) {
+        var cache = sget(EPG_KEY, null);
+        if (!cache || cache.signature !== idsSignature(ids) || !cache.data || !cache.t) return false;
+        if (Date.now() - cache.t > EPG_TTL) return false;
+
+        STATE.epg = cache.data;
+        STATE.epg.t = cache.t;
+        STATE.epgStats = cache.stats || null;
+        return true;
+    }
+
+    function saveEpgCache(ids, data, stats) {
+        var obj = { signature: idsSignature(ids), t: Date.now(), data: data, stats: stats };
+        try {
+            var serialized = JSON.stringify(obj);
+            if (serialized.length <= EPG_CACHE_LIMIT) sset(EPG_KEY, obj);
+        } catch (e) {}
+    }
+
+    function postEpg(ids, ok, fail) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', EPG_URL, true);
+        xhr.timeout = 45000;
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
+        xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                ok(xhr.responseText, parseInt(xhr.getResponseHeader('X-EPG-Found'), 10) || 0, parseInt(xhr.getResponseHeader('X-EPG-Missing'), 10) || 0);
+            } else {
+                fail('HTTP ' + xhr.status);
+            }
+        };
+        xhr.onerror = function () { fail('мережа або CORS'); };
+        xhr.ontimeout = function () { fail('таймаут'); };
+
+        try { xhr.send(JSON.stringify({ ids: ids })); } catch (e) { fail(String(e)); }
+    }
+
+    function epgDone() {
+        STATE.epgLoading = false;
+        var waiters = STATE.epgWaiters.splice(0);
+        var forceAgain = STATE.epgForcePending;
+        STATE.epgForcePending = false;
+
+        waiters.forEach(function (fn) {
+            try { fn(); } catch (e) {}
+        });
+
+        if (forceAgain) maybeLoadEpg(true);
+    }
+
+    function maybeLoadEpg(force, callback) {
+        if (callback) STATE.epgWaiters.push(callback);
+        if (STATE.epgLoading) {
+            if (force) STATE.epgForcePending = true;
+            return;
+        }
+
+        var ids = epgIds();
+        if (!ids.length) {
+            return epgDone();
+        }
+
+        var signature = idsSignature(ids);
+        if (!force && STATE.epg && STATE.epg.signature === signature && Date.now() - STATE.epg.t < EPG_TTL) {
+            return epgDone();
+        }
+
+        if (!force && loadEpgCache(ids)) return epgDone();
+
+        STATE.epgLoading = true;
+        noty('EPG: завантаження програми...');
+
+        var batches = [];
+        for (var i = 0; i < ids.length; i += BATCH_SIZE) {
+            batches.push(ids.slice(i, i + BATCH_SIZE));
+        }
+
+        var result = { names: Object.create(null), progs: Object.create(null), t: Date.now(), signature: signature };
+        var stats = { requested: ids.length, found: 0, missing: 0, programChannels: 0, failedBatches: 0, batches: batches.length };
+        var pos = 0;
+
+        function next() {
+            if (pos >= batches.length) {
+                Object.keys(result.progs).forEach(function (id) {
+                    result.progs[id].sort(function (a, b) { return a.start - b.start; });
+                });
+
+                STATE.epgStats = stats;
+                if (stats.found > 0) {
+                    STATE.epg = result;
+                    saveEpgCache(ids, result, stats);
+                    noty('EPG оновлено');
+                } else if (STATE.epg) {
+                    noty('Залишено попередні дані EPG');
+                }
+                epgDone();
+                return;
+            }
+
+            var batch = batches[pos++];
+            postEpg(batch, function (xml, found, missing) {
+                try {
+                    parseEpgXml(xml, result);
+                    stats.found += found;
+                    stats.missing += missing;
+                } catch (e) {
+                    stats.failedBatches++;
+                }
+                next();
+            }, function () {
+                stats.failedBatches++;
+                next();
+            });
+        }
+
+        next();
+    }
+
+    function nowTitle(ch) {
+        if (!STATE.epg || !ch) return '';
+        var id = ch.id;
+        if (!STATE.epg.progs[id]) id = STATE.epg.names[norm(ch.name)];
+
+        var list = STATE.epg.progs[id];
+        if (!list) return '';
+
+        var now = Date.now();
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].start <= now && now < list[i].stop) {
+                return fmtTime(list[i].start) + '–' + fmtTime(list[i].stop) + '  ' + list[i].title;
+            }
+        }
+        return '';
+    }
+
+    // --- Функція перегляду архіву передач для каналу ---
+    function showArchivePrograms(ch) {
+        if (!STATE.epg || !STATE.epg.progs) {
+            return noty('Телепрограма не завантажена');
+        }
+
+        var id = ch.id;
+        if (!STATE.epg.progs[id] && STATE.epg.names) {
+            id = STATE.epg.names[norm(ch.name)];
+        }
+
+        var list = STATE.epg.progs[id];
+        if (!list || !list.length) {
+            return noty('Для цього каналу немає програми передач');
+        }
+
+        var recent = list.filter(function (p) {
+            return p.start <= Date.now();
+        }).slice().reverse();
+
+        if (!recent.length) {
+            return noty('Немає минулих передач для архіву');
+        }
+
+        selectShow({
+            title: ch.name + ' — Архів',
+            items: recent.map(function (p) {
+                var available = canArchive(ch.original || ch, p);
+                return {
+                    title: fmtTime(p.start) + ' – ' + fmtTime(p.stop) + '  ' + p.title,
+                    subtitle: available ? 'Доступно в архіві' : 'Тільки програма',
+                    program: p,
+                    available: available
+                };
+            }),
+            onSelect: function (item) {
+                if (!item.available) {
+                    return noty('Ця передача недоступна в архіві (вийшла за межі днів зберігання)');
+                }
+                
+                var archiveUrl = buildArchiveUrl(ch.original || ch, item.program);
+                if (!archiveUrl) {
+                    return noty('Не вдалося сформувати посилання на архів');
+                }
+
+                Lampa.Player.play({
+                    url: archiveUrl,
+                    title: ch.name + ' — ' + item.program.title,
+                    address: archiveUrl
+                });
+            }
+        });
+    }
+
+    /* =====================================================
+       FAVORITES & UI HELPERS
+       ===================================================== */
+
+    function isFav(url) {
+        return !!toSet(sget('iptv_fav', []))[url];
+    }
+
+    function toggleFav(url) {
+        var arr = sget('iptv_fav', []);
+        if (!Array.isArray(arr)) arr = [];
+        arr = arr.slice();
+        var i = arr.indexOf(url);
+        if (i < 0) arr.push(url);
+        else arr.splice(i, 1);
+        sset('iptv_fav', arr);
+    }
+
+    function isHidden(url) {
+        return !!toSet(sget('iptv_hidden', []))[url];
+    }
+
+    function displayName(ch) {
+        var names = sget('iptv_names', {});
+        return names && names[ch.url] || ch.name;
+    }
+
+    function hasPin() {
+        return !!String(sget('iptv_pin', '') || '').replace(/^p/, '');
+    }
+
+    function isUnlocked() {
+        return Date.now() < STATE.unlockedUntil;
+    }
+
+    function askPin(cb) {
+        ask('Введіть PIN', '', function (v) {
+            if (v !== null && v === String(sget('iptv_pin', '') || '').replace(/^p/, '')) {
+                STATE.unlockedUntil = Date.now() + UNLOCK_MS;
+                cb(true);
+            } else {
+                noty('Неправильний PIN');
+                cb(false);
+            }
+        });
+    }
+
+    function buildView() {
+        var hiddenG = toSet(sget('iptv_hidden_groups', []));
+        var locked = toSet(sget('iptv_locked', []));
+        var sort = flag('iptv_sort_az', false);
+
+        var groups = Object.create(null);
+        var order = [];
+        var all = [];
+
+        STATE.channels.forEach(function (c) {
+            if (isHidden(c.url) || hiddenG[c.group]) return;
+
+            var ch = {
+                name: displayName(c),
+                url: c.url,
+                group: c.group,
+                logo: c.logo,
+                id: c.id,
+                catchup: c.catchup,
+                original: c
+            };
+
+            all.push(ch);
+            if (!groups[ch.group]) {
+                groups[ch.group] = [];
+                order.push(ch.group);
+            }
+            groups[ch.group].push(ch);
+        });
+
+        if (sort) {
+            all.sort(function (a, b) { return a.name.localeCompare(b.name); });
+            order.sort(function (a, b) { return a.localeCompare(b); });
+            Object.keys(groups).forEach(function (g) {
+                groups[g].sort(function (a, b) { return a.name.localeCompare(b.name); });
+            });
+        }
+
+        return { all: all, groups: groups, order: order, locked: locked };
+    }
+
+    function playChannel(ch, list) {
+        if (!ch || !ch.url) return;
+
+        STATE.playlist = list || [];
+        STATE.playlistIndex = STATE.playlist.findIndex(function (c) { return c.url === ch.url; });
+        STATE.current = ch;
+
+        var hist = sget('iptv_hist', []);
+        if (!Array.isArray(hist)) hist = [];
+        hist = hist.filter(function (u) { return u !== ch.url; });
+        hist.unshift(ch.url);
+        sset('iptv_hist', hist.slice(0, 30));
+        sset('iptv_last_group', STATE.activeGroup || ch.group || '');
+
+        var title = ch.name;
+        var epg = nowTitle(ch);
+        if (epg) title += ' · ' + epg;
+
+        Lampa.Player.play({
+            url: ch.url,
+            title: title,
+            address: ch.url
+        });
+    }
+
+    /* =====================================================
+       STYLES
+       ===================================================== */
+
+    function injectStyle() {
+        if (document.getElementById('iptv-v33-style')) return;
+
+        var css = [
+            '.iptv-v33{display:flex;height:100%;width:100%;overflow:hidden;background:var(--color-background,#0f0f0f)}',
+            '.iptv-v33__side{width:260px;max-width:30%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
+            '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.08em;font-weight:600;opacity:.8}',
+            '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em}',
+            '.iptv-v33__grp{padding:.62em .8em;border-radius:.4em;margin:.1em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em}',
+            '.iptv-v33__grp.focus,.iptv-v33__grp:hover{background:rgba(255,255,255,.09)}',
+            '.iptv-v33__grp.active{background:rgba(33,150,243,.25);color:#90caf9}',
+            '.iptv-v33__grp-count{opacity:.45;font-size:.84em;flex-shrink:0}',
+            '.iptv-v33__main{flex:1;display:flex;flex-direction:column;min-width:0}',
+            '.iptv-v33__head{padding:1.05em 1.3em .65em;display:flex;align-items:center;justify-content:space-between;gap:1em}',
+            '.iptv-v33__title{font-size:1.4em;font-weight:700}',
+            '.iptv-v33__meta{opacity:.5;font-size:.9em}',
+            '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em}',
+            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.68em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer}',
+            '.iptv-v33__ch.focus,.iptv-v33__ch:hover{background:rgba(255,255,255,.08)}',
+            '.iptv-v33__ch-num{width:2.1em;text-align:right;opacity:.4;font-size:.88em;flex-shrink:0}',
+            '.iptv-v33__ch-body{flex:1;min-width:0}',
+            '.iptv-v33__ch-name{font-size:1.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__ch-epg{font-size:.8em;opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__grid{display:flex;flex-wrap:wrap;gap:.75em;padding:.4em .2em 1.5em}',
+            '.iptv-v33__tile{width:140px;background:rgba(255,255,255,.05);border-radius:.5em;overflow:hidden;cursor:pointer;transition:background .15s,transform .12s}',
+            '.iptv-v33__tile.focus,.iptv-v33__tile:hover{background:rgba(255,255,255,.12);transform:scale(1.03)}',
+            '.iptv-v33__tile-logo{height:80px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)}',
+            '.iptv-v33__tile-logo img{max-width:90%;max-height:70px;object-fit:contain}',
+            '.iptv-v33__tile-logo span{font-size:1.6em;opacity:.35}',
+            '.iptv-v33__tile-name{padding:.45em .5em .55em;font-size:.88em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__empty{padding:2em;text-align:center;opacity:.5}'
+        ].join('');
+
+        var s = document.createElement('style');
+        s.id = 'iptv-v33-style';
+        s.textContent = css;
+        document.head.appendChild(s);
+    }
+
+    /* =====================================================
+       MAIN PANEL UI
+       ===================================================== */
+
+    function MainPanel() {
+        var html = $('<div class="iptv-v33"></div>');
+        var side = $('<div class="iptv-v33__side"></div>');
+        var main = $('<div class="iptv-v33__main"></div>');
+        var chList = $('<div class="iptv-v33__list"></div>');
+        var grpList = $('<div class="iptv-v33__side-list"></div>');
+        var titleEl = $('<div class="iptv-v33__title"></div>');
+        var metaEl = $('<div class="iptv-v33__meta"></div>');
+
+        var view;
+        var channelItems = [];
+        var groupItems = [];
+        var focusIndex = 0;
+        var groupFocus = 0;
+        var destroyed = false;
+
+        function currentChannels() {
+            if (!view) return [];
+            var all = view.all.filter(function (c) {
+                return !view.locked[c.group] || !hasPin() || isUnlocked();
+            });
+
+            if (STATE.activeGroup === '__fav__') {
+                return all.filter(function (c) { return isFav(c.url); });
+            }
+            if (STATE.activeGroup === '__all__' || !STATE.activeGroup) {
+                return all;
+            }
+            return view.groups[STATE.activeGroup] || [];
+        }
+
+        function renderChannels() {
+            chList.empty();
+            channelItems = [];
+            var list = currentChannels();
+
+            titleEl.text(
+                STATE.activeGroup === '__fav__' ? '★ Обране' :
+                STATE.activeGroup === '__all__' ? 'Усі канали' : (STATE.activeGroup || 'Канали')
+            );
+            metaEl.text(list.length + ' каналів · довго затисніть ОК для архіву');
+
+            if (!list.length) {
+                chList.append('<div class="iptv-v33__empty">Немає каналів</div>');
+                return;
+            }
+
+            list.forEach(function (ch, i) {
+                var row = $(
+                    '<div class="iptv-v33__ch selector" data-index="' + i + '">' +
+                        '<div class="iptv-v33__ch-num">' + (i + 1) + '</div>' +
+                        '<div class="iptv-v33__ch-body">' +
+                            '<div class="iptv-v33__ch-name">' + esc(ch.name + (isFav(ch.url) ? ' ★' : '')) + '</div>' +
+                            '<div class="iptv-v33__ch-epg">' + esc(nowTitle(ch) || ch.group || '') + '</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+
+                row.on('hover:enter click', function () {
+                    playChannel(ch, list);
+                });
+
+                row.on('hover:long', function () {
+                    showArchivePrograms(ch);
+                });
+
+                chList.append(row);
+                channelItems.push(row);
+            });
+
+            focusIndex = Math.min(focusIndex, Math.max(0, channelItems.length - 1));
+        }
+
+        function renderGroups() {
+            grpList.empty();
+            groupItems = [];
+
+            var visible = view.all.filter(function (c) {
+                return !view.locked[c.group] || !hasPin() || isUnlocked();
+            });
+
+            var items = [
+                { id: '__fav__', title: '★ Обране', count: visible.filter(function (c) { return isFav(c.url); }).length },
+                { id: '__all__', title: 'Усі канали', count: visible.length }
+            ];
+
+            view.order.forEach(function (g) {
+                items.push({
+                    id: g,
+                    title: (view.locked[g] && hasPin() && !isUnlocked() ? '🔒 ' : '') + g,
+                    count: view.groups[g].length
+                });
+            });
+
+            items.forEach(function (g, i) {
+                var row = $(
+                    '<div class="iptv-v33__grp selector' + (STATE.activeGroup === g.id ? ' active' : '') + '" data-index="' + i + '">' +
+                        '<span>' + esc(g.title) + '</span>' +
+                        '<span class="iptv-v33__grp-count">' + g.count + '</span>' +
+                    '</div>'
+                );
+
+                row.on('hover:enter click', function () {
+                    function change() {
+                        STATE.activeGroup = g.id;
+                        sset('iptv_last_group', g.id);
+                        renderGroups();
+                        renderChannels();
+                        STATE.panelFocus = 'channels';
+                        focusIndex = 0;
+                        applyFocus();
+                    }
+
+                    if (g.id !== '__fav__' && g.id !== '__all__' && view.locked[g.id] && hasPin() && !isUnlocked()) {
+                        askPin(function (ok) { if (ok) change(); });
+                    } else {
+                        change();
+                    }
+                });
+
+                grpList.append(row);
+                groupItems.push(row);
+            });
+        }
+
+        function applyFocus() {
+            channelItems.forEach(function (el) { el.removeClass('focus'); });
+            groupItems.forEach(function (el) { el.removeClass('focus'); });
+
+            var el = STATE.panelFocus === 'groups' ? groupItems[groupFocus] : channelItems[focusIndex];
+            if (el) {
+                el.addClass('focus');
+                try { el[0].scrollIntoView({ block: 'nearest' }); } catch (e) {}
+            }
+        }
+
+        this.create = function () {
+            injectStyle();
+            side.append('<div class="iptv-v33__side-head">Групи</div>').append(grpList);
+            main.append($('<div class="iptv-v33__head"></div>').append(titleEl).append(metaEl)).append(chList);
+            html.append(side).append(main);
+
+            view = buildView();
+            var mode = sget('iptv_start', 'last');
+            var last = sget('iptv_last_group', '');
+
+            STATE.activeGroup = mode === 'fav' ? '__fav__' : mode === 'all' ? '__all__' : (view.groups[last] ? last : (view.order[0] || '__all__'));
+            STATE.panelFocus = 'channels';
+
+            renderGroups();
+            renderChannels();
+
+            if (STATE.epgLoading) {
+                STATE.epgWaiters.push(function () {
+                    if (!destroyed) {
+                        renderChannels();
+                        applyFocus();
+                    }
+                });
+            }
+
+            return html;
+        };
+
+        this.start = function () {
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(html);
+                    applyFocus();
+                },
+                left: function () {
+                    if (STATE.panelFocus === 'channels') {
+                        STATE.panelFocus = 'groups';
+                        applyFocus();
+                    } else {
+                        Lampa.Controller.toggle('menu');
+                    }
+                },
+                right: function () {
+                    if (STATE.panelFocus === 'groups') {
+                        STATE.panelFocus = 'channels';
+                        applyFocus();
+                    }
+                },
+                up: function () {
+                    if (STATE.panelFocus === 'channels') {
+                        if (focusIndex > 0) focusIndex--;
+                        else return Lampa.Controller.toggle('head');
+                    } else {
+                        if (groupFocus > 0) groupFocus--;
+                        else return Lampa.Controller.toggle('head');
+                    }
+                    applyFocus();
+                },
+                down: function () {
+                    if (STATE.panelFocus === 'channels') {
+                        if (focusIndex < channelItems.length - 1) focusIndex++;
+                    } else if (groupFocus < groupItems.length - 1) {
+                        groupFocus++;
+                    }
+                    applyFocus();
+                },
+                enter: function () {
+                    var el = STATE.panelFocus === 'groups' ? groupItems[groupFocus] : channelItems[focusIndex];
+                    if (el) el.trigger('hover:enter');
+                },
+                back: function () {
+                    Lampa.Activity.backward();
+                }
+            });
+            Lampa.Controller.toggle('content');
+        };
+
+        this.pause = function () {};
+        this.stop = function () {};
+        this.render = function () { return html; };
+        this.destroy = function () {
+            destroyed = true;
+            html.remove();
+        };
+    }
+
+    /* =====================================================
+       SETTINGS & LISTS MANAGEMENT
+       ===================================================== */
+
+    function showLists(backFn) {
+        var lists = getLists();
+        var active = activeList();
+
+        var items = lists.map(function (l) {
+            return {
+                title: (active && active.id === l.id ? '● ' : '') + l.name,
+                subtitle: l.url,
+                act: 'pick',
+                id: l.id,
+                name: l.name
+            };
+        });
+
+        items.push({ title: '+ Додати плейлист', act: 'add' });
+        if (lists.length) items.push({ title: 'Видалити плейлист', act: 'del' });
+
+        selectShow({
+            title: 'Плейлисти',
+            items: items,
+            onBack: backFn,
+            onSelect: function (item) {
+                if (item.act === 'pick') {
+                    sset('iptv_active', item.id);
+                    STATE.loaded = false;
+                    STATE.loadedId = null;
+                    noty('Активний: ' + item.name);
+                    showLists(backFn);
+                } else if (item.act === 'add') {
+                    addPlaylist(function () { showLists(backFn); });
+                } else if (item.act === 'del') {
+                    selectShow({
+                        title: 'Видалити плейлист',
+                        items: lists.map(function (l) { return { title: l.name, id: l.id }; }),
+                        onBack: function () { showLists(backFn); },
+                        onSelect: function (it) {
+                            var rest = getLists().filter(function (l) { return l.id !== it.id; });
+                            sset('iptv_lists', rest);
+                            if (sget('iptv_active', '') === it.id) {
+                                sset('iptv_active', rest[0] ? rest[0].id : '');
+                            }
+                            STATE.loaded = false;
+                            STATE.loadedId = null;
+                            noty('Плейлист видалено');
+                            showLists(backFn);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    function addSettings() {
+        if (!Lampa.SettingsApi || !Lampa.SettingsApi.addComponent) return;
+
+        Lampa.SettingsApi.addComponent({
+            component: 'iptv_player_33',
+            name: 'IPTV',
+            icon: ICON
+        });
+
+        function button(name, title, desc, fn) {
+            Lampa.SettingsApi.addParam({
+                component: 'iptv_player_33',
+                param: { name: name, type: 'button' },
+                field: { name: title, description: desc || '' },
+                onChange: fn
+            });
+        }
+
+        function toggle(name, title, desc, def) {
+            Lampa.SettingsApi.addParam({
+                component: 'iptv_player_33',
+                param: { name: name, type: 'trigger', default: def },
+                field: { name: title, description: desc || '' }
+            });
+        }
+
+        Lampa.SettingsApi.addParam({
+            component: 'iptv_player_33',
+            param: {
+                name: 'iptv_start',
+                type: 'select',
+                values: { last: 'Остання група', fav: 'Обране', all: 'Усі канали' },
+                default: 'last'
+            },
+            field: { name: 'Відкривати при вході', description: 'Початкова група каналів' }
+        });
+
+        toggle('iptv_grid', 'Плитки з логотипами', 'Вимкнено — список каналів', false);
+
+        button('iptv_s_lists_33', 'Плейлисти', 'Додати, вибрати або видалити', function () {
+            showLists(function () {});
+        });
+
+        button('iptv_s_epg_33', 'Оновити EPG', 'Примусове оновлення телепрограми', function () {
+            loadPlaylist(false, function () {
+                if (STATE.loaded) maybeLoadEpg(true);
+            }, true);
+        });
+
+        button('iptv_s_epgclear_33', 'Очистити кеш EPG', 'Видалити збережену телепрограму', function () {
+            sset(EPG_KEY, null);
+            STATE.epg = null;
+            STATE.epgStats = null;
+            noty('Кеш EPG очищено');
+        });
+
+        toggle('iptv_sort_az', 'Сортувати за алфавітом', 'Вимкнено — порядок M3U', false);
+
+        button('iptv_s_reload_33', 'Оновити плейлист і EPG', 'Примусове оновлення плейлиста та телепрограми', function () {
+            loadPlaylist(true, function () {
+                if (STATE.loaded) maybeLoadEpg(true);
+            }, true);
+        });
+    }
+
+    function open() {
+        loadPlaylist(false, function () {
+            if (!STATE.loaded) {
+                noty('Додайте плейлист у Налаштування → IPTV');
+                return;
+            }
+            Lampa.Activity.push({
+                url: '',
+                title: 'IPTV',
+                component: 'iptv_main_33',
+                page: 1
+            });
+        });
+    }
+
+    function addMenuButton() {
+        var menu = $('.menu .menu__list').eq(0);
+        if (!menu.length) return false;
+
+        menu.find('[data-action="iptv_player_33"]').remove();
+        var item = $(
+            '<li class="menu__item selector" data-action="iptv_player_33">' +
+                '<div class="menu__ico">' + ICON + '</div>' +
+                '<div class="menu__text">IPTV</div>' +
+            '</li>'
+        );
+
+        item.on('hover:enter click', open);
+        menu.append(item);
+        return true;
+    }
+
+    function start() {
+        if (STATE.started) return;
+        if (!$('.menu .menu__list').length) {
+            setTimeout(start, 500);
+            return;
+        }
+
+        STATE.started = true;
+        Lampa.Component.add('iptv_main_33', MainPanel);
+
+        try { addSettings(); } catch (e) {}
+        try { addMenuButton(); } catch (e) {}
+
+        console.log('[IPTV 3.3.1] Custom EPG Edition with Archive ready');
+    }
+
+    if (window.appready) {
+        start();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') start();
+        });
+    }
+
+})();
