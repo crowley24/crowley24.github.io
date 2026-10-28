@@ -2,7 +2,7 @@
  * IPTV for Lampa 3.3.1 — Custom EPG Edition with Permanent Logos & Archive
  *
  * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive, Progress & Permanent Logos
- * EPG Proxy 2.0.2 — POST batches (Optimized EPG Cache Notifications)
+ * EPG Proxy 2.0.2 — Fixed EPG Cache Loading Fix
  */
 (function () {
     'use strict';
@@ -517,18 +517,27 @@
 
     function loadEpgCache(ids) {
         var cache = sget(EPG_KEY, null);
-        if (!cache || cache.signature !== idsSignature(ids) || !cache.data || !cache.t) return false;
+        if (!cache || !cache.data || !cache.t) return false;
+        
+        // Перевіряємо TTL (6 годин)
         if (Date.now() - cache.t > EPG_TTL) return false;
 
         STATE.epg = cache.data;
         STATE.epg.t = cache.t;
-        STATE.epgStats = cache.stats || null;
+        STATE.epgStats = cache.stats || {
+            requested: ids.length,
+            found: Object.keys(cache.data.progs || {}).length,
+            missing: 0,
+            programChannels: Object.keys(cache.data.progs || {}).length,
+            noProgramChannels: 0,
+            failedBatches: 0,
+            batches: 0,
+            cacheUsed: true,
+            message: 'Використовується кеш EPG'
+        };
 
-        if (STATE.epgStats) {
-            STATE.epgStats.cacheUsed = true;
-            STATE.epgStats.message = 'Використовується кеш EPG';
-        }
-
+        STATE.epgStats.cacheUsed = true;
+        STATE.epgStats.message = 'Використовується кеш EPG';
         return true;
     }
 
@@ -601,16 +610,17 @@
             return epgDone();
         }
 
+        // Завжди спершу намагаємось завантажити з локального сховища (якщо не примусовий запит)
+        if (!force && loadEpgCache(ids)) {
+            return epgDone();
+        }
+
         var signature = idsSignature(ids);
         if (!force && STATE.epg && STATE.epg.signature === signature && Date.now() - STATE.epg.t < EPG_TTL) {
             return epgDone();
         }
 
-        if (!force && loadEpgCache(ids)) return epgDone();
-
         STATE.epgLoading = true;
-        
-        // Сповіщення показується ТІЛЬКИ коли дані фактично завантажуються з мережі
         noty('EPG: завантаження програми...');
 
         var batches = [];
@@ -653,15 +663,12 @@
                     STATE.epg = result;
                     stats.message = stats.failedBatches ? 'Часткове завантаження: є помилкові пакети' : 'EPG успішно оновлено';
                     saveEpgCache(ids, result, stats);
-                    noty('EPG: файлів ' + stats.found + ', із програмами ' + stats.programChannels + ' із ' + stats.requested);
                 } else {
                     if (STATE.epg) {
                         stats.cacheUsed = true;
                         stats.message = 'Оновлення не вдалося; збережено попередні дані';
-                        noty('EPG: оновлення не вдалося. Залишено попередні дані');
                     } else {
                         stats.message = 'Не знайдено даних EPG; перевір tvg-id';
-                        noty('EPG: не знайдено програм. Перевір tvg-id');
                     }
                 }
                 epgDone();
@@ -875,7 +882,7 @@
     }
 
     /* =====================================================
-       STYLES (з постійними іконками та прогресом)
+       STYLES
        ===================================================== */
 
     function injectStyle() {
