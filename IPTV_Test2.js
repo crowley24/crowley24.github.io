@@ -1,7 +1,7 @@
 /**
- * IPTV for Lampa 3.3.1 — Custom EPG Edition with Archive & Progress Bars
+ * IPTV for Lampa 3.3.1 — Custom EPG Edition with Permanent Logos & Archive
  *
- * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive Support & Progress
+ * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive, Progress & Permanent Logos
  * EPG Proxy 2.0.2 — POST batches
  */
 (function () {
@@ -47,7 +47,7 @@
     };
 
     /* =====================================================
-       UTILITIES & PROGRESS HELPERS
+       UTILITIES & HELPERS
        ===================================================== */
 
     function esc(s) {
@@ -110,10 +110,6 @@
         return truthy(sget(k, def));
     }
 
-    function gridMode() {
-        return flag('iptv_grid', false);
-    }
-
     function ask(title, value, cb) {
         if (!Lampa.Input || !Lampa.Input.edit) {
             noty('IPTV: введення недоступне');
@@ -136,7 +132,7 @@
         Lampa.Select.show(o);
     }
 
-    // --- Допоміжні функції для прогресу та архіву ---
+    // --- Архівоутворення та прогрес ---
 
     function programProgress(program, at) {
         if (!program || !program.start || !program.stop || program.stop <= program.start) return 0;
@@ -661,7 +657,6 @@
         return fmtTime(current.start) + '–' + fmtTime(current.stop) + '  ' + current.title;
     }
 
-    // --- Функція перегляду архіву передач для каналу ---
     function showArchivePrograms(ch) {
         if (!STATE.epg || !STATE.epg.progs) {
             return noty('Телепрограма не завантажена');
@@ -825,7 +820,7 @@
     }
 
     /* =====================================================
-       STYLES (з прогрес-баром під кожним каналом)
+       STYLES (з постійними іконками та прогресом)
        ===================================================== */
 
     function injectStyle() {
@@ -845,23 +840,19 @@
             '.iptv-v33__title{font-size:1.4em;font-weight:700}',
             '.iptv-v33__meta{opacity:.5;font-size:.9em}',
             '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em}',
-            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.68em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer}',
+            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer}',
             '.iptv-v33__ch.focus,.iptv-v33__ch:hover{background:rgba(255,255,255,.08)}',
             '.iptv-v33__ch-num{width:2.1em;text-align:right;opacity:.4;font-size:.88em;flex-shrink:0}',
+            // Стилі для іконки/логотипа каналу
+            '.iptv-v33__ch-logo{width:4.2em;height:3em;background:rgba(255,255,255,.06);border-radius:.35em;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}',
+            '.iptv-v33__ch-logo img{max-width:90%;max-height:85%;object-fit:contain}',
+            '.iptv-v33__ch-logo span{font-size:1.1em;opacity:.35}',
             '.iptv-v33__ch-body{flex:1;min-width:0}',
             '.iptv-v33__ch-name{font-size:1.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.iptv-v33__ch-epg{font-size:.8em;opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            // Стилі для прогрес-бару
             '.iptv-v33__progress{height:3px;margin-top:6px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}',
             '.iptv-v33__progress-bar{height:100%;background:#4cc986;border-radius:2px}',
             '.iptv-v33__ch.focus .iptv-v33__progress-bar{background:#10141d}',
-            '.iptv-v33__grid{display:flex;flex-wrap:wrap;gap:.75em;padding:.4em .2em 1.5em}',
-            '.iptv-v33__tile{width:140px;background:rgba(255,255,255,.05);border-radius:.5em;overflow:hidden;cursor:pointer;transition:background .15s,transform .12s}',
-            '.iptv-v33__tile.focus,.iptv-v33__tile:hover{background:rgba(255,255,255,.12);transform:scale(1.03)}',
-            '.iptv-v33__tile-logo{height:80px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)}',
-            '.iptv-v33__tile-logo img{max-width:90%;max-height:70px;object-fit:contain}',
-            '.iptv-v33__tile-logo span{font-size:1.6em;opacity:.35}',
-            '.iptv-v33__tile-name{padding:.45em .5em .55em;font-size:.88em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.iptv-v33__empty{padding:2em;text-align:center;opacity:.5}'
         ].join('');
 
@@ -930,6 +921,7 @@
                 var row = $(
                     '<div class="iptv-v33__ch selector" data-index="' + i + '">' +
                         '<div class="iptv-v33__ch-num">' + (i + 1) + '</div>' +
+                        '<div class="iptv-v33__ch-logo"></div>' +
                         '<div class="iptv-v33__ch-body">' +
                             '<div class="iptv-v33__ch-name">' + esc(ch.name + (isFav(ch.url) ? ' ★' : '')) + '</div>' +
                             '<div class="iptv-v33__ch-epg">' + esc(epgText) + '</div>' +
@@ -937,6 +929,17 @@
                         '</div>' +
                     '</div>'
                 );
+
+                var logoContainer = row.find('.iptv-v33__ch-logo');
+                if (ch.logo) {
+                    var img = $('<img alt="">').attr('src', ch.logo);
+                    img.on('error', function () {
+                        logoContainer.empty().append('<span>📺</span>');
+                    });
+                    logoContainer.append(img);
+                } else {
+                    logoContainer.append('<span>📺</span>');
+                }
 
                 row.on('hover:enter click', function () {
                     playChannel(ch, list);
@@ -1176,14 +1179,6 @@
             });
         }
 
-        function toggle(name, title, desc, def) {
-            Lampa.SettingsApi.addParam({
-                component: 'iptv_player_33',
-                param: { name: name, type: 'trigger', default: def },
-                field: { name: title, description: desc || '' }
-            });
-        }
-
         Lampa.SettingsApi.addParam({
             component: 'iptv_player_33',
             param: {
@@ -1194,8 +1189,6 @@
             },
             field: { name: 'Відкривати при вході', description: 'Початкова група каналів' }
         });
-
-        toggle('iptv_grid', 'Плитки з логотипами', 'Вимкнено — список каналів', false);
 
         button('iptv_s_lists_33', 'Плейлисти', 'Додати, вибрати або видалити', function () {
             showLists(function () {});
@@ -1214,7 +1207,11 @@
             noty('Кеш EPG очищено');
         });
 
-        toggle('iptv_sort_az', 'Сортувати за алфавітом', 'Вимкнено — порядок M3U', false);
+        Lampa.SettingsApi.addParam({
+            component: 'iptv_player_33',
+            param: { name: 'iptv_sort_az', type: 'trigger', default: false },
+            field: { name: 'Сортувати за алфавітом', description: 'Вимкнено — порядок M3U' }
+        });
 
         button('iptv_s_reload_33', 'Оновити плейлист і EPG', 'Примусове оновлення плейлиста та телепрограми', function () {
             loadPlaylist(true, function () {
@@ -1268,7 +1265,7 @@
         try { addSettings(); } catch (e) {}
         try { addMenuButton(); } catch (e) {}
 
-        console.log('[IPTV 3.3.1] Custom EPG Edition with Archive & Progress Bars ready');
+        console.log('[IPTV 3.3.1] Custom EPG Edition with Permanent Logos ready');
     }
 
     if (window.appready) {
