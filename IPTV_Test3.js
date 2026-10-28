@@ -1,7 +1,7 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Ultra Lightweight & Fast Navigation
- * (Архів та довге затискання збережено без змін)
+ * Custom EPG Edition — Position & Scroll Memory
+ * (Збереження позиції скролу та останнього каналу)
  */
 (function () {
     'use strict';
@@ -54,6 +54,9 @@
         panelFocus: 'channels',
         started: false
     };
+
+    // Пам'ять позицій для кожної групи (зберігається в сесії)
+    var groupPositions = Object.create(null);
 
     /* =====================================================
        UTILITIES
@@ -1704,7 +1707,7 @@
     }
 
     /* =====================================================
-       STYLES (Оптимізація апаратного прискорення)
+       STYLES
        ===================================================== */
 
     function injectStyle() {
@@ -1873,6 +1876,8 @@
                 }
 
                 row.on('hover:enter click', function () {
+                    // Зберігаємо поточну позицію перед переходом на канал
+                    groupPositions[STATE.activeGroup] = focusIndex;
                     playChannel(ch, list);
                 });
 
@@ -1884,10 +1889,15 @@
                 channelItems.push(row);
             });
 
-            focusIndex = Math.min(
-                focusIndex,
-                Math.max(0, channelItems.length - 1)
-            );
+            // Відновлюємо останній вибраний канал для поточної групи
+            if (groupPositions[STATE.activeGroup] != null) {
+                focusIndex = Math.min(
+                    groupPositions[STATE.activeGroup],
+                    Math.max(0, channelItems.length - 1)
+                );
+            } else {
+                focusIndex = 0;
+            }
         }
 
         function renderGroups() {
@@ -1933,16 +1943,17 @@
                 );
 
                 row.on('hover:enter click', function () {
-                    STATE.activeGroup = g.id;
+                    // Зберігаємо позицію старої групи перед перемиканням
+                    groupPositions[STATE.activeGroup] = focusIndex;
 
+                    STATE.activeGroup = g.id;
                     sset('iptv_last_group', g.id);
 
                     renderGroups();
                     renderChannels();
 
                     STATE.panelFocus = 'channels';
-                    focusIndex = 0;
-
+                    
                     applyFocus();
                 });
 
@@ -2023,6 +2034,7 @@
 
             renderGroups();
             renderChannels();
+            applyFocus(); // Встановлюємо фокус і скрол на збережений канал одразу при відкритті
 
             if (STATE.epgLoading) {
                 STATE.epgWaiters.push(function () {
@@ -2045,6 +2057,8 @@
 
                 left: function () {
                     if (STATE.panelFocus === 'channels') {
+                        // Зберігаємо позицію каналу при переході в меню груп
+                        groupPositions[STATE.activeGroup] = focusIndex;
                         STATE.panelFocus = 'groups';
                         applyFocus();
                     } else {
@@ -2063,6 +2077,7 @@
                     if (STATE.panelFocus === 'channels') {
                         if (focusIndex > 0) {
                             focusIndex--;
+                            groupPositions[STATE.activeGroup] = focusIndex;
                         } else {
                             return Lampa.Controller.toggle('head');
                         }
@@ -2081,6 +2096,7 @@
                     if (STATE.panelFocus === 'channels') {
                         if (focusIndex < channelItems.length - 1) {
                             focusIndex++;
+                            groupPositions[STATE.activeGroup] = focusIndex;
                         }
                     } else if (groupFocus < groupItems.length - 1) {
                         groupFocus++;
@@ -2097,7 +2113,6 @@
                     if (el) el.trigger('hover:enter');
                 },
 
-                // Довге затискання ОК (відкриття архіву) збережено без змін
                 long: function () {
                     if (STATE.panelFocus === 'channels') {
                         var list = currentChannels();
@@ -2521,7 +2536,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready'
+            '[IPTV 3.3.2] Custom EPG Edition ready — Scroll & Position Memory'
         );
     }
 
