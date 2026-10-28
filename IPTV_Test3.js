@@ -1,24 +1,15 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Compact EPG Cache (with TV Remote Focus Fix)
+ * Custom EPG Edition — Ultra Fast TV Remote Navigation
  *
  * Based on IPTV 3.3.1
  * EPG Proxy 2.0.2 — POST batches
  *
  * Changes:
- * - PIN protection completely removed
- * - Improved archive URL templates
- * - Improved EPG ID/name matching
- * - Preserve previous EPG on failed batches
- * - Better EPG cache diagnostics
- * - Accurate archive availability
- * - Reduced duplicate EPG requests
- * - M3U parsing without optional chaining
- * - EPG range: previous 24 hours + next 12 hours
- * - Compact EPG cache without programme descriptions
- * - Cache write verification and size diagnostics
- * - Existing playlist and storage keys preserved
- * - Added Lampa.Controller 'long' method and focus recovery fix on close
+ * - Ultra fast TV remote scrolling (replaced scrollIntoView with scrollTop)
+ * - GPU hardware acceleration for smooth rendering on Smart TV / Android TV / PS4
+ * - Immediate focus restoration on modal back
+ * - Compact EPG cache preserved
  */
 (function () {
     'use strict';
@@ -1572,11 +1563,9 @@
                 });
             },
 
-            // Гарантоване відновлення фокусу пульта після закриття архіву
+            // Миттєве відновлення контролера без затримок
             onBack: function () {
-                setTimeout(function () {
-                    Lampa.Controller.toggle('content');
-                }, 100);
+                Lampa.Controller.toggle('content');
             }
         });
     }
@@ -1724,7 +1713,7 @@
     }
 
     /* =====================================================
-       STYLES
+       STYLES (GPU Acceleration & Performance Optimizations)
        ===================================================== */
 
     function injectStyle() {
@@ -1734,7 +1723,7 @@
             '.iptv-v33{display:flex;height:100%;width:100%;overflow:hidden;background:var(--color-background,#0f0f0f)}',
             '.iptv-v33__side{width:260px;max-width:30%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
             '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.08em;font-weight:600;opacity:.8}',
-            '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em}',
+            '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em;will-change:transform}',
             '.iptv-v33__grp{padding:.62em .8em;border-radius:.4em;margin:.1em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em}',
             '.iptv-v33__grp.focus,.iptv-v33__grp:hover{background:rgba(255,255,255,.09)}',
             '.iptv-v33__grp.active{background:rgba(33,150,243,.25);color:#90caf9}',
@@ -1743,8 +1732,8 @@
             '.iptv-v33__head{padding:1.05em 1.3em .65em;display:flex;align-items:center;justify-content:space-between;gap:1em}',
             '.iptv-v33__title{font-size:1.4em;font-weight:700}',
             '.iptv-v33__meta{opacity:.5;font-size:.9em}',
-            '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em}',
-            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer}',
+            '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em;will-change:transform}',
+            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer;transform:translateZ(0)}',
             '.iptv-v33__ch.focus,.iptv-v33__ch:hover{background:rgba(255,255,255,.08)}',
             '.iptv-v33__ch-num{width:2.1em;text-align:right;opacity:.4;font-size:.88em;flex-shrink:0}',
             '.iptv-v33__ch-logo{width:4.2em;height:3em;background:rgba(255,255,255,.06);border-radius:.35em;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}',
@@ -1976,6 +1965,7 @@
             );
         }
 
+        // Прямий підрахунок scrollTop без важкого scrollIntoView
         function applyFocus() {
             channelItems.forEach(function (el) {
                 el.removeClass('focus');
@@ -1985,18 +1975,29 @@
                 el.removeClass('focus');
             });
 
-            var el = STATE.panelFocus === 'groups'
+            var isGroups = STATE.panelFocus === 'groups';
+            var el = isGroups
                 ? groupItems[groupFocus]
                 : channelItems[focusIndex];
 
-            if (el) {
+            if (el && el[0]) {
                 el.addClass('focus');
 
-                try {
-                    el[0].scrollIntoView({
-                        block: 'nearest'
-                    });
-                } catch (e) {}
+                var container = isGroups ? grpList[0] : chList[0];
+                var node = el[0];
+
+                if (container && node) {
+                    var containerTop = container.scrollTop;
+                    var containerHeight = container.clientHeight;
+                    var nodeTop = node.offsetTop;
+                    var nodeHeight = node.offsetHeight;
+
+                    if (nodeTop < containerTop) {
+                        container.scrollTop = nodeTop;
+                    } else if (nodeTop + nodeHeight > containerTop + containerHeight) {
+                        container.scrollTop = nodeTop + nodeHeight - containerHeight;
+                    }
+                }
             }
         }
 
@@ -2529,7 +2530,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — Compact Cache'
+            '[IPTV 3.3.2] Custom EPG Edition ready — Ultra Fast TV Remote Navigation'
         );
     }
 
