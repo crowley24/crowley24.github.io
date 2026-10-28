@@ -1,7 +1,7 @@
 /**
- * IPTV for Lampa 3.3.1 — Custom EPG Edition with Archive
+ * IPTV for Lampa 3.3.1 — Custom EPG Edition with Archive & Progress Bars
  *
- * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive Support
+ * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive Support & Progress
  * EPG Proxy 2.0.2 — POST batches
  */
 (function () {
@@ -47,7 +47,7 @@
     };
 
     /* =====================================================
-       UTILITIES & ARCHIVE HELPERS
+       UTILITIES & PROGRESS HELPERS
        ===================================================== */
 
     function esc(s) {
@@ -136,7 +136,13 @@
         Lampa.Select.show(o);
     }
 
-    // --- Логіка архівоутворення (Catch-up) ---
+    // --- Допоміжні функції для прогресу та архіву ---
+
+    function programProgress(program, at) {
+        if (!program || !program.start || !program.stop || program.stop <= program.start) return 0;
+        at = at || Date.now();
+        return Math.max(0, Math.min(100, Math.round((at - program.start) / (program.stop - program.start) * 100)));
+    }
 
     function normalizeCatchupVariables(template) {
         var aliases = { utc: 'start', lutc: 'timestamp', current_utc: 'timestamp', utcend: 'end' };
@@ -632,21 +638,27 @@
         next();
     }
 
-    function nowTitle(ch) {
-        if (!STATE.epg || !ch) return '';
+    function getCurrentProgram(ch) {
+        if (!STATE.epg || !ch) return null;
         var id = ch.id;
         if (!STATE.epg.progs[id]) id = STATE.epg.names[norm(ch.name)];
 
         var list = STATE.epg.progs[id];
-        if (!list) return '';
+        if (!list) return null;
 
         var now = Date.now();
         for (var i = 0; i < list.length; i++) {
             if (list[i].start <= now && now < list[i].stop) {
-                return fmtTime(list[i].start) + '–' + fmtTime(list[i].stop) + '  ' + list[i].title;
+                return list[i];
             }
         }
-        return '';
+        return null;
+    }
+
+    function nowTitle(ch) {
+        var current = getCurrentProgram(ch);
+        if (!current) return '';
+        return fmtTime(current.start) + '–' + fmtTime(current.stop) + '  ' + current.title;
     }
 
     // --- Функція перегляду архіву передач для каналу ---
@@ -813,7 +825,7 @@
     }
 
     /* =====================================================
-       STYLES
+       STYLES (з прогрес-баром під кожним каналом)
        ===================================================== */
 
     function injectStyle() {
@@ -839,6 +851,10 @@
             '.iptv-v33__ch-body{flex:1;min-width:0}',
             '.iptv-v33__ch-name{font-size:1.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.iptv-v33__ch-epg{font-size:.8em;opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            // Стилі для прогрес-бару
+            '.iptv-v33__progress{height:3px;margin-top:6px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}',
+            '.iptv-v33__progress-bar{height:100%;background:#4cc986;border-radius:2px}',
+            '.iptv-v33__ch.focus .iptv-v33__progress-bar{background:#10141d}',
             '.iptv-v33__grid{display:flex;flex-wrap:wrap;gap:.75em;padding:.4em .2em 1.5em}',
             '.iptv-v33__tile{width:140px;background:rgba(255,255,255,.05);border-radius:.5em;overflow:hidden;cursor:pointer;transition:background .15s,transform .12s}',
             '.iptv-v33__tile.focus,.iptv-v33__tile:hover{background:rgba(255,255,255,.12);transform:scale(1.03)}',
@@ -907,12 +923,17 @@
             }
 
             list.forEach(function (ch, i) {
+                var currentProg = getCurrentProgram(ch);
+                var progress = programProgress(currentProg);
+                var epgText = currentProg ? (fmtTime(currentProg.start) + '–' + fmtTime(currentProg.stop) + '  ' + currentProg.title) : (ch.group || '');
+
                 var row = $(
                     '<div class="iptv-v33__ch selector" data-index="' + i + '">' +
                         '<div class="iptv-v33__ch-num">' + (i + 1) + '</div>' +
                         '<div class="iptv-v33__ch-body">' +
                             '<div class="iptv-v33__ch-name">' + esc(ch.name + (isFav(ch.url) ? ' ★' : '')) + '</div>' +
-                            '<div class="iptv-v33__ch-epg">' + esc(nowTitle(ch) || ch.group || '') + '</div>' +
+                            '<div class="iptv-v33__ch-epg">' + esc(epgText) + '</div>' +
+                            (currentProg ? '<div class="iptv-v33__progress"><div class="iptv-v33__progress-bar" style="width:' + progress + '%"></div></div>' : '') +
                         '</div>' +
                     '</div>'
                 );
@@ -1247,7 +1268,7 @@
         try { addSettings(); } catch (e) {}
         try { addMenuButton(); } catch (e) {}
 
-        console.log('[IPTV 3.3.1] Custom EPG Edition with Archive ready');
+        console.log('[IPTV 3.3.1] Custom EPG Edition with Archive & Progress Bars ready');
     }
 
     if (window.appready) {
