@@ -6,6 +6,8 @@
     'use strict';
 
     if (!window.Lampa || !window.$) return;
+    if (window.__iptv_pro_140_initialized) return;
+    window.__iptv_pro_140_initialized = true;
 
     var KEY = 'iptv_pro_v12';
     var EPG_CACHE_KEY = 'iptv_pro_epg_cache_v132';
@@ -2243,10 +2245,6 @@
      */
 
     function init() {
-        // Захист від повторного запуску — перевіряємо і ставимо прапорець на самому початку
-        if (window.__iptv_pro_140_initialized) return;
-        window.__iptv_pro_140_initialized = true;
-
         var menu = $('.menu .menu__list');
 
         if (!menu.length) {
@@ -2254,8 +2252,10 @@
             return;
         }
 
-        // Перевіряємо, чи пункт меню вже існує в DOM, щоб уникнути будь-яких дублікатів
-        if (menu.find('.iptv-pro-menu').length > 0) return;
+        // Жорстко видаляємо будь-які існуючі елементи з назвою «ТБ», щоб гарантовано не було дублікатів
+        menu.find('.menu__item').filter(function () {
+            return $(this).find('.menu__text').text().trim() === 'ТБ';
+        }).remove();
 
         Lampa.Component.add('iptv_pro', IPTVComponent);
 
