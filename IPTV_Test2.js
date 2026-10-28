@@ -2,7 +2,7 @@
  * IPTV for Lampa 3.3.1 — Custom EPG Edition with Permanent Logos & Archive
  *
  * Base: IPTV 3.2 / Custom EPG 3.3 + IPTV+ Archive, Progress & Permanent Logos
- * EPG Proxy 2.0.2 — Robust EPG Cache & Auto-Load Fix
+ * EPG Proxy 2.0.2 — Final Stable EPG Cache Fix
  */
 (function () {
     'use strict';
@@ -511,7 +511,10 @@
         return ids;
     }
 
+    // Менеджер завантаження кешу (працює незалежно від стану списку каналів)
     function loadEpgCache() {
+        if (STATE.epg) return true; // Вже завантажено в пам'ять
+
         var cache = sget(EPG_KEY, null);
         if (!cache || !cache.data || !cache.t) return false;
         
@@ -589,7 +592,7 @@
             return;
         }
 
-        // 1. Спершу завжди перевіряємо локальний кеш (якщо це не примусове оновлення)
+        // 1. Спершу завжди намагаємось відновити з кешу (якщо не примусово)
         if (!force && loadEpgCache()) {
             return epgDone();
         }
@@ -1342,6 +1345,10 @@
         }
 
         STATE.started = true;
+        
+        // Одразу при запуску Lampa намагаємось підтягнути кеш EPG у пам'ять
+        loadEpgCache();
+
         Lampa.Component.add('iptv_main_33', MainPanel);
 
         try { addSettings(); } catch (e) {}
