@@ -1,6 +1,6 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Context Menu on Long Press
+ * Custom EPG Edition — Full Channel EPG List
  */
 (function () {
     'use strict';
@@ -948,7 +948,8 @@
                 return {
                     start: p.start,
                     stop: p.stop,
-                    title: p.title
+                    title: p.title,
+                    desc: p.desc || ''
                 };
             });
 
@@ -1022,7 +1023,8 @@
                 return {
                     start: p.start,
                     stop: p.stop,
-                    title: String(p.title || '')
+                    title: String(p.title || ''),
+                    desc: String(p.desc || '')
                 };
             });
         });
@@ -1509,6 +1511,56 @@
     }
 
     /* =====================================================
+       FULL EPG / TELEPROGRAM LIST VIEW
+       ===================================================== */
+
+    function showFullEpg(ch) {
+        if (!STATE.epg || !STATE.epg.progs) {
+            return noty('Телепрограма не завантажена');
+        }
+
+        var id = findEpgId(ch);
+        var list = id ? STATE.epg.progs[id] : null;
+
+        if (!list || !list.length) {
+            return noty('Для цього каналу немає телепрограми');
+        }
+
+        var now = Date.now();
+
+        selectShow({
+            title: ch.name + ' — Телепрограма',
+            items: list.map(function (p) {
+                var isCurrent = p.start <= now && now < p.stop;
+                var isPast = p.stop <= now;
+
+                return {
+                    title: (isCurrent ? '▶ [ЗАРАЗ] ' : '') + fmtTime(p.start) + ' – ' + fmtTime(p.stop) + '  ' + p.title,
+                    subtitle: p.desc ? p.desc : (isPast ? 'Минула передача' : 'Майбутня передача'),
+                    program: p
+                };
+            }),
+            onSelect: function (item) {
+                if (item.program.desc) {
+                    selectShow({
+                        title: fmtTime(item.program.start) + ' – ' + fmtTime(item.program.stop) + '  ' + item.program.title,
+                        items: [
+                            { title: item.program.desc }
+                        ],
+                        onBack: function () {
+                            showFullEpg(ch);
+                        },
+                        onSelect: function () {}
+                    });
+                }
+            },
+            onBack: function () {
+                Lampa.Controller.toggle('content');
+            }
+        });
+    }
+
+    /* =====================================================
        CONTEXT MENU FOR CHANNEL
        ===================================================== */
 
@@ -1523,12 +1575,12 @@
                     action: 'fav'
                 },
                 {
-                    title: '📺 Архів передач',
-                    action: 'archive'
+                    title: '📅 Телепрограма каналу',
+                    action: 'epg'
                 },
                 {
-                    title: '📅 Поточна програма / Інформація',
-                    action: 'info'
+                    title: '📺 Архів передач',
+                    action: 'archive'
                 }
             ],
             onSelect: function (item) {
@@ -1537,22 +1589,10 @@
                     if (typeof refreshCallback === 'function') {
                         refreshCallback();
                     }
+                } else if (item.action === 'epg') {
+                    showFullEpg(ch);
                 } else if (item.action === 'archive') {
                     showArchivePrograms(ch);
-                } else if (item.action === 'info') {
-                    var cur = getCurrentProgram(ch);
-                    if (cur) {
-                        selectShow({
-                            title: ch.name + ' — ' + cur.title,
-                            items: [
-                                { title: 'Час: ' + fmtTime(cur.start) + ' – ' + fmtTime(cur.stop) },
-                                { title: cur.desc || 'Опис відсутній' }
-                            ],
-                            onSelect: function () {}
-                        });
-                    } else {
-                        noty('Поточна програма відсутня');
-                    }
                 }
             },
             onBack: function () {
@@ -2631,7 +2671,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — Channel Context Menu'
+            '[IPTV 3.3.2] Custom EPG Edition ready — Full EPG View'
         );
     }
 
