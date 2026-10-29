@@ -152,7 +152,6 @@
 
   function parseXmltvDate(str) {
     if (!str) return null;
-    // Format: YYYYMMDDHHmmss +HHMM
     const m = str.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{2})(\d{2})/);
     if (!m) return null;
     const [, yr, mo, dy, hr, mn, sc, tzH, tzM] = m;
@@ -276,7 +275,7 @@
   };
 
   const DEFAULTS = {
-    liptv_m3u_url:    'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u',
+    liptv_m3u_url_2:  'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u',
     liptv_epg_url:    '',
     liptv_epg_source: 'auto',
     liptv_view_mode:  'list',
@@ -289,8 +288,8 @@
   function set(key, val) { Lampa.Storage.set(key, val); }
 
   const storage = {
-    getM3uUrl:  () => get('liptv_m3u_url'),
-    setM3uUrl:  (v) => set('liptv_m3u_url', v),
+    getM3uUrl:  () => get('liptv_m3u_url_2'),
+    setM3uUrl:  (v) => set('liptv_m3u_url_2', v),
     getEpgUrl:    () => get('liptv_epg_url'),
     setEpgUrl:    (v) => set('liptv_epg_url', v),
     getEpgSource: () => get('liptv_epg_source'),
@@ -318,10 +317,6 @@
     isBlacklisted:   (id) => get('liptv_blacklist').includes(id),
   };
 
-  /**
-   * Injects IPTV plugin CSS into the page <head>.
-   * Called once on plugin init.
-   */
   function injectStyles() {
     if (document.getElementById('liptv-styles')) return;
 
@@ -332,7 +327,6 @@
   }
 
   var CSS = '\
-/* ── Layout ───────────────────────────────────── */\
 .liptv-container {\
   width: 100%;\
   height: 100%;\
@@ -343,8 +337,6 @@
   flex-direction: column;\
   height: 100%;\
 }\
-\
-/* ── Toolbar ──────────────────────────────────── */\
 .liptv-toolbar {\
   display: flex;\
   gap: 1em;\
@@ -364,15 +356,11 @@
   background: rgba(255,255,255,0.28);\
   color: #fff;\
 }\
-\
-/* ── Body: sidebar + channels ─────────────────── */\
 .liptv-body {\
   display: flex;\
   flex: 1;\
   overflow: hidden;\
 }\
-\
-/* ── Sidebar (groups) ─────────────────────────── */\
 .liptv-sidebar {\
   width: 15em;\
   flex-shrink: 0;\
@@ -398,8 +386,6 @@
   color: #fff;\
   background: rgba(255,255,255,0.22);\
 }\
-\
-/* ── Channel list (list mode) ─────────────────── */\
 .liptv-channels {\
   flex: 1;\
   overflow-y: auto;\
@@ -446,8 +432,6 @@
   overflow: hidden;\
   text-overflow: ellipsis;\
 }\
-\
-/* ── Channel grid (grid mode) ─────────────────── */\
 .liptv-channels.grid {\
   display: flex;\
   flex-wrap: wrap;\
@@ -480,16 +464,12 @@
   text-overflow: ellipsis;\
   white-space: nowrap;\
 }\
-\
-/* ── Empty state ──────────────────────────────── */\
 .liptv-empty {\
   color: rgba(255,255,255,0.4);\
   font-size: 1.1em;\
   padding: 3em 1em;\
   text-align: center;\
 }\
-\
-/* ── OSD mini-list (player overlay) ──────────── */\
 .liptv-osd {\
   position: fixed;\
   bottom: 2em;\
@@ -565,8 +545,6 @@
   overflow: hidden;\
   text-overflow: ellipsis;\
 }\
-\
-/* ── EPG sidebar ─────────────────────────────── */\
 .liptv-epg {\
   position: fixed;\
   top: 0;\
@@ -673,7 +651,7 @@
           selected: p.start <= now && (!p.stop || p.stop > now)
         };
       }),
-      onSelect: function() {} // read-only; close on select is default Lampa.Select behavior
+      onSelect: function() {}
     });
   }
 
@@ -682,16 +660,11 @@
     const next   = epg.getNext(channel.id);
     const isFav  = storage.isFavorite(channel.id);
 
-    // Store action fn directly on each item; Lampa.Select.show onSelect passes only (item)
     const actionItems = [
-      { title: '▶ Смотреть',
-        fn: function() { playChannel(channel); } },
-      { title: isFav ? '★ Убрать из избранного' : '☆ В избранное',
-        fn: function() { toggleFav(channel); if (onClose) onClose(); } },
-      { title: '📋 Программа',
-        fn: function() { showEpgScreen(channel); } },
-      { title: '🚫 Скрыть',
-        fn: function() { storage.addBlacklist(channel.id); Lampa.Noty.show('"' + channel.name + '" скрыт'); if (onClose) onClose(); } }
+      { title: '▶ Смотреть', fn: function() { playChannel(channel); } },
+      { title: isFav ? '★ Убрать из избранного' : '☆ В избранное', fn: function() { toggleFav(channel); if (onClose) onClose(); } },
+      { title: '📋 Программа', fn: function() { showEpgScreen(channel); } },
+      { title: '🚫 Скрыть', fn: function() { storage.addBlacklist(channel.id); Lampa.Noty.show('"' + channel.name + '" скрыт'); if (onClose) onClose(); } }
     ];
 
     Lampa.Select.show({
@@ -824,7 +797,6 @@
         onChannelSelect(null, 'search');
       });
 
-      // Short press → play, long press → card with actions
       body.find('[data-id]').on('hover:enter', function() {
         const id = $(this).data('id');
         const ch = allChannels.find(function(c) { return c.id === id; });
@@ -835,11 +807,9 @@
         if (ch) onChannelSelect(ch, 'card');
       });
 
-      // Activate Lampa navigation on .selector elements
       Lampa.Controller.toggle('content');
     }
 
-    // Refresh EPG labels when data loads — keep named reference for cleanup
     function onEpgLoaded() {
       document.querySelectorAll('.liptv-row[data-id]').forEach(function(el) {
         const cur    = epg.getCurrent(el.dataset.id);
@@ -856,8 +826,6 @@
   }
 
   function showSearch(allChannels) {
-    // Lampa.Keypad is the documented API for text input.
-    // Falls back to a simple prompt for environments where Keypad is unavailable.
     if (Lampa.Keypad && typeof Lampa.Keypad.show === 'function') {
       Lampa.Keypad.show({
         title:   'Поиск',
@@ -865,7 +833,6 @@
         confirm: function(query) { doSearch(query, allChannels); }
       });
     } else {
-      // Minimal fallback: browser prompt (web preview / desktop testing)
       const query = window.prompt('Поиск (название канала или передачи):');
       if (query) doSearch(query, allChannels);
     }
@@ -920,7 +887,7 @@
 
     Lampa.SettingsApi.addParam({
       component: 'liptv',
-      param:  { name: 'liptv_m3u_url', type: 'trigger', default: false },
+      param:  { name: 'liptv_m3u_url_2', type: 'trigger', default: false },
       field:  { name: 'M3U URL', description: storage.getM3uUrl() || 'Не задан' },
       onChange: function() {
         promptUrl('M3U URL', storage.getM3uUrl() || '', function(v) {
@@ -931,7 +898,6 @@
       }
     });
 
-    // Build values object for select from EPG_PRESETS
     var epgValues = {};
     Object.keys(EPG_PRESETS).forEach(function(key) {
       epgValues[key] = EPG_PRESETS[key].label;
@@ -976,7 +942,7 @@
         default: 'list'
       },
       field:    { name: 'Режим отображения' },
-      onChange: function() { /* Lampa stores select value automatically */ }
+      onChange: function() {}
     });
 
     Lampa.SettingsApi.addParam({
@@ -1137,7 +1103,6 @@
   }
 
   function createOsd(channels, onSwitch) {
-    // Create DOM elements
     var osdEl = document.createElement('div');
     osdEl.className = 'liptv-osd';
 
@@ -1153,8 +1118,6 @@
     var _osdVisible   = false;
     var _epgItems     = [];
     var _epgFocusIdx  = -1;
-
-    // ── OSD ──────────────────────────────────────────────────────────────────
 
     function show(currentIndex) {
       _currentIndex = currentIndex;
@@ -1188,23 +1151,18 @@
       }, 3000);
     }
 
-    // ── EPG sidebar ───────────────────────────────────────────────────────────
-
     function showEpgSidebar(channel) {
-      hide(); // hide OSD while EPG is open
+      hide();
       epgEl.innerHTML = renderEpgHtml(channel);
       epgEl.classList.add('visible');
       epgEl.classList.remove('hiding');
       _epgVisible  = true;
       _epgFocusIdx = -1;
 
-      // Collect focusable items
       _epgItems = epgEl.querySelectorAll('.liptv-epg-item');
 
-      // Auto-scroll to current program
       var nowItem = epgEl.querySelector('.liptv-epg-item.now');
       if (nowItem) {
-        // Set focus on current program
         var items = Array.prototype.slice.call(_epgItems);
         _epgFocusIdx = items.indexOf(nowItem);
         nowItem.classList.add('focus');
@@ -1222,8 +1180,6 @@
       }, 280);
     }
 
-    // ── EPG navigation helpers ────────────────────────────────────────────────
-
     function _epgMoveFocus(direction) {
       var items = epgEl.querySelectorAll('.liptv-epg-item');
       if (items.length === 0) return;
@@ -1240,8 +1196,6 @@
       items[_epgFocusIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
-    // ── Channel switch helper ─────────────────────────────────────────────────
-
     function _switchChannel(direction) {
       var next = _currentIndex + direction;
       if (next >= channels.length) next = 0;
@@ -1250,91 +1204,31 @@
       if (typeof onSwitch === 'function') onSwitch(channels[_currentIndex], _currentIndex);
     }
 
-    // ── Keyboard handler ──────────────────────────────────────────────────────
-
     function _onKeyDown(e) {
       var kc = e.keyCode;
 
-      // Layer 3: EPG sidebar open
       if (_epgVisible) {
-        if (isKey(kc, KEY.UP)) {
-          e.preventDefault(); e.stopPropagation();
-          _epgMoveFocus(-1);
-          return;
-        }
-        if (isKey(kc, KEY.DOWN)) {
-          e.preventDefault(); e.stopPropagation();
-          _epgMoveFocus(1);
-          return;
-        }
-        if (isKey(kc, KEY.LEFT) || isKey(kc, KEY.BACK)) {
-          e.preventDefault(); e.stopPropagation();
-          hideEpgSidebar();
-          return;
-        }
-        if (isKey(kc, KEY.CH_UP)) {
-          e.preventDefault(); e.stopPropagation();
-          _switchChannel(1);
-          showEpgSidebar(channels[_currentIndex]);
-          return;
-        }
-        if (isKey(kc, KEY.CH_DOWN)) {
-          e.preventDefault(); e.stopPropagation();
-          _switchChannel(-1);
-          showEpgSidebar(channels[_currentIndex]);
-          return;
-        }
-        // All other keys pass through
+        if (isKey(kc, KEY.UP)) { e.preventDefault(); e.stopPropagation(); _epgMoveFocus(-1); return; }
+        if (isKey(kc, KEY.DOWN)) { e.preventDefault(); e.stopPropagation(); _epgMoveFocus(1); return; }
+        if (isKey(kc, KEY.LEFT) || isKey(kc, KEY.BACK)) { e.preventDefault(); e.stopPropagation(); hideEpgSidebar(); return; }
+        if (isKey(kc, KEY.CH_UP)) { e.preventDefault(); e.stopPropagation(); _switchChannel(1); showEpgSidebar(channels[_currentIndex]); return; }
+        if (isKey(kc, KEY.CH_DOWN)) { e.preventDefault(); e.stopPropagation(); _switchChannel(-1); showEpgSidebar(channels[_currentIndex]); return; }
         return;
       }
 
-      // Layer 2: OSD visible
       if (_osdVisible) {
-        if (isKey(kc, KEY.CH_UP)) {
-          e.preventDefault(); e.stopPropagation();
-          _switchChannel(1);
-          show(_currentIndex);
-          return;
-        }
-        if (isKey(kc, KEY.CH_DOWN)) {
-          e.preventDefault(); e.stopPropagation();
-          _switchChannel(-1);
-          show(_currentIndex);
-          return;
-        }
-        if (isKey(kc, KEY.OK)) {
-          e.preventDefault(); e.stopPropagation();
-          showEpgSidebar(channels[_currentIndex]);
-          return;
-        }
-        if (isKey(kc, KEY.BACK)) {
-          e.preventDefault(); e.stopPropagation();
-          hide();
-          return;
-        }
-        // All other keys pass through
+        if (isKey(kc, KEY.CH_UP)) { e.preventDefault(); e.stopPropagation(); _switchChannel(1); show(_currentIndex); return; }
+        if (isKey(kc, KEY.CH_DOWN)) { e.preventDefault(); e.stopPropagation(); _switchChannel(-1); show(_currentIndex); return; }
+        if (isKey(kc, KEY.OK)) { e.preventDefault(); e.stopPropagation(); showEpgSidebar(channels[_currentIndex]); return; }
+        if (isKey(kc, KEY.BACK)) { e.preventDefault(); e.stopPropagation(); hide(); return; }
         return;
       }
 
-      // Layer 1: nothing shown
-      if (isKey(kc, KEY.CH_UP)) {
-        e.preventDefault(); e.stopPropagation();
-        _switchChannel(1);
-        show(_currentIndex);
-        return;
-      }
-      if (isKey(kc, KEY.CH_DOWN)) {
-        e.preventDefault(); e.stopPropagation();
-        _switchChannel(-1);
-        show(_currentIndex);
-        return;
-      }
-      // All other keys pass to native Lampa player
+      if (isKey(kc, KEY.CH_UP)) { e.preventDefault(); e.stopPropagation(); _switchChannel(1); show(_currentIndex); return; }
+      if (isKey(kc, KEY.CH_DOWN)) { e.preventDefault(); e.stopPropagation(); _switchChannel(-1); show(_currentIndex); return; }
     }
 
     document.addEventListener('keydown', _onKeyDown, true);
-
-    // ── Destroy ───────────────────────────────────────────────────────────────
 
     function destroy() {
       clearTimeout(_hideTimer);
@@ -1354,13 +1248,12 @@
   }
 
   (function() {
-
     let historyTimer    = null;
     let _mainScreen     = null;
     let _body           = null;
-    let _channels       = [];   // current channel list — used by player history tracking
+    let _channels       = [];
     let _osd = null;
-    let _switching = false;     // guard: prevents Player 'destroy' from killing OSD during channel switch
+    let _switching = false;
 
     function startHistoryTracking(channelId) {
       clearTimeout(historyTimer);
@@ -1372,8 +1265,6 @@
       historyTimer = null;
     }
 
-    // Called on first launch and whenever M3U URL changes via settings.
-    // Fetches playlist, (re)builds the main screen, starts EPG in background.
     async function loadAndRender() {
       const m3uUrl = storage.getM3uUrl();
 
@@ -1387,7 +1278,6 @@
       try {
         parsed = await fetchM3U(m3uUrl);
       } catch (e) {
-        // TODO (v0.2.0): replace with error screen + "Повторить" button (Known Gap)
         Lampa.Noty.show('Не удалось загрузить плейлист: ' + e.message, { style: 'error', time: 5000 });
         return;
       }
@@ -1401,7 +1291,6 @@
       channels.forEach(function(ch) { channelMap[ch.id] = ch.name; });
       setChannelMap(channelMap);
 
-      // Clean up previous main screen listener before creating a new one
       if (_mainScreen) _mainScreen.destroy();
 
       _mainScreen = createMainScreen(channels, function(channel, action) {
@@ -1411,19 +1300,9 @@
 
       if (_body) _mainScreen.render(_body);
 
-      // Resolve EPG source and start fetch in background
       epg.reset();
       const epgSource = storage.getEpgSource();
       const resolved = resolveEpgUrls(epgSource, channels, playlistEpgUrl, storage.getEpgUrl());
-      if (resolved.urls.length === 0 && epgSource === 'auto' && !playlistEpgUrl) {
-        Lampa.Noty.show('Не удалось определить EPG автоматически, выберите источник в настройках');
-      }
-      if (resolved.urls.length === 0 && epgSource === 'playlist' && !playlistEpgUrl) {
-        Lampa.Noty.show('Плейлист не содержит EPG URL');
-      }
-      if (resolved.urls.length === 0 && epgSource === 'custom') {
-        Lampa.Noty.show('Укажите EPG URL в настройках');
-      }
       epg.init(resolved.urls, channels, resolved.needsMapping);
       epg.fetchInBackground();
     }
@@ -1431,7 +1310,6 @@
     function init() {
       injectStyles();
 
-      // Register component once — create() and destroy() called by Lampa lifecycle
       class LiptvMain {
         constructor(object) { this.activity = object; }
         render() {
@@ -1452,13 +1330,11 @@
       }
       Lampa.Component.add('liptv_main', LiptvMain);
 
-      // Track current playing channel immediately when playChannel() is called
       setOnPlay(function(channel) {
         _switching = true;
         channel.url;
         startHistoryTracking(channel.id);
 
-        // Create OSD only once; reuse across channel switches
         if (!_osd) {
           var blacklist = storage.getBlacklist();
           var visible = _channels.filter(function(ch) { return !blacklist.includes(ch.id); });
@@ -1474,20 +1350,16 @@
         _switching = false;
       });
 
-      // Register player listeners once
       Lampa.Player.listener.follow('destroy', function() {
         stopHistoryTracking();
-        // Don't destroy OSD during channel switch — Player fires 'destroy' for the old stream
         if (!_switching && _osd) { _osd.destroy(); _osd = null; }
       });
 
-      // Re-render when user updates M3U URL in settings
       registerSettings(
-        function() { loadAndRender(); },   // onM3uChange
-        function() { loadAndRender(); }    // onEpgChange — reload EPG
+        function() { loadAndRender(); },
+        function() { loadAndRender(); }
       );
 
-      // Add IPTV item to the left sidebar menu
       var menuIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>';
       var menuItem = $('<li class="menu__item selector" data-action="liptv">' +
         '<div class="menu__ico">' + menuIcon + '</div>' +
@@ -1498,7 +1370,6 @@
         Lampa.Activity.push({ component: 'liptv_main', url: '', title: 'IPTV' });
       });
 
-      // Insert before Settings item if found, otherwise append to end
       var settingsItem = $('.menu .menu__list .menu__item[data-action="settings"]');
       if (settingsItem.length) {
         settingsItem.before(menuItem);
@@ -1509,7 +1380,6 @@
       Lampa.Activity.push({ component: 'liptv_main', url: '', title: 'IPTV' });
     }
 
-    // Verified init pattern from docs/lampa-api-notes.md
     if (window.appready) {
       init();
     } else {
