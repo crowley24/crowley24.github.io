@@ -1,6 +1,6 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — System Font Size & Position Memory
+ * Custom EPG Edition — Large & Comfortable Font Size
  */
 (function () {
     'use strict';
@@ -1687,44 +1687,45 @@
     }
 
     /* =====================================================
-       STYLES (Використання системного розміру шрифту)
+       STYLES (Збільшені шрифти для каналів, груп і EPG)
        ===================================================== */
 
     function injectStyle() {
         var logoSize = sget('iptv_ui_logo_size', 'normal');
         var showProgress = sget('iptv_ui_progress', true);
 
-        var logoWidth = logoSize === 'small' ? '3.2em' : (logoSize === 'large' ? '5.2em' : '4.2em');
-        var logoHeight = logoSize === 'small' ? '2.2em' : (logoSize === 'large' ? '3.8em' : '3em');
+        var logoWidth = logoSize === 'small' ? '3.4em' : (logoSize === 'large' ? '5.4em' : '4.4em');
+        var logoHeight = logoSize === 'small' ? '2.4em' : (logoSize === 'large' ? '4em' : '3.2em');
 
         var css = [
             '.iptv-v33{display:flex;height:100%;width:100%;overflow:hidden;background:var(--color-background,#0f0f0f)}',
-            '.iptv-v33__side{width:260px;max-width:30%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
-            '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.08em;font-weight:600;opacity:.8}',
+            '.iptv-v33__side{width:290px;max-width:32%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
+            '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.2em;font-weight:600;opacity:.85}',
             '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em;will-change:transform}',
-            '.iptv-v33__grp{padding:.62em .8em;border-radius:.4em;margin:.1em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em}',
+            /* Збільшений шрифт груп в лівій панелі */
+            '.iptv-v33__grp{padding:.7em .9em;border-radius:.4em;margin:.15em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em;font-size:1.15em !important;font-weight:500}',
             '.iptv-v33__grp.focus,.iptv-v33__grp:hover{background:rgba(255,255,255,.09)}',
             '.iptv-v33__grp.active{background:rgba(33,150,243,.25);color:#90caf9}',
-            '.iptv-v33__grp-count{opacity:.45;font-size:.84em;flex-shrink:0}',
+            '.iptv-v33__grp-count{opacity:.5;font-size:.9em;flex-shrink:0}',
             '.iptv-v33__main{flex:1;display:flex;flex-direction:column;min-width:0}',
             '.iptv-v33__head{padding:1.05em 1.3em .65em;display:flex;align-items:center;justify-content:space-between;gap:1em}',
-            '.iptv-v33__title{font-size:1.4em;font-weight:700}',
-            '.iptv-v33__meta{opacity:.5;font-size:.9em}',
+            '.iptv-v33__title{font-size:1.5em;font-weight:700}',
+            '.iptv-v33__meta{opacity:.55;font-size:1em}',
             '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em;will-change:transform}',
-            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer;transform:translateZ(0)}',
+            '.iptv-v33__ch{display:flex;align-items:center;gap:.9em;padding:.6em .9em;border-radius:.42em;margin:.15em 0;cursor:pointer;transform:translateZ(0)}',
             '.iptv-v33__ch.focus,.iptv-v33__ch:hover{background:rgba(255,255,255,.08)}',
-            '.iptv-v33__ch-num{width:2.1em;text-align:right;opacity:.4;font-size:.88em;flex-shrink:0}',
+            '.iptv-v33__ch-num{width:2.2em;text-align:right;opacity:.45;font-size:1em;flex-shrink:0}',
             '.iptv-v33__ch-logo{width:' + logoWidth + ';height:' + logoHeight + ';background:rgba(255,255,255,.06);border-radius:.35em;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}',
             '.iptv-v33__ch-logo img{max-width:90%;max-height:85%;object-fit:contain}',
-            '.iptv-v33__ch-logo span{font-size:1.1em;opacity:.35}',
+            '.iptv-v33__ch-logo span{font-size:1.2em;opacity:.35}',
             '.iptv-v33__ch-body{flex:1;min-width:0}',
-            /* Використовуємо стандартний системний розмір шрифту Lampa замість фіксованого */
-            '.iptv-v33__ch-name{font-size:var(--font-size, 1.1em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '.iptv-v33__ch-epg{font-size:calc(var(--font-size, 1.1em) * 0.82);opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            '.iptv-v33__progress{height:3px;margin-top:6px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;' + (showProgress ? '' : 'display:none;') + '}',
+            /* Примусово великі та чіткі шрифти для назви каналу та EPG */
+            '.iptv-v33__ch-name{font-size:1.3em !important;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__ch-epg{font-size:1.05em !important;opacity:.75;margin-top:.18em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__progress{height:4px;margin-top:7px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;' + (showProgress ? '' : 'display:none;') + '}',
             '.iptv-v33__progress-bar{height:100%;background:#4cc986;border-radius:2px}',
             '.iptv-v33__ch.focus .iptv-v33__progress-bar{background:#10141d}',
-            '.iptv-v33__empty{padding:2em;text-align:center;opacity:.5}'
+            '.iptv-v33__empty{padding:2em;text-align:center;opacity:.5;font-size:1.2em}'
         ].join('');
 
         var s = document.getElementById('iptv-v33-style');
@@ -2555,7 +2556,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — System Font Size'
+            '[IPTV 3.3.2] Custom EPG Edition ready — All Fonts Enlarged'
         );
     }
 
