@@ -1,6 +1,6 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Large & Comfortable Font Size
+ * Custom EPG Edition — Context Menu on Long Press
  */
 (function () {
     'use strict';
@@ -1485,6 +1485,83 @@
     }
 
     /* =====================================================
+       FAVORITES MANAGEMENT
+       ===================================================== */
+
+    function isFav(url) {
+        return !!toSet(sget('iptv_fav', []))[url];
+    }
+
+    function toggleFav(ch) {
+        var favs = sget('iptv_fav', []);
+        if (!Array.isArray(favs)) favs = [];
+
+        var index = favs.indexOf(ch.url);
+        if (index >= 0) {
+            favs.splice(index, 1);
+            noty('Видалено з обраного');
+        } else {
+            favs.push(ch.url);
+            noty('Додано в обране');
+        }
+
+        sset('iptv_fav', favs);
+    }
+
+    /* =====================================================
+       CONTEXT MENU FOR CHANNEL
+       ===================================================== */
+
+    function showChannelMenu(ch, refreshCallback) {
+        var favorite = isFav(ch.url);
+
+        selectShow({
+            title: ch.name,
+            items: [
+                {
+                    title: favorite ? '⭐ Видалити з обраного' : '⭐ Додати в обране',
+                    action: 'fav'
+                },
+                {
+                    title: '📺 Архів передач',
+                    action: 'archive'
+                },
+                {
+                    title: '📅 Поточна програма / Інформація',
+                    action: 'info'
+                }
+            ],
+            onSelect: function (item) {
+                if (item.action === 'fav') {
+                    toggleFav(ch);
+                    if (typeof refreshCallback === 'function') {
+                        refreshCallback();
+                    }
+                } else if (item.action === 'archive') {
+                    showArchivePrograms(ch);
+                } else if (item.action === 'info') {
+                    var cur = getCurrentProgram(ch);
+                    if (cur) {
+                        selectShow({
+                            title: ch.name + ' — ' + cur.title,
+                            items: [
+                                { title: 'Час: ' + fmtTime(cur.start) + ' – ' + fmtTime(cur.stop) },
+                                { title: cur.desc || 'Опис відсутній' }
+                            ],
+                            onSelect: function () {}
+                        });
+                    } else {
+                        noty('Поточна програма відсутня');
+                    }
+                }
+            },
+            onBack: function () {
+                Lampa.Controller.toggle('content');
+            }
+        });
+    }
+
+    /* =====================================================
        ARCHIVE UI
        ===================================================== */
 
@@ -1563,12 +1640,8 @@
     }
 
     /* =====================================================
-       FAVORITES & CHANNEL HELPERS
+       CHANNEL HELPERS
        ===================================================== */
-
-    function isFav(url) {
-        return !!toSet(sget('iptv_fav', []))[url];
-    }
 
     function displayName(ch) {
         var names = sget('iptv_names', {});
@@ -1687,7 +1760,7 @@
     }
 
     /* =====================================================
-       STYLES (Збільшені шрифти для каналів, груп і EPG)
+       STYLES
        ===================================================== */
 
     function injectStyle() {
@@ -1702,7 +1775,6 @@
             '.iptv-v33__side{width:290px;max-width:32%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
             '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.2em;font-weight:600;opacity:.85}',
             '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em;will-change:transform}',
-            /* Збільшений шрифт груп в лівій панелі */
             '.iptv-v33__grp{padding:.7em .9em;border-radius:.4em;margin:.15em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em;font-size:1.15em !important;font-weight:500}',
             '.iptv-v33__grp.focus,.iptv-v33__grp:hover{background:rgba(255,255,255,.09)}',
             '.iptv-v33__grp.active{background:rgba(33,150,243,.25);color:#90caf9}',
@@ -1719,7 +1791,6 @@
             '.iptv-v33__ch-logo img{max-width:90%;max-height:85%;object-fit:contain}',
             '.iptv-v33__ch-logo span{font-size:1.2em;opacity:.35}',
             '.iptv-v33__ch-body{flex:1;min-width:0}',
-            /* Примусово великі та чіткі шрифти для назви каналу та EPG */
             '.iptv-v33__ch-name{font-size:1.3em !important;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.iptv-v33__ch-epg{font-size:1.05em !important;opacity:.75;margin-top:.18em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '.iptv-v33__progress{height:4px;margin-top:7px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;' + (showProgress ? '' : 'display:none;') + '}',
@@ -1792,7 +1863,7 @@
             );
 
             metaEl.text(
-                list.length + ' каналів · затисніть ОК для архіву'
+                list.length + ' каналів · затисніть ОК для меню'
             );
 
             if (!list.length) {
@@ -1868,7 +1939,9 @@
                 });
 
                 row.on('hover:long', function () {
-                    showArchivePrograms(ch);
+                    showChannelMenu(ch, function () {
+                        renderChannels();
+                    });
                 });
 
                 chList.append(row);
@@ -2101,7 +2174,9 @@
                         var list = currentChannels();
                         var ch = list[focusIndex];
                         if (ch) {
-                            showArchivePrograms(ch);
+                            showChannelMenu(ch, function () {
+                                renderChannels();
+                            });
                         }
                     }
                 },
@@ -2556,7 +2631,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — All Fonts Enlarged'
+            '[IPTV 3.3.2] Custom EPG Edition ready — Channel Context Menu'
         );
     }
 
