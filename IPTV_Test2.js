@@ -1,20 +1,6 @@
 /**
  * IPTV for Lampa 3.3.2
- * Custom EPG Edition — Archive Fixes, Permanent Logos, No PIN
- *
- * Based on IPTV 3.3.1
- * EPG Proxy 2.0.2 — POST batches
- *
- * Changes:
- * - PIN protection completely removed
- * - Improved archive URL templates
- * - Improved EPG ID/name matching
- * - Preserve previous EPG on failed batches
- * - Better EPG cache diagnostics
- * - Accurate archive availability
- * - Reduced duplicate EPG requests
- * - M3U parsing without optional chaining
- * - Existing playlist and storage keys preserved
+ * Custom EPG Edition — System Font Size & Position Memory
  */
 (function () {
     'use strict';
@@ -40,6 +26,11 @@
     var EPG_CACHE_LIMIT = 1500000;
     var BATCH_SIZE = 40;
 
+    var EPG_HISTORY = 24 * 3600 * 1000;
+    var EPG_FUTURE = 12 * 3600 * 1000;
+
+    var EPG_CACHE_PROGRAM_LIMITS = [30, 20, 12, 8, 5, 3, 1];
+
     var EPG_KEY = 'iptv_33_epg_cache';
 
     var STATE = {
@@ -62,6 +53,8 @@
         panelFocus: 'channels',
         started: false
     };
+
+    var groupPositions = Object.create(null);
 
     /* =====================================================
        UTILITIES
@@ -158,6 +151,18 @@
         );
 
         return days > 0 ? days : 3;
+    }
+
+    function formatBytes(bytes) {
+        bytes = Number(bytes) || 0;
+
+        if (bytes < 1024) return bytes + ' Б';
+
+        if (bytes < 1024 * 1024) {
+            return (bytes / 1024).toFixed(1) + ' КБ';
+        }
+
+        return (bytes / (1024 * 1024)).toFixed(2) + ' МБ';
     }
 
     /* =====================================================
@@ -265,17 +270,10 @@
 
         if (!source) return url;
 
-        /*
-         * An absolute catchup-source is already a complete URL.
-         */
         if (/^https?:\/\//i.test(source)) {
             return source;
         }
 
-        /*
-         * Query-string and path suffix templates are appended
-         * to the original channel URL.
-         */
         if (source.charAt(0) === '?' ||
             source.charAt(0) === '&') {
             return url + source;
@@ -311,13 +309,6 @@
             return false;
         }
 
-        /*
-         * Flussonic commonly uses a time-based path:
-         * /video.m3u8 -> /video-START-DURATION.m3u8
-         *
-         * This is a common format, not a guarantee that every
-         * Flussonic provider uses the same URL structure.
-         */
         if (type === 'flussonic' || type === 'fs') {
             var flussonic = url.replace(
                 /\/(video\d*|mono\d*)\.(m3u8|ts)(\?[^#]*)?(#.*)?$/i,
@@ -327,37 +318,20 @@
             return flussonic !== url ? flussonic : false;
         }
 
-        /*
-         * append:
-         * append catchup-source to the original channel URL.
-         */
         if (type === 'append') {
             return source
                 ? appendCatchupSource(channel.url, source)
                 : shiftTemplate(channel.url);
         }
 
-        /*
-         * shift:
-         * modify the URL's UTC query parameters.
-         */
         if (type === 'shift') {
             return source || shiftTemplate(channel.url);
         }
 
-        /*
-         * default:
-         * catchup-source is treated as the complete template
-         * when provided; otherwise use a UTC query template.
-         */
         if (type === 'default') {
             return source || shiftTemplate(channel.url);
         }
 
-        /*
-         * Unknown or provider-specific modes:
-         * prefer an explicit source template.
-         */
         return source || shiftTemplate(channel.url);
     }
 
@@ -418,7 +392,6 @@
         if (!template) return false;
 
         var days = getCatchupDays(channel);
-
         var oldest = Date.now() - days * 86400000;
 
         return program.start >= oldest;
@@ -801,8 +774,8 @@
         var progs = result.progs;
 
         var now = Date.now();
-        var from = now - 7 * 24 * 3600000;
-        var to = now + 36 * 3600000;
+        var from = now - EPG_HISTORY;
+        var to = now + EPG_FUTURE;
 
         var channels = doc.getElementsByTagName('channel');
 
@@ -887,20 +860,12 @@
         var progs = STATE.epg.progs || {};
         var names = STATE.epg.names || {};
 
-        /*
-         * Prefer an exact tvg-id match.
-         */
         var id = String(ch.id || '').trim();
 
         if (id && progs[id]) {
             return id;
         }
 
-        /*
-         * Name matching is only a fallback.
-         * If several XMLTV IDs have the same display name,
-         * prefer the ID that actually has programme data.
-         */
         var key = norm(ch.name);
 
         if (key && names[key]) {
@@ -909,9 +874,6 @@
             if (progs[id]) return id;
         }
 
-        /*
-         * Additional exact-name fallback against XMLTV names.
-         */
         if (key) {
             var matches = [];
 
@@ -930,7 +892,7 @@
     }
 
     /* =====================================================
-       EPG CACHE
+       EPG CACHE — COMPACT STORAGE
        ===================================================== */
 
     function loadEpgCache(ids) {
@@ -939,7 +901,9 @@
         if (!cache ||
             cache.signature !== idsSignature(ids) ||
             !cache.data ||
-            !cache.t) {
+            !cache.t ||
+            !cache.data.progs ||
+            !cache.data.names) {
             return false;
         }
 
@@ -947,39 +911,209 @@
             return false;
         }
 
-        STATE.epg = cache.data;
+        var now = Date.now();
+        var from = now - EPG_HISTORY;
+        var to = now + EPG_FUTURE;
+        var validData = {
+            names: Object.create(null),
+            progs: Object.create(null),
+            t: cache.t,
+            signature: cache.signature
+        };
+
+        var idSet = toSet(ids);
+        var cachedNames = cache.data.names || {};
+        var cachedProgs = cache.data.progs || {};
+
+        Object.keys(cachedNames).forEach(function (key) {
+            var id = cachedNames[key];
+
+            if (idSet[id]) {
+                validData.names[key] = id;
+            }
+        });
+
+        Object.keys(cachedProgs).forEach(function (id) {
+            if (!idSet[id] || !Array.isArray(cachedProgs[id])) {
+                return;
+            }
+
+            var filtered = cachedProgs[id].filter(function (p) {
+                return p &&
+                    p.start >= from &&
+                    p.start <= to &&
+                    p.stop > p.start &&
+                    p.title;
+            }).map(function (p) {
+                return {
+                    start: p.start,
+                    stop: p.stop,
+                    title: p.title
+                };
+            });
+
+            if (filtered.length) {
+                validData.progs[id] = filtered;
+            }
+        });
+
+        STATE.epg = validData;
         STATE.epg.t = cache.t;
 
-        STATE.epgStats = cache.stats || null;
+        STATE.epgStats = cache.stats || {};
 
-        if (STATE.epgStats) {
-            STATE.epgStats.cacheUsed = true;
-            STATE.epgStats.message = 'Використовується кеш EPG';
-        }
+        STATE.epgStats.cacheUsed = true;
+        STATE.epgStats.cacheSaved = true;
+        STATE.epgStats.cacheError = '';
+        STATE.epgStats.message = 'Використовується кеш EPG';
 
         return true;
     }
 
-    function saveEpgCache(ids, data, stats) {
-        var obj = {
-            signature: idsSignature(ids),
-            t: Date.now(),
-            data: data,
-            stats: stats
+    function makeCompactEpg(ids, data, perChannelLimit) {
+        var now = Date.now();
+        var from = now - EPG_HISTORY;
+        var to = now + EPG_FUTURE;
+
+        var idSet = toSet(ids);
+        var compact = {
+            names: Object.create(null),
+            progs: Object.create(null),
+            t: data && data.t ? data.t : now,
+            signature: data && data.signature
+                ? data.signature
+                : idsSignature(ids)
         };
 
-        try {
-            var serialized = JSON.stringify(obj);
+        var names = data && data.names ? data.names : {};
+        var progs = data && data.progs ? data.progs : {};
 
-            if (serialized.length <= EPG_CACHE_LIMIT) {
-                sset(EPG_KEY, obj);
-                return true;
+        Object.keys(names).forEach(function (key) {
+            var id = names[key];
+
+            if (idSet[id]) {
+                compact.names[key] = id;
+            }
+        });
+
+        ids.forEach(function (id) {
+            var list = progs[id];
+
+            if (!Array.isArray(list) || !list.length) return;
+
+            var filtered = list.filter(function (p) {
+                return p &&
+                    p.start >= from &&
+                    p.start <= to &&
+                    p.stop > p.start &&
+                    p.title;
+            }).sort(function (a, b) {
+                return a.start - b.start;
+            });
+
+            if (perChannelLimit > 0 &&
+                filtered.length > perChannelLimit) {
+                filtered = filtered.slice(-perChannelLimit);
             }
 
-            return false;
-        } catch (e) {
-            return false;
+            if (!filtered.length) return;
+
+            compact.progs[id] = filtered.map(function (p) {
+                return {
+                    start: p.start,
+                    stop: p.stop,
+                    title: String(p.title || '')
+                };
+            });
+        });
+
+        return compact;
+    }
+
+    function saveEpgCache(ids, data, stats) {
+        var signature = idsSignature(ids);
+        var lastSize = 0;
+        var lastError = '';
+        var saved = false;
+
+        for (var attempt = 0;
+            attempt < EPG_CACHE_PROGRAM_LIMITS.length;
+            attempt++) {
+
+            var limit = EPG_CACHE_PROGRAM_LIMITS[attempt];
+
+            var compact = makeCompactEpg(
+                ids,
+                data,
+                limit
+            );
+
+            var obj = {
+                signature: signature,
+                t: Date.now(),
+                data: compact,
+                stats: null
+            };
+
+            var snapshotStats = {};
+
+            Object.keys(stats || {}).forEach(function (key) {
+                snapshotStats[key] = stats[key];
+            });
+
+            snapshotStats.cacheUsed = false;
+            snapshotStats.cacheSaved = true;
+            snapshotStats.cacheError = '';
+            snapshotStats.cacheLimit = EPG_CACHE_LIMIT;
+
+            obj.stats = snapshotStats;
+
+            var serialized;
+
+            try {
+                serialized = JSON.stringify(obj);
+                lastSize = serialized.length;
+            } catch (e) {
+                lastError = 'Помилка JSON: ' + String(e);
+                break;
+            }
+
+            if (lastSize > EPG_CACHE_LIMIT) {
+                lastError = 'Дані перевищують ліміт кешу';
+                continue;
+            }
+
+            try {
+                Lampa.Storage.set(EPG_KEY, obj);
+
+                var check = Lampa.Storage.get(EPG_KEY, null);
+
+                if (!check ||
+                    check.signature !== signature ||
+                    !check.t ||
+                    !check.data ||
+                    !check.data.progs ||
+                    check.t !== obj.t) {
+                    lastError = 'Storage не підтвердив запис';
+                    continue;
+                }
+
+                saved = true;
+                lastError = '';
+                break;
+            } catch (e2) {
+                lastError = 'Помилка Storage: ' + String(e2);
+            }
         }
+
+        stats.cacheSize = lastSize;
+        stats.cacheLimit = EPG_CACHE_LIMIT;
+        stats.cacheSaved = saved;
+        stats.cacheError = saved ? '' : (
+            lastError || 'Не вдалося зберегти кеш'
+        );
+
+        return saved;
     }
 
     /* =====================================================
@@ -1069,23 +1203,29 @@
     }
 
     function cloneEpgData(data) {
-        return {
+        var copy = {
             names: Object.assign(
                 Object.create(null),
                 data && data.names ? data.names : {}
             ),
-
-            progs: Object.assign(
-                Object.create(null),
-                data && data.progs ? data.progs : {}
-            ),
-
+            progs: Object.create(null),
             t: data && data.t ? data.t : Date.now(),
-
             signature: data && data.signature
                 ? data.signature
                 : ''
         };
+
+        var sourceProgs = data && data.progs
+            ? data.progs
+            : {};
+
+        Object.keys(sourceProgs).forEach(function (id) {
+            copy.progs[id] = Array.isArray(sourceProgs[id])
+                ? sourceProgs[id].slice()
+                : [];
+        });
+
+        return copy;
     }
 
     function maybeLoadEpg(force, callback) {
@@ -1111,6 +1251,9 @@
                 batches: 0,
                 cacheUsed: false,
                 cacheSaved: false,
+                cacheSize: 0,
+                cacheLimit: EPG_CACHE_LIMIT,
+                cacheError: '',
                 message: 'У M3U немає tvg-id'
             };
 
@@ -1161,6 +1304,9 @@
             batches: batches.length,
             cacheUsed: false,
             cacheSaved: false,
+            cacheSize: 0,
+            cacheLimit: EPG_CACHE_LIMIT,
+            cacheError: '',
             message: 'Завантаження EPG'
         };
 
@@ -1174,11 +1320,6 @@
 
         function next() {
             if (pos >= batches.length) {
-                /*
-                 * Keep previous data for IDs belonging to failed
-                 * batches. Successfully processed batches replace
-                 * their previous data, including valid empty results.
-                 */
                 if (oldEpg && stats.failedBatches) {
                     Object.keys(failedIds).forEach(function (id) {
                         if (oldEpg.progs[id] &&
@@ -1231,7 +1372,8 @@
                     );
 
                     if (!stats.cacheSaved) {
-                        stats.message += '; кеш не збережено';
+                        stats.message += '; кеш не збережено: ' +
+                            (stats.cacheError || 'невідома причина');
                     }
 
                     STATE.epgStats = stats;
@@ -1243,10 +1385,6 @@
                         stats.requested
                     );
                 } else if (oldEpg) {
-                    /*
-                     * All requests failed: retain the previous
-                     * working EPG instead of replacing it.
-                     */
                     STATE.epg = oldEpg;
 
                     stats.cacheUsed = true;
@@ -1416,6 +1554,10 @@
                     title: ch.name + ' — ' + item.program.title,
                     address: archiveUrl
                 });
+            },
+
+            onBack: function () {
+                Lampa.Controller.toggle('content');
             }
         });
     }
@@ -1426,28 +1568,6 @@
 
     function isFav(url) {
         return !!toSet(sget('iptv_fav', []))[url];
-    }
-
-    function toggleFav(url) {
-        var arr = sget('iptv_fav', []);
-
-        if (!Array.isArray(arr)) arr = [];
-
-        arr = arr.slice();
-
-        var i = arr.indexOf(url);
-
-        if (i < 0) {
-            arr.push(url);
-        } else {
-            arr.splice(i, 1);
-        }
-
-        sset('iptv_fav', arr);
-    }
-
-    function isHidden(url) {
-        return !!toSet(sget('iptv_hidden', []))[url];
     }
 
     function displayName(ch) {
@@ -1516,6 +1636,10 @@
         };
     }
 
+    function isHidden(url) {
+        return !!toSet(sget('iptv_hidden', []))[url];
+    }
+
     /* =====================================================
        CHANNEL PLAYBACK
        ===================================================== */
@@ -1563,72 +1687,53 @@
     }
 
     /* =====================================================
-       STYLES
+       STYLES (Використання системного розміру шрифту)
        ===================================================== */
 
     function injectStyle() {
-        if (document.getElementById('iptv-v33-style')) return;
+        var logoSize = sget('iptv_ui_logo_size', 'normal');
+        var showProgress = sget('iptv_ui_progress', true);
+
+        var logoWidth = logoSize === 'small' ? '3.2em' : (logoSize === 'large' ? '5.2em' : '4.2em');
+        var logoHeight = logoSize === 'small' ? '2.2em' : (logoSize === 'large' ? '3.8em' : '3em');
 
         var css = [
             '.iptv-v33{display:flex;height:100%;width:100%;overflow:hidden;background:var(--color-background,#0f0f0f)}',
-
             '.iptv-v33__side{width:260px;max-width:30%;display:flex;flex-direction:column;background:rgba(0,0,0,.28);border-right:1px solid rgba(255,255,255,.07);flex-shrink:0}',
-
             '.iptv-v33__side-head{padding:1.1em 1em .55em;font-size:1.08em;font-weight:600;opacity:.8}',
-
-            '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em}',
-
+            '.iptv-v33__side-list{flex:1;overflow:auto;padding:.2em .55em 1.2em;will-change:transform}',
             '.iptv-v33__grp{padding:.62em .8em;border-radius:.4em;margin:.1em 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.45em}',
-
             '.iptv-v33__grp.focus,.iptv-v33__grp:hover{background:rgba(255,255,255,.09)}',
-
             '.iptv-v33__grp.active{background:rgba(33,150,243,.25);color:#90caf9}',
-
             '.iptv-v33__grp-count{opacity:.45;font-size:.84em;flex-shrink:0}',
-
             '.iptv-v33__main{flex:1;display:flex;flex-direction:column;min-width:0}',
-
             '.iptv-v33__head{padding:1.05em 1.3em .65em;display:flex;align-items:center;justify-content:space-between;gap:1em}',
-
             '.iptv-v33__title{font-size:1.4em;font-weight:700}',
-
             '.iptv-v33__meta{opacity:.5;font-size:.9em}',
-
-            '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em}',
-
-            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer}',
-
+            '.iptv-v33__list{flex:1;overflow:auto;padding:.25em .9em 1.4em;will-change:transform}',
+            '.iptv-v33__ch{display:flex;align-items:center;gap:.85em;padding:.5em .85em;border-radius:.42em;margin:.12em 0;cursor:pointer;transform:translateZ(0)}',
             '.iptv-v33__ch.focus,.iptv-v33__ch:hover{background:rgba(255,255,255,.08)}',
-
             '.iptv-v33__ch-num{width:2.1em;text-align:right;opacity:.4;font-size:.88em;flex-shrink:0}',
-
-            '.iptv-v33__ch-logo{width:4.2em;height:3em;background:rgba(255,255,255,.06);border-radius:.35em;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}',
-
+            '.iptv-v33__ch-logo{width:' + logoWidth + ';height:' + logoHeight + ';background:rgba(255,255,255,.06);border-radius:.35em;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}',
             '.iptv-v33__ch-logo img{max-width:90%;max-height:85%;object-fit:contain}',
-
             '.iptv-v33__ch-logo span{font-size:1.1em;opacity:.35}',
-
             '.iptv-v33__ch-body{flex:1;min-width:0}',
-
-            '.iptv-v33__ch-name{font-size:1.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-
-            '.iptv-v33__ch-epg{font-size:.8em;opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-
-            '.iptv-v33__progress{height:3px;margin-top:6px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}',
-
+            /* Використовуємо стандартний системний розмір шрифту Lampa замість фіксованого */
+            '.iptv-v33__ch-name{font-size:var(--font-size, 1.1em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__ch-epg{font-size:calc(var(--font-size, 1.1em) * 0.82);opacity:.65;margin-top:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            '.iptv-v33__progress{height:3px;margin-top:6px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;' + (showProgress ? '' : 'display:none;') + '}',
             '.iptv-v33__progress-bar{height:100%;background:#4cc986;border-radius:2px}',
-
             '.iptv-v33__ch.focus .iptv-v33__progress-bar{background:#10141d}',
-
             '.iptv-v33__empty{padding:2em;text-align:center;opacity:.5}'
         ].join('');
 
-        var s = document.createElement('style');
-
-        s.id = 'iptv-v33-style';
+        var s = document.getElementById('iptv-v33-style');
+        if (!s) {
+            s = document.createElement('style');
+            s.id = 'iptv-v33-style';
+            document.head.appendChild(s);
+        }
         s.textContent = css;
-
-        document.head.appendChild(s);
     }
 
     /* =====================================================
@@ -1686,7 +1791,7 @@
             );
 
             metaEl.text(
-                list.length + ' каналів · довго затисніть ОК для архіву'
+                list.length + ' каналів · затисніть ОК для архіву'
             );
 
             if (!list.length) {
@@ -1757,6 +1862,7 @@
                 }
 
                 row.on('hover:enter click', function () {
+                    groupPositions[STATE.activeGroup] = focusIndex;
                     playChannel(ch, list);
                 });
 
@@ -1768,10 +1874,14 @@
                 channelItems.push(row);
             });
 
-            focusIndex = Math.min(
-                focusIndex,
-                Math.max(0, channelItems.length - 1)
-            );
+            if (groupPositions[STATE.activeGroup] != null) {
+                focusIndex = Math.min(
+                    groupPositions[STATE.activeGroup],
+                    Math.max(0, channelItems.length - 1)
+                );
+            } else {
+                focusIndex = 0;
+            }
         }
 
         function renderGroups() {
@@ -1817,16 +1927,16 @@
                 );
 
                 row.on('hover:enter click', function () {
-                    STATE.activeGroup = g.id;
+                    groupPositions[STATE.activeGroup] = focusIndex;
 
+                    STATE.activeGroup = g.id;
                     sset('iptv_last_group', g.id);
 
                     renderGroups();
                     renderChannels();
 
                     STATE.panelFocus = 'channels';
-                    focusIndex = 0;
-
+                    
                     applyFocus();
                 });
 
@@ -1849,18 +1959,29 @@
                 el.removeClass('focus');
             });
 
-            var el = STATE.panelFocus === 'groups'
+            var isGroups = STATE.panelFocus === 'groups';
+            var el = isGroups
                 ? groupItems[groupFocus]
                 : channelItems[focusIndex];
 
-            if (el) {
+            if (el && el[0]) {
                 el.addClass('focus');
 
-                try {
-                    el[0].scrollIntoView({
-                        block: 'nearest'
-                    });
-                } catch (e) {}
+                var container = isGroups ? grpList[0] : chList[0];
+                var node = el[0];
+
+                if (container && node) {
+                    var containerTop = container.scrollTop;
+                    var containerHeight = container.clientHeight;
+                    var nodeTop = node.offsetTop;
+                    var nodeHeight = node.offsetHeight;
+
+                    if (nodeTop < containerTop) {
+                        container.scrollTop = nodeTop;
+                    } else if (nodeTop + nodeHeight > containerTop + containerHeight) {
+                        container.scrollTop = nodeTop + nodeHeight - containerHeight;
+                    }
+                }
             }
         }
 
@@ -1896,6 +2017,7 @@
 
             renderGroups();
             renderChannels();
+            applyFocus();
 
             if (STATE.epgLoading) {
                 STATE.epgWaiters.push(function () {
@@ -1918,6 +2040,7 @@
 
                 left: function () {
                     if (STATE.panelFocus === 'channels') {
+                        groupPositions[STATE.activeGroup] = focusIndex;
                         STATE.panelFocus = 'groups';
                         applyFocus();
                     } else {
@@ -1936,6 +2059,7 @@
                     if (STATE.panelFocus === 'channels') {
                         if (focusIndex > 0) {
                             focusIndex--;
+                            groupPositions[STATE.activeGroup] = focusIndex;
                         } else {
                             return Lampa.Controller.toggle('head');
                         }
@@ -1954,6 +2078,7 @@
                     if (STATE.panelFocus === 'channels') {
                         if (focusIndex < channelItems.length - 1) {
                             focusIndex++;
+                            groupPositions[STATE.activeGroup] = focusIndex;
                         }
                     } else if (groupFocus < groupItems.length - 1) {
                         groupFocus++;
@@ -1968,6 +2093,16 @@
                         : channelItems[focusIndex];
 
                     if (el) el.trigger('hover:enter');
+                },
+
+                long: function () {
+                    if (STATE.panelFocus === 'channels') {
+                        var list = currentChannels();
+                        var ch = list[focusIndex];
+                        if (ch) {
+                            showArchivePrograms(ch);
+                        }
+                    }
                 },
 
                 back: function () {
@@ -2143,6 +2278,43 @@
             }
         });
 
+        Lampa.SettingsApi.addParam({
+            component: 'iptv_player_33',
+            param: {
+                name: 'iptv_ui_logo_size',
+                type: 'select',
+                values: {
+                    small: 'Компактні',
+                    normal: 'Стандартні',
+                    large: 'Великі'
+                },
+                default: 'normal'
+            },
+            field: {
+                name: 'Розмір логотипів',
+                description: 'Змінити розмір іконок каналів у списку'
+            },
+            onChange: function() {
+                injectStyle();
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'iptv_player_33',
+            param: {
+                name: 'iptv_ui_progress',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Шкала прогресу передачі',
+                description: 'Показувати смужку виконання поточної програми'
+            },
+            onChange: function() {
+                injectStyle();
+            }
+        });
+
         button(
             'iptv_s_lists_33',
             'Плейлисти',
@@ -2239,6 +2411,23 @@
                         {
                             title: 'Кеш збережено: ' +
                                 (st.cacheSaved ? 'Так' : 'Ні')
+                        },
+                        {
+                            title: 'Розмір кешу: ' +
+                                (st.cacheSize || 0) + ' символів'
+                        },
+                        {
+                            title: 'Розмір кешу: ' +
+                                formatBytes(st.cacheSize || 0)
+                        },
+                        {
+                            title: 'Ліміт кешу: ' +
+                                (st.cacheLimit || EPG_CACHE_LIMIT) +
+                                ' символів'
+                        },
+                        {
+                            title: 'Причина помилки: ' +
+                                (st.cacheError || 'немає')
                         },
                         {
                             title: st.message || 'EPG Proxy 2.0.2'
@@ -2366,7 +2555,7 @@
         }
 
         console.log(
-            '[IPTV 3.3.2] Custom EPG Edition ready — No PIN'
+            '[IPTV 3.3.2] Custom EPG Edition ready — System Font Size'
         );
     }
 
