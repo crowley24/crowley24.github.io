@@ -5,36 +5,11 @@
 if (!window.Lampa || !window.$ || window.iptv_preview_test_ready) return;
 window.iptv_preview_test_ready = true;
 
-var CFG = {
-    delay: 700,
-    volume: 0.35
-};
+var CFG = { delay: 850, volume: 0.35 };
+var timer = null, video = null, hls = null, panel = null, lastRow = null, token = 0;
+var channels = [], currentListId = '', ticker = null;
 
-var timer = null;
-var video = null;
-var hls = null;
-var panel = null;
-var lastRow = null;
-var token = 0;
-var channels = [];
-var currentListId = '';
-var ticker = null;
-
-var css =
-'.iptv-preview-test{' +
-'position:absolute;right:1.5%;bottom:3%;width:32%;max-width:480px;' +
-'aspect-ratio:16/9;background:#080b10;border:2px solid rgba(255,255,255,.28);' +
-'border-radius:12px;overflow:hidden;z-index:40;' +
-'box-shadow:0 10px 40px rgba(0,0,0,.7);pointer-events:none}' +
-'.iptv-preview-test video{' +
-'width:100%;height:100%;object-fit:contain;background:#080b10}' +
-'.iptv-preview-test__label{' +
-'position:absolute;left:0;right:0;bottom:0;padding:10px 12px;' +
-'background:linear-gradient(transparent,rgba(0,0,0,.9));' +
-'color:white;font-size:15px}' +
-'.iptv-preview-test__status{' +
-'position:absolute;top:9px;left:9px;padding:4px 8px;' +
-'border-radius:4px;background:rgba(0,0,0,.7);font-size:12px;color:white}';
+var css = '.iptv-preview-test{position:absolute;right:2%;bottom:10%;width:56%;max-width:320px;min-width:150px;aspect-ratio:16/9;background:#080b10;border:1px solid rgba(255,255,255,.35);border-radius:8px;overflow:hidden;z-index:9999;box-shadow:0 5px 22px rgba(0,0,0,.65);pointer-events:none}.iptv-preview-test video{display:block;width:100%;height:100%;object-fit:contain;background:#080b10}.iptv-preview-test__label{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;background:linear-gradient(transparent,rgba(0,0,0,.9));color:white;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iptv-preview-test__status{position:absolute;top:5px;left:5px;max-width:90%;padding:3px 5px;border-radius:4px;background:rgba(0,0,0,.75);font-size:10px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media (min-width:700px){.iptv-preview-test{width:32%;max-width:420px;bottom:3%;right:1.5%}.iptv-preview-test__label{font-size:14px}.iptv-preview-test__status{font-size:11px}}';
 
 var style = document.createElement('style');
 style.id = 'iptv-preview-test-css';
@@ -43,17 +18,12 @@ document.head.appendChild(style);
 
 function log() {
     try {
-        console.log.apply(
-            console,
-            ['[IPTV Preview Test]'].concat([].slice.call(arguments))
-        );
+        console.log.apply(console, ['[IPTV Preview Test]'].concat([].slice.call(arguments)));
     } catch (e) {}
 }
 
 function norm(s) {
-    return String(s || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9а-яёіїєґ]+/g, '');
+    return String(s || '').toLowerCase().replace(/[^a-z0-9а-яёіїєґ]+/g, '');
 }
 
 function storage(k, d) {
@@ -124,7 +94,12 @@ function refreshPlaylist() {
 function channelFor(row) {
     refreshPlaylist();
 
-    var title = row.querySelector('.iptv-v33__ch-name');
+    var title = row.querySelector(
+        '.iptv-v33__ch-name, .iptv-v3__ch-name, ' +
+        '.iptv-channel__name, .iptv__ch-name, ' +
+        '[class*="ch-name"], [class*="channel-name"]'
+    );
+
     if (!title) return null;
 
     var name = title.textContent.replace(/\s*★\s*$/, '').trim();
@@ -166,7 +141,6 @@ function stopPlayback() {
         try {
             hls.destroy();
         } catch (e) {}
-
         hls = null;
     }
 
@@ -188,17 +162,22 @@ function removePanel() {
     }
 
     lastRow = null;
+    video = null;
 }
 
 function status(s) {
-    if (panel) {
-        var el = panel.querySelector('.iptv-preview-test__status');
-        if (el) el.textContent = s;
-    }
+    if (!panel) return;
+
+    var el = panel.querySelector('.iptv-preview-test__status');
+
+    if (el) el.textContent = s;
 }
 
 function loadHls(done) {
-    if (window.Hls) return done(true);
+    if (window.Hls) {
+        done(true);
+        return;
+    }
 
     var existing = document.getElementById('iptv-preview-hls-script');
 
@@ -232,8 +211,23 @@ function loadHls(done) {
     document.head.appendChild(script);
 }
 
+function findRoot() {
+    return document.querySelector(
+        '.iptv-v33, .iptv-v3, .iptv-list, .iptv'
+    );
+}
+
+function findFocusedRow(root) {
+    return root.querySelector(
+        '.iptv-v33__ch.focus, .iptv-v3__ch.focus, ' +
+        '.iptv-channel.focus, .iptv__channel.focus, ' +
+        '.iptv-v33__ch.focused, .iptv-v3__ch.focused, ' +
+        '.iptv-channel.focused, .iptv__channel.focused'
+    );
+}
+
 function ensurePanel() {
-    var root = document.querySelector('.iptv-v33');
+    var root = findRoot();
 
     if (!root) return false;
 
@@ -260,7 +254,6 @@ function ensurePanel() {
     video.muted = false;
     video.volume = CFG.volume;
     video.controls = false;
-
     video.setAttribute('playsinline', '');
 
     video.addEventListener('error', function () {
@@ -272,10 +265,8 @@ function ensurePanel() {
 
 function begin(row) {
     if (!document.body.contains(row) ||
-        !row.classList.contains('focus') ||
-        !ensurePanel()) {
-        return;
-    }
+        !row.matches('.focus, .focused') ||
+        !ensurePanel()) return;
 
     var ch = channelFor(row);
 
@@ -309,9 +300,7 @@ function begin(row) {
 
         if (p && p.then) {
             p.then(function () {
-                if (request === token) {
-                    status('LIVE · звук 35%');
-                }
+                if (request === token) status('LIVE · звук 35%');
             }).catch(function (err) {
                 if (request === token) {
                     status('Автозапуск заблоковано');
@@ -321,8 +310,7 @@ function begin(row) {
         }
     }
 
-    var isHls = /\.m3u8(?:[?#]|$)/i.test(url) ||
-        /\/hls\//i.test(url);
+    var isHls = /\.m3u8(?:[?#]|$)/i.test(url) || /\/hls\//i.test(url);
 
     if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
@@ -373,7 +361,7 @@ function begin(row) {
 }
 
 function inspect() {
-    var root = document.querySelector('.iptv-v33');
+    var root = findRoot();
 
     if (!root) {
         if (panel) removePanel();
@@ -382,12 +370,11 @@ function inspect() {
 
     if (!ensurePanel()) return;
 
-    var row = root.querySelector('.iptv-v33__ch.focus');
+    var row = findFocusedRow(root);
 
     if (row === lastRow) return;
 
     lastRow = row;
-
     stopPlayback();
 
     if (!row) {
@@ -395,7 +382,7 @@ function inspect() {
         return;
     }
 
-    status('Очікування 700 мс…');
+    status('Очікування 850 мс…');
 
     timer = setTimeout(function () {
         timer = null;
@@ -418,7 +405,7 @@ function init() {
         }
     }, true);
 
-    log('Модуль готовий');
+    log('Мобільний тестовий модуль готовий');
 }
 
 if (window.appready) {
