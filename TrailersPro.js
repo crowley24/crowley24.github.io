@@ -503,6 +503,7 @@
         }
 
         function openPanel() {
+            showPosters(); // Показуємо постери при відкритті панелі
             var list = ['movie', 'tv'].map(function (t) {
                 return { title: TYPES[t] + (t === type ? '  ✓' : ''), tfeed_type: t };
             });
