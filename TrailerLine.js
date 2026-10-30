@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + No YT Overlay)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + No Pause Icon)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -22,10 +22,9 @@
         'body.tfeed--on .head{display:none}' +
         '.tfeed__bg,.tfeed__video,.tfeed__yt{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden}' +
         '.tfeed__bg{background-size:cover;background-position:center}' +
-        '.tfeed__yt{opacity:0;transition:opacity .35s}' +
+        // Поки плеєр не готовий і не відтворюється, ховаємо його повністю, щоб не проскакували значки YouTube
+        '.tfeed__yt{opacity:0;transition:opacity .35s;pointer-events:none;}' +
         '.tfeed__yt--on{opacity:1}' +
-        // Захисний шар поверх iframe, який повністю блокує будь-які кліки та значки паузи YouTube
-        '.tfeed__yt::after,.tfeed__frame::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:auto;}' +
         '.tfeed__yt iframe{position:absolute;left:0;top:-300px;width:100%;height:calc(100% + 600px);border:0;pointer-events:none}' +
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
         '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
