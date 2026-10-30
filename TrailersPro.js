@@ -1,8 +1,7 @@
-
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + Auto-hide Posters)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -27,16 +26,18 @@
         '.tfeed__yt--on{opacity:1}' +
         '.tfeed__yt iframe{position:absolute;left:0;top:-300px;width:100%;height:calc(100% + 600px);border:0;pointer-events:none}' +
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
-        '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
-            'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer}' +
-        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;' +
-            'opacity:1;visibility:visible;transition:opacity .3s,visibility .3s}' +
-        '.tfeed__side--hidden{opacity:0;visibility:hidden;pointer-events:none}' +
+        // Зміщено чіп нижче, щоб він не наїжджав на верхнє меню Lampa
+        '.tfeed__chip{position:absolute;left:3em;top:4.5em;padding:.4em .9em;border-radius:1em;' +
+            'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer;z-index:10}' +
+        // Права колонка з постерами з плавним зникненням через 3 секунди
+        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;opacity:1;transition:opacity 0.5s ease;}' +
+        '.tfeed__side.tfeed__side--hidden{opacity:0;pointer-events:none;}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
-        '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 12em 2em 3em;' +
-            'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}' +
+        // Збільшено верхній відступ інформаційного блоку, щоб логотип і метадані не перекривалися хедерами
+        '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 12em 2.5em 3em;' +
+            'background:linear-gradient(to top,rgba(0,0,0,0.95),rgba(0,0,0,0.6) 60%,rgba(0,0,0,0));z-index:10}' +
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
         '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
@@ -46,15 +47,10 @@
         '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.4em;' +
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
-        '@media screen and (max-width:768px){' +
-            '.tfeed__video{height:42vh}' +
-            '.tfeed__info{top:42vh;bottom:auto;left:0;right:0;padding:1.2em 1.5em 2em;' +
-                'background:linear-gradient(to bottom,rgba(0,0,0,.96),rgba(0,0,0,.78))}' +
-            '.tfeed__logo{max-width:85%;max-height:5em;margin-bottom:.4em}' +
+        '@media screen and (max-width: 768px) {' +
+            '.tfeed__info{padding:4em 10em 2em 1.5em; right:1.5em;}' +
             '.tfeed__title{font-size:1.8em}' +
-            '.tfeed__meta{font-size:1em}' +
-            '.tfeed__descr{font-size:1em;max-width:100%;margin-top:.5em}' +
-            '.tfeed__chip{left:1.5em;top:1.5em}' +
+            '.tfeed__chip{left:1.5em; top:3.5em}' +
             '.tfeed__hint{display:none}' +
         '}';
 
@@ -119,19 +115,31 @@
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
             '<div class="tfeed__meta"></div><div class="tfeed__descr"></div>' +
             '<div class="tfeed__hint">' + hintText + '</div></div></div>');
-
+        
         var type, genre, items, index, dir, page, totalPages, loading, waiters;
         var feedGen = 0;
         var seq = 0;
         var players = [];
         var cur = null;
         var frameId = '';
-        var nextTimer, watchdog, prepTimer, sideTimer;
+        var nextTimer, watchdog, prepTimer;
+        var posterHideTimer = null; // Таймер для приховування постерів
         var self = this;
 
         var touchStartY = 0;
         var touchStartX = 0;
         var touchStartTime = 0;
+
+        // Функція для показу постерів і запуску таймера їх приховування (через 3 сек)
+        function showPosters() {
+            var side = html.find('.tfeed__side');
+            side.removeClass('tfeed__side--hidden');
+            
+            if (posterHideTimer) clearTimeout(posterHideTimer);
+            posterHideTimer = setTimeout(function () {
+                side.addClass('tfeed__side--hidden');
+            }, 3000);
+        }
 
         function status(text) {
             html.find('.tfeed__status').text(text || '');
@@ -168,7 +176,7 @@
             if (page >= totalPages) return flush(false);
             loading = true;
             var gen = feedGen;
-
+            
             if (page === 0 && totalPages === 1) {
                 page = Math.floor(Math.random() * 15) + 1;
             } else {
@@ -183,7 +191,7 @@
                 if (gen !== feedGen) return;
                 loading = false;
                 totalPages = json.total_pages || page;
-
+                
                 var newItems = (json.results || []).filter(function (m) { return !m.adult; });
                 shuffleArray(newItems);
 
@@ -236,31 +244,21 @@
             return players.filter(function (p) { return p.item === item; })[0];
         }
 
-        function revealSide() {
-            var side = html.find('.tfeed__side');
-            side.removeClass('tfeed__side--hidden');
-
-            clearTimeout(sideTimer);
-            sideTimer = setTimeout(function () {
-                side.addClass('tfeed__side--hidden');
-            }, 3000);
-        }
-
         function makePlayer(item, play) {
             var p = { item: item, ready: false, wantPlay: play };
             p.el = $('<div class="tfeed__yt"><div></div></div>');
             html.find('.tfeed__video').append(p.el);
-            var vars = {
-                autoplay: play ? 1 : 0,
-                controls: 0,
-                rel: 0,
-                modestbranding: 1,
+            var vars = { 
+                autoplay: play ? 1 : 0, 
+                controls: 0, 
+                rel: 0, 
+                modestbranding: 1, 
                 playsinline: 1,
-                iv_load_policy: 3,
-                disablekb: 1,
-                fs: 0,
+                iv_load_policy: 3, 
+                disablekb: 1, 
+                fs: 0, 
                 enablejsapi: 1,
-                mute: isMobile ? 1 : 0
+                mute: isMobile ? 1 : 0 
             };
             if (/^https?:/.test(location.origin)) vars.origin = location.origin;
             p.yt = new window.YT.Player(p.el.children()[0], {
@@ -299,7 +297,7 @@
             clearTimeout(nextTimer);
             clearTimeout(watchdog);
             clearTimeout(prepTimer);
-            clearTimeout(sideTimer);
+            if (posterHideTimer) clearTimeout(posterHideTimer);
             frameId = '';
             html.find('.tfeed__frame').remove();
         }
@@ -440,7 +438,7 @@
             var genres = tmdb.getGenresNameFromIds(type, item.genre_ids || []).slice(0, 3).join(', ');
             var meta = [date.slice(0, 4), item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '', genres]
                 .filter(Boolean).join(' · ');
-
+            
             var titleEl = html.find('.tfeed__title');
             var logoEl = html.find('.tfeed__logo');
             var movieTitle = item.title || item.name || item.original_title || item.original_name || '';
@@ -486,7 +484,7 @@
             status('');
             info(item);
             renderSide();
-            revealSide();
+            showPosters(); // Показуємо постери при зміні трейлера
 
             ensureVideo(item, function (trailer) {
                 if (my !== seq) return;
@@ -571,9 +569,13 @@
 
                 if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
                     if (deltaY < 0) {
+                        showPosters(); // Показуємо постери при свайпі
                         show(index + 1, 1);
                     } else {
-                        if (index > 0) show(index - 1, -1);
+                        if (index > 0) {
+                            showPosters(); // Показуємо постери при свайпі
+                            show(index - 1, -1);
+                        }
                     }
                 }
             }, { passive: true });
@@ -586,8 +588,16 @@
         this.start = function () {
             Lampa.Controller.add('content', {
                 toggle: function () { Lampa.Controller.clear(); },
-                up: function () { if (index > 0) show(index - 1, -1); },
-                down: function () { show(index + 1, 1); },
+                up: function () { 
+                    if (index > 0) {
+                        showPosters(); // Показуємо постери при натисканні пульта
+                        show(index - 1, -1);
+                    }
+                },
+                down: function () { 
+                    showPosters(); // Показуємо постери при натисканні пульта
+                    show(index + 1, 1); 
+                },
                 left: function () { Lampa.Controller.toggle('menu'); },
                 right: openPanel,
                 enter: openCurrentCard,
@@ -598,20 +608,9 @@
             if (index >= 0 && !cur && !frameId && items[index] && items[index].tfeed_video) playItem(items[index]);
         };
 
-        this.pause = function () {
-            seq++;
-            stopAll();
-            fullscreen(false);
-        };
-
-        this.stop = function () {
-            seq++;
-            stopAll();
-            fullscreen(false);
-        };
-
+        this.pause = function () { seq++; stopAll(); fullscreen(false); };
+        this.stop = function () { seq++; stopAll(); fullscreen(false); };
         this.render = function () { return html; };
-
         this.destroy = function () {
             seq++;
             feedGen++;
@@ -624,12 +623,8 @@
 
     function openFeed() {
         Lampa.Activity.push({
-            url: '',
-            title: 'КіноТрейлери',
-            component: 'trailers_feed',
-            page: 1,
-            type: Lampa.Storage.get('tfeed_type', 'movie'),
-            genre: parseInt(Lampa.Storage.get('tfeed_genre', 0), 10) || 0
+            url: '', title: 'КіноТрейлери', component: 'trailers_feed', page: 1,
+            type: Lampa.Storage.get('tfeed_type', 'movie'), genre: parseInt(Lampa.Storage.get('tfeed_genre', 0), 10) || 0
         });
     }
 
@@ -647,7 +642,5 @@
     }
 
     if (window.appready) start();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') start();
-    });
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
