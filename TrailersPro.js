@@ -31,11 +31,6 @@
         '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;' +
             'opacity:1;transition:opacity .4s ease}' +
         '.tfeed__side--hidden{opacity:0;pointer-events:none}' +
-        '.tfeed__fav{width:5.5em;height:3em;margin-bottom:.8em;border-radius:.5em;background:rgba(0,0,0,.55);' +
-            'display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s}' +
-        '.tfeed__fav:hover{transform:scale(1.1)}' +
-        '.tfeed__fav svg{width:1.5em;height:1.5em;fill:#fff;opacity:.6}' +
-        '.tfeed__fav.active svg{fill:#f44336;opacity:1}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
@@ -43,7 +38,14 @@
             'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}' +
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
-        '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
+        '.tfeed__details{display:flex;align-items:center;gap:1.5em;margin-top:.3em}' +
+        '.tfeed__meta{font-size:1.3em;opacity:.8}' +
+        '.tfeed__fav{display:inline-flex;align-items:center;gap:.5em;padding:.3em .8em;border-radius:1em;' +
+            'background:rgba(255,255,255,.15);font-size:1.1em;cursor:pointer;transition:background .2s}' +
+        '.tfeed__fav:hover{background:rgba(255,255,255,.25)}' +
+        '.tfeed__fav svg{width:1.2em;height:1.2em;fill:#fff;opacity:.8}' +
+        '.tfeed__fav.active svg{fill:#f44336;opacity:1}' +
+        '.tfeed__fav.active{background:rgba(244,67,54,.2)}' +
         '.tfeed__descr{font-size:1.2em;opacity:.7;margin-top:.6em;max-width:70%;' +
             'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
         '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
@@ -112,11 +114,13 @@
     }
 
     function Feed(object) {
-        var hintText = isMobile ? 'Свайп вгору/вниз — гортати · Тап — відкрити' : '▲▼ гортати · OK — відкрити · 🤍 Обране · → жанри · Назад — вихід';
+        var hintText = isMobile ? 'Свайп вгору/вниз — гортати · Тап — відкрити' : '▲▼ гортати · OK — відкрити · → жанри · Назад — вихід';
         var html = $('<div class="tfeed"><div class="tfeed__bg"></div><div class="tfeed__video"></div>' +
             '<div class="tfeed__status"></div><div class="tfeed__chip"></div><div class="tfeed__side"></div>' +
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
-            '<div class="tfeed__meta"></div><div class="tfeed__descr"></div>' +
+            '<div class="tfeed__details"><div class="tfeed__meta"></div>' +
+            '<div class="tfeed__fav" title="Обране"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span>Обране</span></div>' +
+            '</div><div class="tfeed__descr"></div>' +
             '<div class="tfeed__hint">' + hintText + '</div></div></div>');
 
         var type, genre, items, index, dir, page, totalPages, loading, waiters;
@@ -425,19 +429,6 @@
 
         function renderSide() {
             var side = html.find('.tfeed__side').empty();
-            
-            // Додаємо кнопку обраного на початок правої колонки
-            var favBtn = $('<div class="tfeed__fav" title="Обране"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>');
-            favBtn.on('click', function (e) {
-                e.stopPropagation();
-                toggleFavorite();
-            });
-            side.append(favBtn);
-
-            if (items[index]) {
-                checkFavorite(items[index]);
-            }
-
             for (let i = index, shown = 0; i < items.length && shown <= AHEAD; i++) {
                 if (i > index && items[i].tfeed_video === null) continue;
                 var poster = items[i].poster_path ? 'url(' + Lampa.Api.img(items[i].poster_path, 'w200') + ')' : 'none';
@@ -488,6 +479,8 @@
                     titleEl.text(movieTitle).show();
                 }
             });
+
+            checkFavorite(item);
         }
 
         function showPosters() {
@@ -580,10 +573,15 @@
                 openPanel();
             });
 
+            html.find('.tfeed__fav').on('click', function (e) {
+                e.stopPropagation();
+                toggleFavorite();
+            });
+
             html.on('click', function (e) {
-                if ($(e.target).closest('.tfeed__info').length) {
+                if ($(e.target).closest('.tfeed__info').length && !$(e.target).closest('.tfeed__fav').length) {
                     openCurrentCard();
-                } else if (!$(e.target).closest('.tfeed__side').length) {
+                } else if (!$(e.target).closest('.tfeed__side').length && !$(e.target).closest('.tfeed__fav').length) {
                     openPanel();
                 }
             });
@@ -595,8 +593,6 @@
                     touchStartTime = Date.now();
                 }
             }, { passive: true });
-
-            html[0].addEventListener('touched', function () {}, { passive: true });
 
             html[0].addEventListener('touchend', function (e) {
                 if (!e.changedTouches || e.changedTouches.length === 0) return;
@@ -626,7 +622,7 @@
                 left: function () { Lampa.Controller.toggle('menu'); },
                 right: openPanel,
                 enter: openCurrentCard,
-                info: toggleFavorite, // На пульті кнопка "Info" додає/видаляє з обраного
+                info: toggleFavorite,
                 back: function () { Lampa.Activity.backward(); }
             });
             Lampa.Controller.toggle('content');
@@ -642,7 +638,7 @@
             feedGen++;
             stopAll();
             fullscreen(false);
-            window.removeEventListener('message', onMessage);
+            window.removeEventListener('message', nMessage);
             html.remove();
         };
     }
