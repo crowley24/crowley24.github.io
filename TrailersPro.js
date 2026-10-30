@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + Auto-hide Posters)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Fixed Scroll + Auto-hide Posters)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -26,16 +26,14 @@
         '.tfeed__yt--on{opacity:1}' +
         '.tfeed__yt iframe{position:absolute;left:0;top:-300px;width:100%;height:calc(100% + 600px);border:0;pointer-events:none}' +
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
-        // Зміщено чіп нижче, щоб він не наїжджав на верхнє меню Lampa
         '.tfeed__chip{position:absolute;left:3em;top:4.5em;padding:.4em .9em;border-radius:1em;' +
             'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer;z-index:10}' +
-        // Права колонка з постерами з плавним зникненням через 3 секунди
+        // Права колонка з постерами з плавним зникненням
         '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;opacity:1;transition:opacity 0.5s ease;}' +
         '.tfeed__side.tfeed__side--hidden{opacity:0;pointer-events:none;}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
-        // Збільшено верхній відступ інформаційного блоку, щоб логотип і метадані не перекривалися хедерами
         '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 12em 2.5em 3em;' +
             'background:linear-gradient(to top,rgba(0,0,0,0.95),rgba(0,0,0,0.6) 60%,rgba(0,0,0,0));z-index:10}' +
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
@@ -123,14 +121,14 @@
         var cur = null;
         var frameId = '';
         var nextTimer, watchdog, prepTimer;
-        var posterHideTimer = null; // Таймер для приховування постерів
+        var posterHideTimer = null;
         var self = this;
 
         var touchStartY = 0;
         var touchStartX = 0;
         var touchStartTime = 0;
 
-        // Функція для показу постерів і запуску таймера їх приховування (через 3 сек)
+        // Функція для показу постерів і запуску таймера приховування через 3 сек
         function showPosters() {
             var side = html.find('.tfeed__side');
             side.removeClass('tfeed__side--hidden');
@@ -568,14 +566,11 @@
                 var deltaTime = Date.now() - touchStartTime;
 
                 if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
+                    showPosters(); // Показуємо постери при свайпі
                     if (deltaY < 0) {
-                        showPosters(); // Показуємо постери при свайпі
                         show(index + 1, 1);
                     } else {
-                        if (index > 0) {
-                            showPosters(); // Показуємо постери при свайпі
-                            show(index - 1, -1);
-                        }
+                        if (index > 0) show(index - 1, -1);
                     }
                 }
             }, { passive: true });
@@ -590,12 +585,12 @@
                 toggle: function () { Lampa.Controller.clear(); },
                 up: function () { 
                     if (index > 0) {
-                        showPosters(); // Показуємо постери при натисканні пульта
+                        showPosters(); // Показуємо постери при натисканні стрілки вгору
                         show(index - 1, -1);
                     }
                 },
                 down: function () { 
-                    showPosters(); // Показуємо постери при натисканні пульта
+                    showPosters(); // Показуємо постери при натисканні стрілки вниз
                     show(index + 1, 1); 
                 },
                 left: function () { Lampa.Controller.toggle('menu'); },
