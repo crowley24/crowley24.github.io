@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + Bookmarks)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + Favorite)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -15,8 +15,7 @@
     var BASE = ((document.currentScript && document.currentScript.src) ||
         'https://smokingairlinestg.github.io/lampa-trailers/feed.js').split('?')[0].replace(/[^/]*$/, '');
     var bridgeMode = false;
-    var isMobile = Lampa.Platform && Lampa.Platform.is('mobile') ||
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var isMobile = Lampa.Platform && Lampa.Platform.is('mobile') || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     var css = '' +
         '.tfeed{position:fixed;left:0;top:0;width:100%;height:100%;background:#000;overflow:hidden;z-index:9999}' +
@@ -32,6 +31,11 @@
         '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;' +
             'opacity:1;transition:opacity .4s ease}' +
         '.tfeed__side--hidden{opacity:0;pointer-events:none}' +
+        '.tfeed__fav{width:5.5em;height:3em;margin-bottom:.8em;border-radius:.5em;background:rgba(0,0,0,.55);' +
+            'display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s}' +
+        '.tfeed__fav:hover{transform:scale(1.1)}' +
+        '.tfeed__fav svg{width:1.5em;height:1.5em;fill:#fff;opacity:.6}' +
+        '.tfeed__fav.active svg{fill:#f44336;opacity:1}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
@@ -40,72 +44,26 @@
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
         '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
-        '.tfeed__bookmark{position:absolute;right:2em;bottom:2em;z-index:30;' +
-            'width:3.4em;height:3.4em;display:flex;align-items:center;justify-content:center;' +
-            'border-radius:50%;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.45);' +
-            'color:#fff;cursor:pointer;transition:background .2s,transform .2s}' +
-        '.tfeed__bookmark svg{width:1.7em;height:1.7em;display:block;fill:none;' +
-            'stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}' +
-        '.tfeed__bookmark--saved{background:rgba(255,170,0,.95);color:#111;border-color:#ffb000}' +
-        '.tfeed__bookmark:active{transform:scale(.92)}' +
+        '.tfeed__descr{font-size:1.2em;opacity:.7;margin-top:.6em;max-width:70%;' +
+            'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
+        '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
         '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.4em;' +
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__bg{' +
-                'background-size:cover;' +
-                'background-position:center;' +
-            '}' +
-            '.tfeed__video{' +
-                'top:4%;' +
-                'height:48%;' +
-                'bottom:auto;' +
-            '}' +
-            '.tfeed__yt,.tfeed__frame{' +
-                'height:100%;' +
-            '}' +
-            '.tfeed__yt iframe{' +
-                'top:-10%;' +
-                'height:120%;' +
-            '}' +
-            '.tfeed__info{' +
-                'top:53%;' +
-                'bottom:auto;' +
-                'left:1.5em;' +
-                'right:1.5em;' +
-                'padding:1em 4.5em 1em 0;' +
-                'background:none;' +
-            '}' +
-            '.tfeed__logo{' +
-                'max-width:100%;' +
-                'max-height:4em;' +
-                'margin:0 0 .4em;' +
-            '}' +
+            '.tfeed__info{padding:4em 10em 6em 1.5em;right:0;}' +
             '.tfeed__title{font-size:1.8em}' +
-            '.tfeed__meta{font-size:1em;line-height:1.4}' +
             '.tfeed__chip{left:1.5em;top:1.5em}' +
-            '.tfeed__side{display:none}' +
-            '.tfeed__bookmark{' +
-                'right:1.2em;' +
-                'bottom:auto;' +
-                'top:54%;' +
-                'width:3em;' +
-                'height:3em;' +
-            '}' +
+            '.tfeed__hint{display:none}' +
         '}';
 
     function pickTrailer(results) {
         var lang = Lampa.Storage.field('tmdb_lang');
         var rank = function (v) {
-            return (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 2 : 4) +
-                (v.iso_639_1 === lang ? 0 : 1);
+            return (v.type === 'Trailer' ? 0 : v.type === 'Teaser' ? 2 : 4) + (v.iso_639_1 === lang ? 0 : 1);
         };
-        var yt = results.filter(function (v) {
-            return v.site === 'YouTube' && v.key;
-        });
-        yt.sort(function (a, b) {
-            return rank(a) - rank(b);
-        });
+        var yt = results.filter(function (v) { return v.site === 'YouTube' && v.key; });
+        yt.sort(function (a, b) { return rank(a) - rank(b); });
         return yt[0];
     }
 
@@ -113,9 +71,7 @@
         var order = [Lampa.Storage.field('tmdb_lang'), 'en', null];
         for (var i = 0; i < order.length; i++) {
             var lang = order[i];
-            var found = logos.filter(function (l) {
-                return l.iso_639_1 === lang;
-            })[0];
+            var found = logos.filter(function (l) { return l.iso_639_1 === lang; })[0];
             if (found) return found;
         }
         return logos[0];
@@ -123,9 +79,7 @@
 
     function genreTitle(type, id) {
         if (!id) return 'Популярне';
-        var g = tmdb.genres[type].filter(function (x) {
-            return x.id === id;
-        })[0];
+        var g = tmdb.genres[type].filter(function (x) { return x.id === id; })[0];
         return g ? Lampa.Utils.capitalizeFirstLetter(Lampa.Lang.translate(g.title)) : '';
     }
 
@@ -158,17 +112,12 @@
     }
 
     function Feed(object) {
-        var hintText = isMobile
-            ? 'Свайп вгору/вниз — гортати · Тап — відкрити'
-            : '▲▼ гортати · OK — відкрити · → жанри · Назад — вихід';
-
+        var hintText = isMobile ? 'Свайп вгору/вниз — гортати · Тап — відкрити' : '▲▼ гортати · OK — відкрити · 🤍 Обране · → жанри · Назад — вихід';
         var html = $('<div class="tfeed"><div class="tfeed__bg"></div><div class="tfeed__video"></div>' +
             '<div class="tfeed__status"></div><div class="tfeed__chip"></div><div class="tfeed__side"></div>' +
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
-            '<div class="tfeed__meta"></div></div>' +
-            '<div class="tfeed__bookmark" role="button" tabindex="0" title="Додати в закладки">' +
-            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>' +
-            '</div></div>');
+            '<div class="tfeed__meta"></div><div class="tfeed__descr"></div>' +
+            '<div class="tfeed__hint">' + hintText + '</div></div></div>');
 
         var type, genre, items, index, dir, page, totalPages, loading, waiters;
         var feedGen = 0;
@@ -188,45 +137,6 @@
             html.find('.tfeed__status').text(text || '');
         }
 
-        function favoriteCheck(item) {
-            if (!item || !Lampa.Favorite || typeof Lampa.Favorite.check !== 'function') return false;
-            try {
-                var result = Lampa.Favorite.check(item);
-                if (typeof result === 'boolean') return result;
-                return !!(result && result.book);
-            } catch (e) {
-                return false;
-            }
-        }
-
-        function updateBookmark(item) {
-            var button = html.find('.tfeed__bookmark');
-            var saved = favoriteCheck(item);
-            button.toggleClass('tfeed__bookmark--saved', saved);
-            button.attr('title', saved ? 'Видалити із закладок' : 'Додати в закладки');
-            button.attr('aria-label', saved ? 'Видалити із закладок' : 'Додати в закладки');
-            button.attr('aria-pressed', saved ? 'true' : 'false');
-        }
-
-        function toggleBookmark() {
-            var item = items && items[index];
-            if (!item) return;
-            if (!Lampa.Favorite || typeof Lampa.Favorite.toggle !== 'function') {
-                status('Функція закладок недоступна');
-                return;
-            }
-            try {
-                Lampa.Favorite.toggle('book', item);
-                updateBookmark(item);
-                status(favoriteCheck(item) ? 'Додано в закладки' : 'Видалено із закладок');
-                setTimeout(function () {
-                    if (items && items[index] === item) status('');
-                }, 1500);
-            } catch (e) {
-                status('Не вдалося змінити закладку');
-            }
-        }
-
         function reset(newType, newGenre) {
             type = newType;
             genre = newGenre;
@@ -244,15 +154,12 @@
             stopAll();
             html.find('.tfeed__side').empty();
             html.find('.tfeed__chip').text(TYPES[type] + ' · ' + genreTitle(type, genre));
-            updateBookmark(null);
         }
 
         function flush(ok) {
             var w = waiters;
             waiters = [];
-            w.forEach(function (f) {
-                f(ok);
-            });
+            w.forEach(function (f) { f(ok); });
         }
 
         function loadPage(done) {
@@ -261,26 +168,25 @@
             if (page >= totalPages) return flush(false);
             loading = true;
             var gen = feedGen;
+
             if (page === 0 && totalPages === 1) {
                 page = Math.floor(Math.random() * 15) + 1;
             } else {
                 page++;
             }
-            var params = {
-                page: page,
-                sort_by: 'popularity.desc',
-                filter: { 'vote_count.gte': 50 }
-            };
+
+            var params = { page: page, sort_by: 'popularity.desc', filter: { 'vote_count.gte': 50 } };
             if (genre) params.genres = genre;
             if (type === 'tv' && !genre) params.filter.without_genres = '10763,10767';
+
             tmdb.get('discover/' + type, params, function (json) {
                 if (gen !== feedGen) return;
                 loading = false;
                 totalPages = json.total_pages || page;
-                var newItems = (json.results || []).filter(function (m) {
-                    return !m.adult;
-                });
+
+                var newItems = (json.results || []).filter(function (m) { return !m.adult; });
                 shuffleArray(newItems);
+
                 items = items.concat(newItems);
                 flush(true);
             }, function () {
@@ -298,9 +204,7 @@
                 item[key] = value || null;
                 var w = item[key + '_wait'];
                 item[key + '_wait'] = null;
-                w.forEach(function (f) {
-                    f(item[key]);
-                });
+                w.forEach(function (f) { f(item[key]); });
             });
         }
 
@@ -309,9 +213,7 @@
             cached(item, 'tfeed_video', function (done) {
                 tmdb.videos({ method: t, id: item.id }, function (json) {
                     done(pickTrailer(json.results || []));
-                }, function () {
-                    done(null);
-                });
+                }, function () { done(null); });
             }, cb);
         }
 
@@ -319,14 +221,10 @@
             var t = type;
             cached(item, 'tfeed_logo', function (done) {
                 var langs = Lampa.Storage.field('tmdb_lang') + ',en,null';
-                tmdb.get(t + '/' + item.id + '/images', {
-                    filter: { include_image_language: langs }
-                }, function (json) {
+                tmdb.get(t + '/' + item.id + '/images', { filter: { include_image_language: langs } }, function (json) {
                     var logo = json.logos && json.logos.length ? pickLogo(json.logos) : null;
                     done(logo ? Lampa.Api.img(logo.file_path, 'w500') : null);
-                }, function () {
-                    done(null);
-                });
+                }, function () { done(null); });
             }, cb);
         }
 
@@ -335,9 +233,7 @@
         }
 
         function findPlayer(item) {
-            return players.filter(function (p) {
-                return p.item === item;
-            })[0];
+            return players.filter(function (p) { return p.item === item; })[0];
         }
 
         function makePlayer(item, play) {
@@ -369,12 +265,8 @@
                         if (frame) frame.setAttribute('tabindex', '-1');
                         if (p.wantPlay && !play) p.yt.playVideo();
                     },
-                    onStateChange: function (e) {
-                        onPlayer(p, 'state', e.data);
-                    },
-                    onError: function (e) {
-                        onPlayer(p, 'error', e.data);
-                    }
+                    onStateChange: function (e) { onPlayer(p, 'state', e.data); },
+                    onError: function (e) { onPlayer(p, 'error', e.data); }
                 }
             });
             players.push(p);
@@ -387,9 +279,7 @@
                 clearTimeout(nextTimer);
                 clearTimeout(watchdog);
             }
-            try {
-                p.yt.destroy();
-            } catch (e) {}
+            try { p.yt.destroy(); } catch (e) {}
             p.el.remove();
             players.splice(players.indexOf(p), 1);
         }
@@ -411,9 +301,7 @@
             for (let i = index + 1; i < items.length && keep.length <= LIVE_AHEAD; i++) {
                 var v = items[i].tfeed_video;
                 if (v === undefined) {
-                    ensureVideo(items[i], function () {
-                        schedulePrepare();
-                    });
+                    ensureVideo(items[i], function () { schedulePrepare(); });
                     break;
                 }
                 if (v) keep.push(items[i]);
@@ -421,9 +309,7 @@
             players.slice().forEach(function (p) {
                 if (keep.indexOf(p.item) < 0) killPlayer(p);
             });
-            var missing = keep.slice(1).filter(function (item) {
-                return !findPlayer(item);
-            })[0];
+            var missing = keep.slice(1).filter(function (item) { return !findPlayer(item); })[0];
             if (missing) {
                 makePlayer(missing, false);
                 schedulePrepare();
@@ -494,19 +380,14 @@
             }
             if ((kind === 'state' && value === window.YT.PlayerState.ENDED) || kind === 'error') {
                 if (kind === 'error') status('Трейлер недоступний, гортаю далі…');
-                nextTimer = setTimeout(function () {
-                    show(index + 1, 1);
-                }, kind === 'error' ? 1500 : 300);
+                nextTimer = setTimeout(function () { show(index + 1, 1); }, kind === 'error' ? 1500 : 300);
             }
         }
 
         function playFrame(item) {
             frameId = 'tfeed_' + Math.random().toString(36).slice(2);
-            html.find('.tfeed__video').append(
-                $('<iframe class="tfeed__frame" tabindex="-1" allow="autoplay; encrypted-media"></iframe>')
-                    .attr('src', BASE + 'yt.html?id=' + frameId + '&v=' +
-                        encodeURIComponent(item.tfeed_video.key) + '&preload=0')
-            );
+            html.find('.tfeed__video').append($('<iframe class="tfeed__frame" tabindex="-1" allow="autoplay; encrypted-media"></iframe>')
+                .attr('src', BASE + 'yt.html?id=' + frameId + '&v=' + encodeURIComponent(item.tfeed_video.key) + '&preload=0'));
             watch(seq);
         }
 
@@ -514,27 +395,54 @@
             var data = event.data;
             if (!data || !frameId || data.bridgeId !== frameId) return;
             if (data.type === 'ready') clearTimeout(watchdog);
-            if ((data.type === 'stateChange' && data.data && data.data.state === 0) ||
-                data.type === 'error') {
+            if ((data.type === 'stateChange' && data.data && data.data.state === 0) || data.type === 'error') {
                 if (data.type === 'error') status('Трейлер недоступний, гортаю далі…');
-                nextTimer = setTimeout(function () {
-                    show(index + 1, 1);
-                }, data.type === 'error' ? 1500 : 300);
+                nextTimer = setTimeout(function () { show(index + 1, 1); }, data.type === 'error' ? 1500 : 300);
             }
+        }
+
+        function checkFavorite(item) {
+            var saved = Lampa.Favorite.check(type, item);
+            html.find('.tfeed__fav').toggleClass('active', saved);
+        }
+
+        function toggleFavorite() {
+            var item = items[index];
+            if (!item) return;
+            item.source = 'tmdb';
+            item.media_type = type;
+            var saved = Lampa.Favorite.check(type, item);
+            if (saved) {
+                Lampa.Favorite.remove(type, item);
+                status('Видалено з обраного');
+            } else {
+                Lampa.Favorite.add(type, item, 'book');
+                status('Додано в обране');
+            }
+            checkFavorite(item);
+            setTimeout(function () { status(''); }, 1500);
         }
 
         function renderSide() {
             var side = html.find('.tfeed__side').empty();
+            
+            // Додаємо кнопку обраного на початок правої колонки
+            var favBtn = $('<div class="tfeed__fav" title="Обране"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>');
+            favBtn.on('click', function (e) {
+                e.stopPropagation();
+                toggleFavorite();
+            });
+            side.append(favBtn);
+
+            if (items[index]) {
+                checkFavorite(items[index]);
+            }
+
             for (let i = index, shown = 0; i < items.length && shown <= AHEAD; i++) {
                 if (i > index && items[i].tfeed_video === null) continue;
-                var poster = items[i].poster_path
-                    ? 'url(' + Lampa.Api.img(items[i].poster_path, 'w200') + ')'
-                    : 'none';
-                side.append(
-                    $('<div class="tfeed__poster"></div>')
-                        .toggleClass('tfeed__poster--now', i === index)
-                        .css('background-image', poster)
-                );
+                var poster = items[i].poster_path ? 'url(' + Lampa.Api.img(items[i].poster_path, 'w200') + ')' : 'none';
+                side.append($('<div class="tfeed__poster"></div>')
+                    .toggleClass('tfeed__poster--now', i === index).css('background-image', poster));
                 shown++;
             }
         }
@@ -543,9 +451,7 @@
             for (let i = index + 1; i < Math.min(items.length, index + 1 + META_AHEAD); i++) {
                 var item = items[i];
                 ensureVideo(item, renderSide);
-                ensureLogo(item, function (url) {
-                    if (url) new Image().src = url;
-                });
+                ensureLogo(item, function (url) { if (url) new Image().src = url; });
                 if (!item.tfeed_warm) {
                     item.tfeed_warm = true;
                     if (item.poster_path) new Image().src = Lampa.Api.img(item.poster_path, 'w200');
@@ -557,22 +463,23 @@
         function info(item) {
             var date = item.release_date || item.first_air_date || '';
             var genres = tmdb.getGenresNameFromIds(type, item.genre_ids || []).slice(0, 3).join(', ');
-            var meta = [
-                date.slice(0, 4),
-                item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '',
-                genres
-            ].filter(Boolean).join(' · ');
+            var meta = [date.slice(0, 4), item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '', genres]
+                .filter(Boolean).join(' · ');
+
             var titleEl = html.find('.tfeed__title');
             var logoEl = html.find('.tfeed__logo');
             var movieTitle = item.title || item.name || item.original_title || item.original_name || '';
+
             html.find('.tfeed__meta').text(meta);
+            html.find('.tfeed__descr').text(item.overview || '');
             html.find('.tfeed__bg').css('background-image',
                 item.backdrop_path ? 'url(' + Lampa.Api.img(item.backdrop_path, 'w1280') + ')' : 'none');
-            updateBookmark(item);
+
             logoEl.hide().removeAttr('src');
             titleEl.text('').hide();
+
             ensureLogo(item, function (url) {
-                if (!items || items[index] !== item) return;
+                if (items[index] !== item) return;
                 if (url) {
                     logoEl.attr('src', url).show();
                     titleEl.hide();
@@ -602,6 +509,7 @@
                 });
             }
             if (i >= items.length - META_AHEAD) loadPage();
+
             index = i;
             var item = items[i];
             var my = ++seq;
@@ -633,18 +541,11 @@
 
         function openPanel() {
             var list = ['movie', 'tv'].map(function (t) {
-                return {
-                    title: TYPES[t] + (t === type ? '  ✓' : ''),
-                    tfeed_type: t
-                };
+                return { title: TYPES[t] + (t === type ? '  ✓' : ''), tfeed_type: t };
             });
             list.push({ title: 'Жанр', separator: true });
             [{ id: 0 }].concat(tmdb.genres[type]).forEach(function (g) {
-                list.push({
-                    title: genreTitle(type, g.id),
-                    tfeed_genre: g.id,
-                    selected: g.id === genre
-                });
+                list.push({ title: genreTitle(type, g.id), tfeed_genre: g.id, selected: g.id === genre });
             });
             Lampa.Select.show({
                 title: 'КіноТрейлери',
@@ -653,9 +554,7 @@
                     Lampa.Controller.toggle('content');
                     if (a.tfeed_type) {
                         if (a.tfeed_type === type) return;
-                        var keep = tmdb.genres[a.tfeed_type].some(function (g) {
-                            return g.id === genre;
-                        });
+                        var keep = tmdb.genres[a.tfeed_type].some(function (g) { return g.id === genre; });
                         reset(a.tfeed_type, keep ? genre : 0);
                     } else {
                         if (a.tfeed_genre === genre) return;
@@ -663,51 +562,32 @@
                     }
                     begin();
                 },
-                onBack: function () {
-                    Lampa.Controller.toggle('content');
-                }
+                onBack: function () { Lampa.Controller.toggle('content'); }
             });
         }
 
         function openCurrentCard() {
             var item = items[index];
             if (!item) return;
-            Lampa.Activity.push({
-                url: '',
-                component: 'full',
-                id: item.id,
-                method: type,
-                card: item,
-                source: 'tmdb'
-            });
+            Lampa.Activity.push({ url: '', component: 'full', id: item.id, method: type, card: item, source: 'tmdb' });
         }
 
         this.create = function () {
             window.addEventListener('message', onMessage);
+
             html.find('.tfeed__chip').on('click', function (e) {
                 e.stopPropagation();
                 openPanel();
             });
-            html.find('.tfeed__bookmark').on('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleBookmark();
-            });
-            html.find('.tfeed__bookmark').on('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleBookmark();
-                }
-            });
+
             html.on('click', function (e) {
-                if ($(e.target).closest('.tfeed__bookmark').length) return;
                 if ($(e.target).closest('.tfeed__info').length) {
                     openCurrentCard();
-                } else {
+                } else if (!$(e.target).closest('.tfeed__side').length) {
                     openPanel();
                 }
             });
+
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -715,14 +595,16 @@
                     touchStartTime = Date.now();
                 }
             }, { passive: true });
+
+            html[0].addEventListener('touched', function () {}, { passive: true });
+
             html[0].addEventListener('touchend', function (e) {
                 if (!e.changedTouches || e.changedTouches.length === 0) return;
                 var deltaY = e.changedTouches[0].clientY - touchStartY;
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
                 var deltaTime = Date.now() - touchStartTime;
-                if (Math.abs(deltaY) > 30 &&
-                    Math.abs(deltaY) > Math.abs(deltaX) &&
-                    deltaTime < 500) {
+
+                if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
                     if (deltaY < 0) {
                         show(index + 1, 1);
                     } else {
@@ -730,56 +612,31 @@
                     }
                 }
             }, { passive: true });
+
             reset(TYPES[object.type] ? object.type : 'movie', object.genre || 0);
-            begin(function () {
-                self.activity.toggle();
-            });
+            begin(function () { self.activity.toggle(); });
             return this.render();
         };
 
         this.start = function () {
             Lampa.Controller.add('content', {
-                toggle: function () {
-                    Lampa.Controller.clear();
-                },
-                up: function () {
-                    if (index > 0) show(index - 1, -1);
-                },
-                down: function () {
-                    show(index + 1, 1);
-                },
-                left: function () {
-                    Lampa.Controller.toggle('menu');
-                },
+                toggle: function () { Lampa.Controller.clear(); },
+                up: function () { if (index > 0) show(index - 1, -1); },
+                down: function () { show(index + 1, 1); },
+                left: function () { Lampa.Controller.toggle('menu'); },
                 right: openPanel,
                 enter: openCurrentCard,
-                back: function () {
-                    Lampa.Activity.backward();
-                }
+                info: toggleFavorite, // На пульті кнопка "Info" додає/видаляє з обраного
+                back: function () { Lampa.Activity.backward(); }
             });
             Lampa.Controller.toggle('content');
             fullscreen(true);
-            if (index >= 0 && !cur && !frameId && items[index] && items[index].tfeed_video) {
-                playItem(items[index]);
-            }
+            if (index >= 0 && !cur && !frameId && items[index] && items[index].tfeed_video) playItem(items[index]);
         };
 
-        this.pause = function () {
-            seq++;
-            stopAll();
-            fullscreen(false);
-        };
-
-        this.stop = function () {
-            seq++;
-            stopAll();
-            fullscreen(false);
-        };
-
-        this.render = function () {
-            return html;
-        };
-
+        this.pause = function () { seq++; stopAll(); fullscreen(false); };
+        this.stop = function () { seq++; stopAll(); fullscreen(false); };
+        this.render = function () { return html; };
         this.destroy = function () {
             seq++;
             feedGen++;
@@ -792,12 +649,8 @@
 
     function openFeed() {
         Lampa.Activity.push({
-            url: '',
-            title: 'КіноТрейлери',
-            component: 'trailers_feed',
-            page: 1,
-            type: Lampa.Storage.get('tfeed_type', 'movie'),
-            genre: parseInt(Lampa.Storage.get('tfeed_genre', 0), 10) || 0
+            url: '', title: 'КіноТрейлери', component: 'trailers_feed', page: 1,
+            type: Lampa.Storage.get('tfeed_type', 'movie'), genre: parseInt(Lampa.Storage.get('tfeed_genre', 0), 10) || 0
         });
     }
 
@@ -808,15 +661,12 @@
         if (Lampa.Menu.addButton) {
             Lampa.Menu.addButton(icon, 'КіноТрейлери', openFeed);
         } else {
-            var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon +
-                '</div><div class="menu__text">КіноТрейлери</div></li>');
+            var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">КіноТрейлери</div></li>');
             item.on('hover:enter', openFeed);
             $('.menu .menu__list').eq(0).append(item);
         }
     }
 
     if (window.appready) start();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') start();
-    });
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
