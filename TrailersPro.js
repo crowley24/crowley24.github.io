@@ -1,4 +1,3 @@
-
 (function () {
     'use strict';
 
@@ -53,13 +52,46 @@
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__info{top:auto;bottom:5.5em;padding:2em 5.5em 1em 1.5em;right:0;' +
-                'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}' +
-            '.tfeed__logo{max-width:100%;max-height:6em}' +
+            '.tfeed__bg{' +
+                'background-size:cover;' +
+                'background-position:center;' +
+            '}' +
+            '.tfeed__video{' +
+                'top:4%;' +
+                'height:48%;' +
+                'bottom:auto;' +
+            '}' +
+            '.tfeed__yt,.tfeed__frame{' +
+                'height:100%;' +
+            '}' +
+            '.tfeed__yt iframe{' +
+                'top:-10%;' +
+                'height:120%;' +
+            '}' +
+            '.tfeed__info{' +
+                'top:53%;' +
+                'bottom:auto;' +
+                'left:1.5em;' +
+                'right:1.5em;' +
+                'padding:1em 4.5em 1em 0;' +
+                'background:none;' +
+            '}' +
+            '.tfeed__logo{' +
+                'max-width:100%;' +
+                'max-height:4em;' +
+                'margin:0 0 .4em;' +
+            '}' +
             '.tfeed__title{font-size:1.8em}' +
-            '.tfeed__meta{font-size:1.05em}' +
+            '.tfeed__meta{font-size:1em;line-height:1.4}' +
             '.tfeed__chip{left:1.5em;top:1.5em}' +
-            '.tfeed__bookmark{right:1.2em;bottom:7em;width:3em;height:3em}' +
+            '.tfeed__side{display:none}' +
+            '.tfeed__bookmark{' +
+                'right:1.2em;' +
+                'bottom:auto;' +
+                'top:54%;' +
+                'width:3em;' +
+                'height:3em;' +
+            '}' +
         '}';
 
     function pickTrailer(results) {
@@ -158,7 +190,6 @@
 
         function favoriteCheck(item) {
             if (!item || !Lampa.Favorite || typeof Lampa.Favorite.check !== 'function') return false;
-
             try {
                 var result = Lampa.Favorite.check(item);
                 if (typeof result === 'boolean') return result;
@@ -171,7 +202,6 @@
         function updateBookmark(item) {
             var button = html.find('.tfeed__bookmark');
             var saved = favoriteCheck(item);
-
             button.toggleClass('tfeed__bookmark--saved', saved);
             button.attr('title', saved ? 'Видалити із закладок' : 'Додати в закладки');
             button.attr('aria-label', saved ? 'Видалити із закладок' : 'Додати в закладки');
@@ -181,17 +211,14 @@
         function toggleBookmark() {
             var item = items && items[index];
             if (!item) return;
-
             if (!Lampa.Favorite || typeof Lampa.Favorite.toggle !== 'function') {
                 status('Функція закладок недоступна');
                 return;
             }
-
             try {
                 Lampa.Favorite.toggle('book', item);
                 updateBookmark(item);
                 status(favoriteCheck(item) ? 'Додано в закладки' : 'Видалено із закладок');
-
                 setTimeout(function () {
                     if (items && items[index] === item) status('');
                 }, 1500);
@@ -234,31 +261,25 @@
             if (page >= totalPages) return flush(false);
             loading = true;
             var gen = feedGen;
-
             if (page === 0 && totalPages === 1) {
                 page = Math.floor(Math.random() * 15) + 1;
             } else {
                 page++;
             }
-
             var params = {
                 page: page,
                 sort_by: 'popularity.desc',
                 filter: { 'vote_count.gte': 50 }
             };
-
             if (genre) params.genres = genre;
             if (type === 'tv' && !genre) params.filter.without_genres = '10763,10767';
-
             tmdb.get('discover/' + type, params, function (json) {
                 if (gen !== feedGen) return;
                 loading = false;
                 totalPages = json.total_pages || page;
-
                 var newItems = (json.results || []).filter(function (m) {
                     return !m.adult;
                 });
-
                 shuffleArray(newItems);
                 items = items.concat(newItems);
                 flush(true);
@@ -272,9 +293,7 @@
         function cached(item, key, request, cb) {
             if (item[key] !== undefined) return cb(item[key]);
             if (item[key + '_wait']) return item[key + '_wait'].push(cb);
-
             item[key + '_wait'] = [cb];
-
             request(function (value) {
                 item[key] = value || null;
                 var w = item[key + '_wait'];
@@ -288,10 +307,7 @@
         function ensureVideo(item, cb) {
             var t = type;
             cached(item, 'tfeed_video', function (done) {
-                tmdb.videos({
-                    method: t,
-                    id: item.id
-                }, function (json) {
+                tmdb.videos({ method: t, id: item.id }, function (json) {
                     done(pickTrailer(json.results || []));
                 }, function () {
                     done(null);
@@ -328,7 +344,6 @@
             var p = { item: item, ready: false, wantPlay: play };
             p.el = $('<div class="tfeed__yt"><div></div></div>');
             html.find('.tfeed__video').append(p.el);
-
             var vars = {
                 autoplay: play ? 1 : 0,
                 controls: 0,
@@ -341,9 +356,7 @@
                 enablejsapi: 1,
                 mute: isMobile ? 1 : 0
             };
-
             if (/^https?:/.test(location.origin)) vars.origin = location.origin;
-
             p.yt = new window.YT.Player(p.el.children()[0], {
                 videoId: item.tfeed_video.key,
                 width: '100%',
@@ -364,7 +377,6 @@
                     }
                 }
             });
-
             players.push(p);
             return p;
         }
@@ -375,11 +387,9 @@
                 clearTimeout(nextTimer);
                 clearTimeout(watchdog);
             }
-
             try {
                 p.yt.destroy();
             } catch (e) {}
-
             p.el.remove();
             players.splice(players.indexOf(p), 1);
         }
@@ -397,30 +407,23 @@
         function prepare() {
             clearTimeout(prepTimer);
             if (bridgeMode || !cur || index < 0 || !items[index]) return;
-
             var keep = [items[index]];
-
             for (let i = index + 1; i < items.length && keep.length <= LIVE_AHEAD; i++) {
                 var v = items[i].tfeed_video;
-
                 if (v === undefined) {
                     ensureVideo(items[i], function () {
                         schedulePrepare();
                     });
                     break;
                 }
-
                 if (v) keep.push(items[i]);
             }
-
             players.slice().forEach(function (p) {
                 if (keep.indexOf(p.item) < 0) killPlayer(p);
             });
-
             var missing = keep.slice(1).filter(function (item) {
                 return !findPlayer(item);
             })[0];
-
             if (missing) {
                 makePlayer(missing, false);
                 schedulePrepare();
@@ -442,24 +445,19 @@
         function playItem(item) {
             var my = seq;
             if (bridgeMode) return playFrame(item);
-
             loadYT(function (ok) {
                 if (my !== seq) return;
-
                 if (!ok) {
                     bridgeMode = true;
                     return playFrame(item);
                 }
-
                 var p = findPlayer(item);
-
                 if (p) {
                     p.wantPlay = true;
                     if (p.ready) p.yt.playVideo();
                 } else {
                     p = makePlayer(item, true);
                 }
-
                 cur = p;
                 watch(my);
             });
@@ -474,11 +472,9 @@
                     if (item && items[index] === item) playFrame(item);
                     return;
                 }
-
                 p.item.tfeed_video = null;
                 renderSide();
             }
-
             if (p !== cur) {
                 if (kind === 'error') {
                     killPlayer(p);
@@ -486,20 +482,16 @@
                 }
                 return;
             }
-
             if (kind === 'state' && value === window.YT.PlayerState.PLAYING) {
                 clearTimeout(watchdog);
                 status('');
-
                 if (isMobile && p.yt && p.yt.isMuted && p.yt.isMuted()) {
                     p.yt.unMute();
                     p.yt.setVolume(100);
                 }
-
                 p.el.addClass('tfeed__yt--on');
                 schedulePrepare();
             }
-
             if ((kind === 'state' && value === window.YT.PlayerState.ENDED) || kind === 'error') {
                 if (kind === 'error') status('Трейлер недоступний, гортаю далі…');
                 nextTimer = setTimeout(function () {
@@ -510,26 +502,21 @@
 
         function playFrame(item) {
             frameId = 'tfeed_' + Math.random().toString(36).slice(2);
-
             html.find('.tfeed__video').append(
                 $('<iframe class="tfeed__frame" tabindex="-1" allow="autoplay; encrypted-media"></iframe>')
                     .attr('src', BASE + 'yt.html?id=' + frameId + '&v=' +
                         encodeURIComponent(item.tfeed_video.key) + '&preload=0')
             );
-
             watch(seq);
         }
 
         function onMessage(event) {
             var data = event.data;
             if (!data || !frameId || data.bridgeId !== frameId) return;
-
             if (data.type === 'ready') clearTimeout(watchdog);
-
             if ((data.type === 'stateChange' && data.data && data.data.state === 0) ||
                 data.type === 'error') {
                 if (data.type === 'error') status('Трейлер недоступний, гортаю далі…');
-
                 nextTimer = setTimeout(function () {
                     show(index + 1, 1);
                 }, data.type === 'error' ? 1500 : 300);
@@ -538,20 +525,16 @@
 
         function renderSide() {
             var side = html.find('.tfeed__side').empty();
-
             for (let i = index, shown = 0; i < items.length && shown <= AHEAD; i++) {
                 if (i > index && items[i].tfeed_video === null) continue;
-
                 var poster = items[i].poster_path
                     ? 'url(' + Lampa.Api.img(items[i].poster_path, 'w200') + ')'
                     : 'none';
-
                 side.append(
                     $('<div class="tfeed__poster"></div>')
                         .toggleClass('tfeed__poster--now', i === index)
                         .css('background-image', poster)
                 );
-
                 shown++;
             }
         }
@@ -559,12 +542,10 @@
         function prefetch() {
             for (let i = index + 1; i < Math.min(items.length, index + 1 + META_AHEAD); i++) {
                 var item = items[i];
-
                 ensureVideo(item, renderSide);
                 ensureLogo(item, function (url) {
                     if (url) new Image().src = url;
                 });
-
                 if (!item.tfeed_warm) {
                     item.tfeed_warm = true;
                     if (item.poster_path) new Image().src = Lampa.Api.img(item.poster_path, 'w200');
@@ -581,24 +562,17 @@
                 item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '',
                 genres
             ].filter(Boolean).join(' · ');
-
             var titleEl = html.find('.tfeed__title');
             var logoEl = html.find('.tfeed__logo');
             var movieTitle = item.title || item.name || item.original_title || item.original_name || '';
-
             html.find('.tfeed__meta').text(meta);
-
             html.find('.tfeed__bg').css('background-image',
                 item.backdrop_path ? 'url(' + Lampa.Api.img(item.backdrop_path, 'w1280') + ')' : 'none');
-
             updateBookmark(item);
-
             logoEl.hide().removeAttr('src');
             titleEl.text('').hide();
-
             ensureLogo(item, function (url) {
                 if (!items || items[index] !== item) return;
-
                 if (url) {
                     logoEl.attr('src', url).show();
                     titleEl.hide();
@@ -613,7 +587,6 @@
             var side = html.find('.tfeed__side');
             side.removeClass('tfeed__side--hidden');
             clearTimeout(posterHideTimer);
-
             posterHideTimer = setTimeout(function () {
                 side.addClass('tfeed__side--hidden');
             }, 3000);
@@ -621,51 +594,39 @@
 
         function show(i, direction) {
             dir = direction || dir;
-
             if (i < 0) return show(0, 1);
-
             if (i >= items.length) {
                 return loadPage(function (ok) {
                     if (ok && i < items.length) show(i, dir);
                     else status(TYPES[type] + ' у цьому жанрі закінчилися');
                 });
             }
-
             if (i >= items.length - META_AHEAD) loadPage();
-
             index = i;
             var item = items[i];
             var my = ++seq;
-
             if (cur && cur.item !== item) killPlayer(cur);
-
             clearTimeout(prepTimer);
             frameId = '';
             html.find('.tfeed__frame').remove();
             status('');
-
             info(item);
             renderSide();
             showPosters();
-
             ensureVideo(item, function (trailer) {
                 if (my !== seq) return;
                 if (trailer) playItem(item);
                 else show(index + dir, dir);
             });
-
             prefetch();
         }
 
         function begin(done) {
             self.activity.loader(true);
-
             loadPage(function (ok) {
                 self.activity.loader(false);
-
                 if (ok && items.length) show(0, 1);
                 else status('Не вдалося завантажити список');
-
                 if (done) done();
             });
         }
@@ -677,9 +638,7 @@
                     tfeed_type: t
                 };
             });
-
             list.push({ title: 'Жанр', separator: true });
-
             [{ id: 0 }].concat(tmdb.genres[type]).forEach(function (g) {
                 list.push({
                     title: genreTitle(type, g.id),
@@ -687,26 +646,21 @@
                     selected: g.id === genre
                 });
             });
-
             Lampa.Select.show({
                 title: 'КіноТрейлери',
                 items: list,
                 onSelect: function (a) {
                     Lampa.Controller.toggle('content');
-
                     if (a.tfeed_type) {
                         if (a.tfeed_type === type) return;
-
                         var keep = tmdb.genres[a.tfeed_type].some(function (g) {
                             return g.id === genre;
                         });
-
                         reset(a.tfeed_type, keep ? genre : 0);
                     } else {
                         if (a.tfeed_genre === genre) return;
                         reset(type, a.tfeed_genre);
                     }
-
                     begin();
                 },
                 onBack: function () {
@@ -718,7 +672,6 @@
         function openCurrentCard() {
             var item = items[index];
             if (!item) return;
-
             Lampa.Activity.push({
                 url: '',
                 component: 'full',
@@ -731,18 +684,15 @@
 
         this.create = function () {
             window.addEventListener('message', onMessage);
-
             html.find('.tfeed__chip').on('click', function (e) {
                 e.stopPropagation();
                 openPanel();
             });
-
             html.find('.tfeed__bookmark').on('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 toggleBookmark();
             });
-
             html.find('.tfeed__bookmark').on('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -750,17 +700,14 @@
                     toggleBookmark();
                 }
             });
-
             html.on('click', function (e) {
                 if ($(e.target).closest('.tfeed__bookmark').length) return;
-
                 if ($(e.target).closest('.tfeed__info').length) {
                     openCurrentCard();
                 } else {
                     openPanel();
                 }
             });
-
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -768,14 +715,11 @@
                     touchStartTime = Date.now();
                 }
             }, { passive: true });
-
             html[0].addEventListener('touchend', function (e) {
                 if (!e.changedTouches || e.changedTouches.length === 0) return;
-
                 var deltaY = e.changedTouches[0].clientY - touchStartY;
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
                 var deltaTime = Date.now() - touchStartTime;
-
                 if (Math.abs(deltaY) > 30 &&
                     Math.abs(deltaY) > Math.abs(deltaX) &&
                     deltaTime < 500) {
@@ -786,12 +730,10 @@
                     }
                 }
             }, { passive: true });
-
             reset(TYPES[object.type] ? object.type : 'movie', object.genre || 0);
             begin(function () {
                 self.activity.toggle();
             });
-
             return this.render();
         };
 
@@ -815,10 +757,8 @@
                     Lampa.Activity.backward();
                 }
             });
-
             Lampa.Controller.toggle('content');
             fullscreen(true);
-
             if (index >= 0 && !cur && !frameId && items[index] && items[index].tfeed_video) {
                 playItem(items[index]);
             }
@@ -864,15 +804,12 @@
     function start() {
         $('head').append('<style>' + css + '</style>');
         Lampa.Component.add('trailers_feed', Feed);
-
         var icon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-
         if (Lampa.Menu.addButton) {
             Lampa.Menu.addButton(icon, 'КіноТрейлери', openFeed);
         } else {
             var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon +
                 '</div><div class="menu__text">КіноТрейлери</div></li>');
-
             item.on('hover:enter', openFeed);
             $('.menu .menu__list').eq(0).append(item);
         }
