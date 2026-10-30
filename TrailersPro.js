@@ -40,12 +40,10 @@
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
         '.tfeed__details{display:flex;align-items:center;gap:1.5em;margin-top:.3em}' +
         '.tfeed__meta{font-size:1.3em;opacity:.8}' +
-        '.tfeed__fav{display:inline-flex;align-items:center;gap:.5em;padding:.3em .8em;border-radius:1em;' +
-            'background:rgba(255,255,255,.15);font-size:1.1em;cursor:pointer;transition:background .2s}' +
-        '.tfeed__fav:hover{background:rgba(255,255,255,.25)}' +
-        '.tfeed__fav svg{width:1.2em;height:1.2em;fill:#fff;opacity:.8}' +
-        '.tfeed__fav.active svg{fill:#f44336;opacity:1}' +
-        '.tfeed__fav.active{background:rgba(244,67,54,.2)}' +
+        '.tfeed__fav{display:inline-flex;align-items:center;gap:.5em;padding:.2em .4em;font-size:1.1em;cursor:pointer;background:transparent;border:0}' +
+        '.tfeed__fav svg{width:1.3em;height:1.3em;fill:#fff;opacity:.7;transition:transform .2s, fill .2s, opacity .2s}' +
+        '.tfeed__fav:hover svg{transform:scale(1.15);opacity:1}' +
+        '.tfeed__fav.tfeed__fav--active svg{fill:#f44336 !important;opacity:1 !important}' +
         '.tfeed__descr{font-size:1.2em;opacity:.7;margin-top:.6em;max-width:70%;' +
             'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
         '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
@@ -119,7 +117,7 @@
             '<div class="tfeed__status"></div><div class="tfeed__chip"></div><div class="tfeed__side"></div>' +
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
             '<div class="tfeed__details"><div class="tfeed__meta"></div>' +
-            '<div class="tfeed__fav" title="Обране"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span>Обране</span></div>' +
+            '<button class="tfeed__fav" title="Обране"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>' +
             '</div><div class="tfeed__descr"></div>' +
             '<div class="tfeed__hint">' + hintText + '</div></div></div>');
 
@@ -407,7 +405,7 @@
 
         function checkFavorite(item) {
             var saved = Lampa.Favorite.check(type, item);
-            html.find('.tfeed__fav').toggleClass('active', saved);
+            html.find('.tfeed__fav').toggleClass('tfeed__fav--active', saved);
         }
 
         function toggleFavorite() {
@@ -638,7 +636,7 @@
             feedGen++;
             stopAll();
             fullscreen(false);
-            window.removeEventListener('message', nMessage);
+            window.removeEventListener('message', onMessage);
             html.remove();
         };
     }
