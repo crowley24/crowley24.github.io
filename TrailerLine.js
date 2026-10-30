@@ -1,3 +1,4 @@
+
 (function () {
     'use strict';
 
@@ -28,7 +29,9 @@
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
         '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
             'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer}' +
-        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;}' +
+        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;' +
+            'opacity:1;transition:opacity .4s ease}' +
+        '.tfeed__side--hidden{opacity:0;pointer-events:none}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
@@ -44,9 +47,9 @@
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__info{padding:4em 10em 2em 1.5em; right:1.5em;}' +
+            '.tfeed__info{padding:4em 10em 6em 1.5em;right:0;}' +
             '.tfeed__title{font-size:1.8em}' +
-            '.tfeed__chip{left:1.5em; top:1.5em}' +
+            '.tfeed__chip{left:1.5em;top:1.5em}' +
             '.tfeed__hint{display:none}' +
         '}';
 
@@ -111,7 +114,7 @@
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
             '<div class="tfeed__meta"></div><div class="tfeed__descr"></div>' +
             '<div class="tfeed__hint">' + hintText + '</div></div></div>');
-        
+
         var type, genre, items, index, dir, page, totalPages, loading, waiters;
         var feedGen = 0;
         var seq = 0;
@@ -119,6 +122,7 @@
         var cur = null;
         var frameId = '';
         var nextTimer, watchdog, prepTimer;
+        var posterHideTimer;
         var self = this;
 
         var touchStartY = 0;
@@ -160,7 +164,7 @@
             if (page >= totalPages) return flush(false);
             loading = true;
             var gen = feedGen;
-            
+
             if (page === 0 && totalPages === 1) {
                 page = Math.floor(Math.random() * 15) + 1;
             } else {
@@ -175,7 +179,7 @@
                 if (gen !== feedGen) return;
                 loading = false;
                 totalPages = json.total_pages || page;
-                
+
                 var newItems = (json.results || []).filter(function (m) { return !m.adult; });
                 shuffleArray(newItems);
 
@@ -232,17 +236,17 @@
             var p = { item: item, ready: false, wantPlay: play };
             p.el = $('<div class="tfeed__yt"><div></div></div>');
             html.find('.tfeed__video').append(p.el);
-            var vars = { 
-                autoplay: play ? 1 : 0, 
-                controls: 0, 
-                rel: 0, 
-                modestbranding: 1, 
+            var vars = {
+                autoplay: play ? 1 : 0,
+                controls: 0,
+                rel: 0,
+                modestbranding: 1,
                 playsinline: 1,
-                iv_load_policy: 3, 
-                disablekb: 1, 
-                fs: 0, 
+                iv_load_policy: 3,
+                disablekb: 1,
+                fs: 0,
                 enablejsapi: 1,
-                mute: isMobile ? 1 : 0 
+                mute: isMobile ? 1 : 0
             };
             if (/^https?:/.test(location.origin)) vars.origin = location.origin;
             p.yt = new window.YT.Player(p.el.children()[0], {
@@ -281,6 +285,7 @@
             clearTimeout(nextTimer);
             clearTimeout(watchdog);
             clearTimeout(prepTimer);
+            clearTimeout(posterHideTimer);
             frameId = '';
             html.find('.tfeed__frame').remove();
         }
@@ -421,7 +426,7 @@
             var genres = tmdb.getGenresNameFromIds(type, item.genre_ids || []).slice(0, 3).join(', ');
             var meta = [date.slice(0, 4), item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '', genres]
                 .filter(Boolean).join(' · ');
-            
+
             var titleEl = html.find('.tfeed__title');
             var logoEl = html.find('.tfeed__logo');
             var movieTitle = item.title || item.name || item.original_title || item.original_name || '';
@@ -450,6 +455,15 @@
             });
         }
 
+        function showPosters() {
+            var side = html.find('.tfeed__side');
+            side.removeClass('tfeed__side--hidden');
+            clearTimeout(posterHideTimer);
+            posterHideTimer = setTimeout(function () {
+                side.addClass('tfeed__side--hidden');
+            }, 3000);
+        }
+
         function show(i, direction) {
             dir = direction || dir;
             if (i < 0) return show(0, 1);
@@ -471,6 +485,7 @@
             status('');
             info(item);
             renderSide();
+            showPosters();
             ensureVideo(item, function (trailer) {
                 if (my !== seq) return;
                 if (trailer) playItem(item);
@@ -538,7 +553,7 @@
                 }
             });
 
-            // Легкий та швидкий свайп (зменшено поріг до 30px для максимальної чутливості)
+            // Легкий та швидкий свайп (поріг 30px)
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -553,7 +568,6 @@
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
                 var deltaTime = Date.now() - touchStartTime;
 
-                // Чутливий поріг: > 30px по вертикалі і швидкий рух (< 500мс)
                 if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
                     if (deltaY < 0) {
                         show(index + 1, 1);
