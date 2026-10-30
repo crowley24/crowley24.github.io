@@ -29,7 +29,9 @@
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
         '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
             'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer}' +
-        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;}' +
+        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;' +
+            'opacity:1;transition:opacity .4s ease}' +
+        '.tfeed__side--hidden{opacity:0;pointer-events:none}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
@@ -45,9 +47,9 @@
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__info{padding:4em 10em 2em 1.5em; right:0;}' +
+            '.tfeed__info{padding:4em 10em 2em 1.5em;right:0;}' +
             '.tfeed__title{font-size:1.8em}' +
-            '.tfeed__chip{left:1.5em; top:1.5em}' +
+            '.tfeed__chip{left:1.5em;top:1.5em}' +
             '.tfeed__hint{display:none}' +
         '}';
 
@@ -120,12 +122,12 @@
         var cur = null;
         var frameId = '';
         var nextTimer, watchdog, prepTimer;
+        var posterHideTimer;
         var self = this;
 
         var touchStartY = 0;
         var touchStartX = 0;
         var touchStartTime = 0;
-        var posterHideTimer;
 
         function status(text) {
             html.find('.tfeed__status').text(text || '');
@@ -551,7 +553,7 @@
                 }
             });
 
-            // Легкий та швидкий свайп (зменшено поріг до 30px для максимальної чутливості)
+            // Легкий та швидкий свайп (поріг 30px)
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -566,7 +568,6 @@
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
                 var deltaTime = Date.now() - touchStartTime;
 
-                // Чутливий поріг: > 30px по вертикалі і швидкий рух (< 500мс)
                 if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
                     if (deltaY < 0) {
                         show(index + 1, 1);
