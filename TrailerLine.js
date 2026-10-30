@@ -1,14 +1,12 @@
 (function () {
     'use strict';
 
-    // Лента YouTube-трейлеров фильмов и сериалов по жанру (TV + Mobile):
-    // TV: ▲▼ листать, OK — карточка, → — Фильмы/Сериалы и жанр, ← — меню Lampa, Назад — выход.
-    // Mobile: свайп вверх/вниз — листать, тап по центру — карточка, тап сбоку — меню/жанры.
+    // Лента YouTube-трейлеров фильмов и сериалов по жанру (UA + Mobile + Random):
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
-    var TYPES = { movie: 'Фильмы', tv: 'Сериалы' };
+    var TYPES = { movie: 'Фільми', tv: 'Серіали' };
     var AHEAD = 3;
     var META_AHEAD = 10;
     var LIVE_AHEAD = 3;
@@ -75,7 +73,7 @@
     }
 
     function genreTitle(type, id) {
-        if (!id) return 'Популярное';
+        if (!id) return 'Популярне';
         var g = tmdb.genres[type].filter(function (x) { return x.id === id; })[0];
         return g ? Lampa.Utils.capitalizeFirstLetter(Lampa.Lang.translate(g.title)) : '';
     }
@@ -100,8 +98,17 @@
         }, 100);
     }
 
+    // Допоміжна функція для перемішування масиву (рандомізація трейлерів)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
     function Feed(object) {
-        var hintText = isMobile ? 'Свайп вверх/вниз — листать · Тап — открыть' : '▲▼ листать · OK — открыть · → жанры · Назад — выход';
+        var hintText = isMobile ? 'Свайп вгору/вниз — гортати · Тап — відкрити' : '▲▼ гортати · OK — відкрити · → жанри · Назад — вихід';
         var html = $('<div class="tfeed"><div class="tfeed__bg"></div><div class="tfeed__video"></div>' +
             '<div class="tfeed__status"></div><div class="tfeed__chip"></div><div class="tfeed__side"></div>' +
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
@@ -117,7 +124,6 @@
         var nextTimer, watchdog, prepTimer;
         var self = this;
 
-        // Змінні для обробки свайпів на телефоні
         var touchStartY = 0;
         var touchStartX = 0;
 
@@ -156,15 +162,28 @@
             if (page >= totalPages) return flush(false);
             loading = true;
             var gen = feedGen;
-            var params = { page: page + 1, sort_by: 'popularity.desc', filter: { 'vote_count.gte': 50 } };
+            
+            // Випадковий вибір сторінки (від 1 до 15), щоб щоразу завантажувати різні фільми
+            if (page === 0 && totalPages === 1) {
+                page = Math.floor(Math.random() * 15) + 1;
+            } else {
+                page++;
+            }
+
+            var params = { page: page, sort_by: 'popularity.desc', filter: { 'vote_count.gte': 50 } };
             if (genre) params.genres = genre;
             if (type === 'tv' && !genre) params.filter.without_genres = '10763,10767';
+
             tmdb.get('discover/' + type, params, function (json) {
                 if (gen !== feedGen) return;
                 loading = false;
-                page = json.page || page + 1;
                 totalPages = json.total_pages || page;
-                items = items.concat((json.results || []).filter(function (m) { return !m.adult; }));
+                
+                var newItems = (json.results || []).filter(function (m) { return !m.adult; });
+                // Перемішуємо результати, щоб навіть на одній сторінці фільми йшли в хаотичному порядку
+                shuffleArray(newItems);
+
+                items = items.concat(newItems);
                 flush(true);
             }, function () {
                 if (gen !== feedGen) return;
@@ -217,8 +236,6 @@
             var p = { item: item, ready: false, wantPlay: play };
             p.el = $('<div class="tfeed__yt"><div></div></div>');
             html.find('.tfeed__video').append(p.el);
-            // На мобільних пристроях іноді безпечніше стартувати з mute якщо блокується атовзапуск, 
-            // але далі скрипт робить unMute() при PLAYING.
             var vars = { 
                 autoplay: play ? 1 : 0, 
                 controls: 0, 
@@ -276,7 +293,7 @@
             clearTimeout(prepTimer);
             if (bridgeMode || !cur || index < 0 || !items[index]) return;
             var keep = [items[index]];
-            for (var i = index + 1; i < items.length && keep.length <= LIVE_AHEAD; i++) {
+            for (let i = index + 1; i < items.length && keep.length <= LIVE_AHEAD; i++) {
                 var v = items[i].tfeed_video;
                 if (v === undefined) {
                     ensureVideo(items[i], function () { schedulePrepare(); });
@@ -302,7 +319,7 @@
         function watch(my) {
             clearTimeout(watchdog);
             watchdog = setTimeout(function () {
-                if (my === seq) status('YouTube не отвечает · пролистайте дальше');
+                if (my === seq) status('YouTube не відповідає · прогорніть далі');
             }, LOAD_TIMEOUT);
         }
 
@@ -357,7 +374,7 @@
                 schedulePrepare();
             }
             if ((kind === 'state' && value === window.YT.PlayerState.ENDED) || kind === 'error') {
-                if (kind === 'error') status('Трейлер недоступен, листаю дальше…');
+                if (kind === 'error') status('Трейлер недоступний, гортаю далі…');
                 nextTimer = setTimeout(function () { show(index + 1, 1); }, kind === 'error' ? 1500 : 300);
             }
         }
@@ -374,14 +391,14 @@
             if (!data || !frameId || data.bridgeId !== frameId) return;
             if (data.type === 'ready') clearTimeout(watchdog);
             if ((data.type === 'stateChange' && data.data && data.data.state === 0) || data.type === 'error') {
-                if (data.type === 'error') status('Трейлер недоступен, листаю дальше…');
+                if (data.type === 'error') status('Трейлер недоступний, гортаю далі…');
                 nextTimer = setTimeout(function () { show(index + 1, 1); }, data.type === 'error' ? 1500 : 300);
             }
         }
 
         function renderSide() {
             var side = html.find('.tfeed__side').empty();
-            for (var i = index, shown = 0; i < items.length && shown <= AHEAD; i++) {
+            for (let i = index, shown = 0; i < items.length && shown <= AHEAD; i++) {
                 if (i > index && items[i].tfeed_video === null) continue;
                 var poster = items[i].poster_path ? 'url(' + Lampa.Api.img(items[i].poster_path, 'w200') + ')' : 'none';
                 side.append($('<div class="tfeed__poster"></div>')
@@ -391,7 +408,7 @@
         }
 
         function prefetch() {
-            for (var i = index + 1; i < Math.min(items.length, index + 1 + META_AHEAD); i++) {
+            for (let i = index + 1; i < Math.min(items.length, index + 1 + META_AHEAD); i++) {
                 var item = items[i];
                 ensureVideo(item, renderSide);
                 ensureLogo(item, function (url) { if (url) new Image().src = url; });
@@ -428,7 +445,7 @@
             if (i >= items.length) {
                 return loadPage(function (ok) {
                     if (ok && i < items.length) show(i, dir);
-                    else status(TYPES[type] + ' в этом жанре закончились');
+                    else status(TYPES[type] + ' у цьому жанрі закінчилися');
                 });
             }
             if (i >= items.length - META_AHEAD) loadPage();
@@ -456,7 +473,7 @@
             loadPage(function (ok) {
                 self.activity.loader(false);
                 if (ok && items.length) show(0, 1);
-                else status('Не удалось загрузить список');
+                else status('Не вдалося завантажити список');
                 if (done) done();
             });
         }
@@ -470,7 +487,7 @@
                 list.push({ title: genreTitle(type, g.id), tfeed_genre: g.id, selected: g.id === genre });
             });
             Lampa.Select.show({
-                title: 'Лента трейлеров',
+                title: 'Лента трейлерів',
                 items: list,
                 onSelect: function (a) {
                     Lampa.Controller.toggle('content');
@@ -501,23 +518,19 @@
                 html.find('.tfeed__title').removeClass('tfeed__title--small');
             });
 
-            // Підтримка кліків та тапів для мобільних пристроїв
             html.find('.tfeed__chip').on('click', function (e) {
                 e.stopPropagation();
                 openPanel();
             });
 
             html.on('click', function (e) {
-                // Клік по інформаційній частині відкриває картку фільму
                 if ($(e.target).closest('.tfeed__info').length) {
                     openCurrentCard();
                 } else {
-                    // Клік поза інфою на мобільному відкриває вибір жанрів
                     openPanel();
                 }
             });
 
-            // Обробка сенсорних жестів (свайпів) для мобільних
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -530,13 +543,10 @@
                 var deltaY = e.changedTouches[0].clientY - touchStartY;
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
 
-                // Якщо рух вертикальний і достатній для свайпу (> 50px)
                 if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
                     if (deltaY < 0) {
-                        // Свайп вгору -> наступний трейлер
                         show(index + 1, 1);
                     } else {
-                        // Свайп вниз -> попередній трейлер
                         if (index > 0) show(index - 1, -1);
                     }
                 }
@@ -577,7 +587,7 @@
 
     function openFeed() {
         Lampa.Activity.push({
-            url: '', title: 'Лента трейлеров', component: 'trailers_feed', page: 1,
+            url: '', title: 'Лента трейлерів', component: 'trailers_feed', page: 1,
             type: Lampa.Storage.get('tfeed_type', 'movie'), genre: parseInt(Lampa.Storage.get('tfeed_genre', 0), 10) || 0
         });
     }
@@ -587,9 +597,9 @@
         Lampa.Component.add('trailers_feed', Feed);
         var icon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
         if (Lampa.Menu.addButton) {
-            Lampa.Menu.addButton(icon, 'Лента трейлеров', openFeed);
+            Lampa.Menu.addButton(icon, 'Лента трейлерів', openFeed);
         } else {
-            var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">Лента трейлеров</div></li>');
+            var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">Лента трейлерів</div></li>');
             item.on('hover:enter', openFeed);
             $('.menu .menu__list').eq(0).append(item);
         }
