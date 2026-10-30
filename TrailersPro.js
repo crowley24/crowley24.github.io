@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + Bookmarks)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -40,17 +40,24 @@
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
         '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
-        '.tfeed__descr{font-size:1.2em;opacity:.7;margin-top:.6em;max-width:70%;' +
-            'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
-        '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
+        '.tfeed__bookmark{position:absolute;right:2em;bottom:2em;z-index:30;' +
+            'width:3.4em;height:3.4em;display:flex;align-items:center;justify-content:center;' +
+            'border-radius:50%;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.45);' +
+            'color:#fff;cursor:pointer;transition:background .2s,transform .2s}' +
+        '.tfeed__bookmark svg{width:1.7em;height:1.7em;display:block;fill:none;' +
+            'stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}' +
+        '.tfeed__bookmark--saved{background:rgba(255,170,0,.95);color:#111;border-color:#ffb000}' +
+        '.tfeed__bookmark:active{transform:scale(.92)}' +
         '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.4em;' +
             'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__info{padding:4em 10em 2em 1.5em;right:0;}' +
+            '.tfeed__info{padding:4em 5.5em 6em 1.5em;right:0;}' +
+            '.tfeed__logo{max-width:100%;max-height:6em}' +
             '.tfeed__title{font-size:1.8em}' +
+            '.tfeed__meta{font-size:1.05em}' +
             '.tfeed__chip{left:1.5em;top:1.5em}' +
-            '.tfeed__hint{display:none}' +
+            '.tfeed__bookmark{right:1.2em;bottom:5.5em;width:3em;height:3em}' +
         '}';
 
     function pickTrailer(results) {
@@ -112,8 +119,10 @@
         var html = $('<div class="tfeed"><div class="tfeed__bg"></div><div class="tfeed__video"></div>' +
             '<div class="tfeed__status"></div><div class="tfeed__chip"></div><div class="tfeed__side"></div>' +
             '<div class="tfeed__info"><img class="tfeed__logo"><div class="tfeed__title"></div>' +
-            '<div class="tfeed__meta"></div><div class="tfeed__descr"></div>' +
-            '<div class="tfeed__hint">' + hintText + '</div></div></div>');
+            '<div class="tfeed__meta"></div></div>' +
+            '<div class="tfeed__bookmark" role="button" tabindex="0" title="Додати в закладки">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>' +
+            '</div></div>');
 
         var type, genre, items, index, dir, page, totalPages, loading, waiters;
         var feedGen = 0;
@@ -133,6 +142,50 @@
             html.find('.tfeed__status').text(text || '');
         }
 
+        function favoriteCheck(item) {
+            if (!item || !Lampa.Favorite || typeof Lampa.Favorite.check !== 'function') return false;
+
+            try {
+                var result = Lampa.Favorite.check(item);
+                if (typeof result === 'boolean') return result;
+                return !!(result && result.book);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function updateBookmark(item) {
+            var button = html.find('.tfeed__bookmark');
+            var saved = favoriteCheck(item);
+
+            button.toggleClass('tfeed__bookmark--saved', saved);
+            button.attr('title', saved ? 'Видалити із закладок' : 'Додати в закладки');
+            button.attr('aria-label', saved ? 'Видалити із закладок' : 'Додати в закладки');
+            button.attr('aria-pressed', saved ? 'true' : 'false');
+        }
+
+        function toggleBookmark() {
+            var item = items && items[index];
+            if (!item) return;
+
+            if (!Lampa.Favorite || typeof Lampa.Favorite.toggle !== 'function') {
+                status('Функція закладок недоступна');
+                return;
+            }
+
+            try {
+                Lampa.Favorite.toggle('book', item);
+                updateBookmark(item);
+                status(favoriteCheck(item) ? 'Додано в закладки' : 'Видалено із закладок');
+
+                setTimeout(function () {
+                    if (items && items[index] === item) status('');
+                }, 1500);
+            } catch (e) {
+                status('Не вдалося змінити закладку');
+            }
+        }
+
         function reset(newType, newGenre) {
             type = newType;
             genre = newGenre;
@@ -150,6 +203,7 @@
             stopAll();
             html.find('.tfeed__side').empty();
             html.find('.tfeed__chip').text(TYPES[type] + ' · ' + genreTitle(type, genre));
+            updateBookmark(null);
         }
 
         function flush(ok) {
@@ -432,23 +486,22 @@
             var movieTitle = item.title || item.name || item.original_title || item.original_name || '';
 
             html.find('.tfeed__meta').text(meta);
-            html.find('.tfeed__descr').text(item.overview || '');
             html.find('.tfeed__bg').css('background-image',
                 item.backdrop_path ? 'url(' + Lampa.Api.img(item.backdrop_path, 'w1280') + ')' : 'none');
+
+            updateBookmark(item);
 
             // Спочатку ховаємо логотип і очищуємо текст
             logoEl.hide().removeAttr('src');
             titleEl.text('').hide();
 
-            // Перевіряємо наявність логотипу
+            // Якщо логотип є — показуємо його, інакше текстову назву
             ensureLogo(item, function (url) {
-                if (items[index] !== item) return;
+                if (!items || items[index] !== item) return;
                 if (url) {
-                    // Якщо лого є — показуємо лише його
                     logoEl.attr('src', url).show();
                     titleEl.hide();
                 } else {
-                    // Якщо лого немає — показуємо текстову назву
                     logoEl.hide();
                     titleEl.text(movieTitle).show();
                 }
@@ -545,7 +598,23 @@
                 openPanel();
             });
 
+            html.find('.tfeed__bookmark').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleBookmark();
+            });
+
+            html.find('.tfeed__bookmark').on('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleBookmark();
+                }
+            });
+
             html.on('click', function (e) {
+                if ($(e.target).closest('.tfeed__bookmark').length) return;
+
                 if ($(e.target).closest('.tfeed__info').length) {
                     openCurrentCard();
                 } else {
