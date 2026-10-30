@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe + No Pause Icon)
+    // Плагін: КіноТрейлери (UA + Mobile + Random + Smart Logo + Smooth Swipe)
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
@@ -22,19 +22,18 @@
         'body.tfeed--on .head{display:none}' +
         '.tfeed__bg,.tfeed__video,.tfeed__yt{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden}' +
         '.tfeed__bg{background-size:cover;background-position:center}' +
-        // Поки плеєр не готовий і не відтворюється, ховаємо його повністю, щоб не проскакували значки YouTube
-        '.tfeed__yt{opacity:0;transition:opacity .35s;pointer-events:none;}' +
+        '.tfeed__yt{opacity:0;transition:opacity .35s}' +
         '.tfeed__yt--on{opacity:1}' +
         '.tfeed__yt iframe{position:absolute;left:0;top:-300px;width:100%;height:calc(100% + 600px);border:0;pointer-events:none}' +
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
         '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
-            'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer;z-index:10}' +
+            'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer}' +
         '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;}' +
         '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
             'background-size:cover;background-position:center;opacity:.55}' +
         '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
         '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 12em 2em 3em;' +
-            'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0));z-index:10}' +
+            'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}' +
         '.tfeed__logo{display:block;max-width:30em;max-height:8em;margin-bottom:.4em;object-fit:contain}' +
         '.tfeed__title{font-size:2.6em;font-weight:600}' +
         '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
@@ -42,7 +41,7 @@
             'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
         '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
         '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.4em;' +
-            'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55);z-index:20}' +
+            'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
         '@media screen and (max-width: 768px) {' +
             '.tfeed__info{padding:4em 10em 2em 1.5em; right:1.5em;}' +
@@ -432,15 +431,19 @@
             html.find('.tfeed__bg').css('background-image',
                 item.backdrop_path ? 'url(' + Lampa.Api.img(item.backdrop_path, 'w1280') + ')' : 'none');
 
+            // Спочатку ховаємо логотип і очищуємо текст
             logoEl.hide().removeAttr('src');
             titleEl.text('').hide();
 
+            // Перевіряємо наявність логотипу
             ensureLogo(item, function (url) {
                 if (items[index] !== item) return;
                 if (url) {
+                    // Якщо лого є — показуємо лише його
                     logoEl.attr('src', url).show();
                     titleEl.hide();
                 } else {
+                    // Якщо лого немає — показуємо текстову назву
                     logoEl.hide();
                     titleEl.text(movieTitle).show();
                 }
@@ -535,6 +538,7 @@
                 }
             });
 
+            // Легкий та швидкий свайп (зменшено поріг до 30px для максимальної чутливості)
             html[0].addEventListener('touchstart', function (e) {
                 if (e.touches && e.touches.length === 1) {
                     touchStartY = e.touches[0].clientY;
@@ -549,6 +553,7 @@
                 var deltaX = e.changedTouches[0].clientX - touchStartX;
                 var deltaTime = Date.now() - touchStartTime;
 
+                // Чутливий поріг: > 30px по вертикалі і швидкий рух (< 500мс)
                 if (Math.abs(deltaY) > 30 && Math.abs(deltaY) > Math.abs(deltaX) && deltaTime < 500) {
                     if (deltaY < 0) {
                         show(index + 1, 1);
