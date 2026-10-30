@@ -1,13 +1,13 @@
 (function () {
     'use strict';
 
-    // Лента YouTube-трейлерів (Premium Netflix/Apple TV+ Style + UA + Mobile + Random)
+    // Лента YouTube-трейлеров фильмов и сериалов по жанру (UA + Mobile + Random + Posters Fix):
     if (window.trailers_feed_plugin) return;
     window.trailers_feed_plugin = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
     var TYPES = { movie: 'Фільми', tv: 'Серіали' };
-    var AHEAD = 4;
+    var AHEAD = 3;
     var META_AHEAD = 10;
     var LIVE_AHEAD = 3;
     var PREP_DELAY = 1500;
@@ -18,52 +18,37 @@
     var isMobile = Lampa.Platform && Lampa.Platform.is('mobile') || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     var css = '' +
-        '@keyframes tfeedFadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }' +
-        '.tfeed{position:fixed;left:0;top:0;width:100%;height:100%;background:#050505;overflow:hidden;z-index:9999;font-family:inherit;}' +
+        '.tfeed{position:fixed;left:0;top:0;width:100%;height:100%;background:#000;overflow:hidden;z-index:9999}' +
         'body.tfeed--on .head{display:none}' +
         '.tfeed__bg,.tfeed__video,.tfeed__yt{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden}' +
-        '.tfeed__bg{background-size:cover;background-position:center;filter: brightness(0.85);transition: background-image 0.6s ease-in-out;}' +
-        '.tfeed__bg::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(5,5,5,0.85) 100%), linear-gradient(to top, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.4) 50%, rgba(5,5,5,0.7) 100%);}' +
-        '.tfeed__yt{opacity:0;transition:opacity .5s ease}' +
+        '.tfeed__bg{background-size:cover;background-position:center}' +
+        '.tfeed__yt{opacity:0;transition:opacity .35s}' +
         '.tfeed__yt--on{opacity:1}' +
         '.tfeed__yt iframe{position:absolute;left:0;top:-300px;width:100%;height:calc(100% + 600px);border:0;pointer-events:none}' +
         '.tfeed__frame{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none}' +
-        
-        // Преміальний Glassmorphism для чіпа жанру
-        '.tfeed__chip{position:absolute;left:4em;top:3em;padding:.5em 1.2em;border-radius:2em;' +
-            'background:rgba(255,255,255,0.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);' +
-            'border:1px solid rgba(255,255,255,0.15);font-size:1.15em;font-weight:500;color:#fff;cursor:pointer;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:10;}' +
-        
-        // Права колонка з постерами (виправлено видимість та додано преміум-ефекти)
-        '.tfeed__side{position:absolute;right:3.5em;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:10;}' +
-        '.tfeed__poster{width:5.5em;height:8.2em;border-radius:.6em;background-color:#1a1a1a;' +
-            'background-size:cover;background-position:center;opacity:0.35;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 4px 12px rgba(0,0,0,0.5);}' +
-        '.tfeed__poster--now{opacity:1;transform:scale(1.08);box-shadow:0 0 20px rgba(255,255,255,0.4), 0 8px 24px rgba(0,0,0,0.7);border:1.5px solid rgba(255,255,255,0.8);}' +
-        
-        // Інформаційний блок з анімацією появи
-        '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 14em 3.5em 4em;' +
-            'background:linear-gradient(to top, rgba(5,5,5,0.98) 0%, rgba(5,5,5,0.85) 40%, rgba(5,5,5,0) 100%);z-index:10;animation: tfeedFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;}' +
-        '.tfeed__logo{display:block;max-width:26em;max-height:6.5em;margin-bottom:.6em;object-fit:contain;filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));}' +
-        '.tfeed__title{font-size:2.8em;font-weight:700;color:#fff;letter-spacing:-0.02em;text-shadow:0 2px 10px rgba(0,0,0,0.5);}' +
-        '.tfeed__title--small{font-size:1.6em;opacity:0.9;}' +
-        '.tfeed__meta{font-size:1.25em;opacity:0.85;margin-top:.4em;color:#e0e0e0;font-weight:400;}' +
-        '.tfeed__descr{font-size:1.15em;opacity:0.75;margin-top:.8em;max-width:65%;line-height:1.5;color:#ccc;' +
+        '.tfeed__chip{position:absolute;left:3em;top:2em;padding:.4em .9em;border-radius:1em;' +
+            'background:rgba(0,0,0,.55);font-size:1.1em;cursor:pointer}' +
+        // Права колонка з постерами завжди видима (зменшені відступи для компактності на вузьких екранах)
+        '.tfeed__side{position:absolute;right:2.5em;top:50%;transform:translateY(-50%);z-index:10;}' +
+        '.tfeed__poster{width:5.5em;height:8.2em;margin:.5em 0;border-radius:.5em;background-color:#222;' +
+            'background-size:cover;background-position:center;opacity:.55}' +
+        '.tfeed__poster--now{opacity:1;box-shadow:0 0 0 .2em #fff}' +
+        '.tfeed__info{position:absolute;left:0;right:0;bottom:0;padding:6em 12em 2em 3em;' +
+            'background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}' +
+        '.tfeed__logo{display:block;max-width:28em;max-height:7em;margin-bottom:.4em}' +
+        '.tfeed__title{font-size:2.6em;font-weight:600}' +
+        '.tfeed__title--small{font-size:1.5em;opacity:.85}' +
+        '.tfeed__meta{font-size:1.3em;opacity:.8;margin-top:.3em}' +
+        '.tfeed__descr{font-size:1.2em;opacity:.7;margin-top:.6em;max-width:70%;' +
             'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}' +
-        '.tfeed__hint{font-size:0.95em;opacity:0.45;margin-top:1.5em;letter-spacing:0.02em;}' +
-        
-        // Преміальний статус завантаження
-        '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.3em;' +
-            'padding:.6em 1.4em;border-radius:1.5em;background:rgba(20,20,20,0.75);backdrop-filter:blur(12px);' +
-            'border:1px solid rgba(255,255,255,0.1);color:#fff;z-index:20;box-shadow:0 10px 30px rgba(0,0,0,0.5);}' +
+        '.tfeed__hint{font-size:1em;opacity:.5;margin-top:1em}' +
+        '.tfeed__status{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:1.4em;' +
+            'padding:.5em 1em;border-radius:1em;background:rgba(0,0,0,.55)}' +
         '.tfeed__status:empty{display:none}' +
-        
-        // Адаптивність для мобільних пристроїв
         '@media screen and (max-width: 768px) {' +
-            '.tfeed__info{padding:4em 2em 2em 2em; right:2em;}' +
-            '.tfeed__side{display:none}' + // На телефонах ховаємо колонку, щоб не заважати перегляду
-            '.tfeed__title{font-size:2em}' +
-            '.tfeed__chip{left:2em; top:2em}' +
-            '.tfeed__descr{-webkit-line-clamp:2; max-width:100%;}' +
+            '.tfeed__info{padding:4em 10em 2em 1.5em; right:1.5em;}' + // Збільшено правий відступ тексту, щоб він не наїжджав на постери
+            '.tfeed__title{font-size:1.8em}' +
+            '.tfeed__chip{left:1.5em; top:1.5em}' +
             '.tfeed__hint{display:none}' +
         '}';
 
@@ -437,13 +422,6 @@
             var genres = tmdb.getGenresNameFromIds(type, item.genre_ids || []).slice(0, 3).join(', ');
             var meta = [date.slice(0, 4), item.vote_average ? '★ ' + item.vote_average.toFixed(1) : '', genres]
                 .filter(Boolean).join(' · ');
-            
-            // Перезапуск анімації тексту при зміні фільму
-            var infoBlock = html.find('.tfeed__info');
-            infoBlock.css('animation', 'none');
-            infoBlock[0].offsetHeight; // trigger reflow
-            infoBlock.css('animation', 'tfeedFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards');
-
             var title = html.find('.tfeed__title').text(item.title || item.name || item.original_title || item.original_name || '')
                 .removeClass('tfeed__title--small');
             var logo = html.find('.tfeed__logo').hide().removeAttr('src');
