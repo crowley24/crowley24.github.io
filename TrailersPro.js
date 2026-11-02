@@ -150,7 +150,7 @@
         // MOBILE
 
         '@media screen and (max-width:768px){' +
-            '.tfeed__info{padding:4em 8em 14em 1.5em;right:0}' +
+            '.tfeed__info{padding:4em 8em 12.5em 1.5em;right:0}' +
             '.tfeed__title{font-size:1.8em}' +
             '.tfeed__logo{max-width:80%;max-height:5em}' +
             '.tfeed__chip{left:1.5em;top:1.5em;font-size:.9em}' +
