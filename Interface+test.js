@@ -1,27 +1,32 @@
+
 (function () {
     'use strict';
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.0
+     * @version 3.1.1
      * @author Crowley24
-     * @description Мобільний інтерфейс Lampa
+     * @description Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * Зміни:
-     * - CSS обмежений карткою фільму
-     * - Plugin Manager не зачіпається
-     * - захист від повторної ініціалізації
-     * - Cinematic Premium оформлення
-     * - віковий рейтинг повністю приховано
-     * - видалено кастомні бейджі та рейтинги
-     * - стандартні рейтинги Lampa перенесено в рядок метаданих
-     * - покращено кешування TMDB та асинхронні запити
-     * - виправлено роботу таймера слайдшоу
+     * 3.1.1 CHANGES:
+     * - Removed duplicate year/country above movie logo
+     * - Preserved year/country in metadata row
+     * - Premium glass metadata design
+     * - Improved logo shadows and glow
+     * - Refined tagline typography
+     * - Premium glass buttons
+     * - Improved poster gradients
+     * - Improved animations
+     * - Age rating completely hidden
+     * - No custom badges or custom ratings
+     * - Native Lampa ratings preserved
+     * - TMDB cache and async request protection
+     * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V310_READY) return;
-    window.MOB_INTERFACE_V310_READY = true;
+    if (window.MOB_INTERFACE_V311_READY) return;
+    window.MOB_INTERFACE_V311_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -32,7 +37,7 @@
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_ui_anim', default: true },
-        { id: 'mobile_interface_ui_anim_effect', default: 'fluid' },
+        { id: 'mobile_interface_ui_anim_effect', default: 'cinematic' },
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' },
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
@@ -120,6 +125,147 @@
         img.src = imgSrc;
     }
 
+    /*
+     * DUPLICATE HEADER METADATA CLEANUP
+     *
+     * Прибирає стандартний рядок року/країни,
+     * який Lampa може показувати над логотипом.
+     *
+     * Не зачіпає:
+     * - логотип фільму;
+     * - логотип студії;
+     * - слоган;
+     * - кнопки;
+     * - наш метарядок;
+     * - стандартні рейтинги.
+     */
+
+    function hideDuplicateHeaderMetadata($render) {
+        if (!$render || !$render.length) return;
+
+        var $right = $render.find('.full-start-new__right').first();
+
+        if (!$right.length) return;
+
+        var root = $right[0];
+
+        var title = $right.find('.full-start-new__title').first()[0];
+
+        if (!title) return;
+
+        var protectedSelector = [
+            '.full-start-new__title',
+            '.full-start-new__tagline',
+            '.full-start-new__buttons',
+            '.studio-header-brand',
+            '.plugin-meta-row',
+            '.full-start__rates',
+            '.full-start__button',
+            'button',
+            'a',
+            'input',
+            'img',
+            'video',
+            'svg'
+        ].join(',');
+
+        function isProtected(element) {
+            if (!element || element === root) return true;
+
+            if (element.matches && element.matches(protectedSelector)) {
+                return true;
+            }
+
+            if (element.querySelector && element.querySelector(protectedSelector)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function isYearCountryLine(element) {
+            if (!element) return false;
+
+            var text = String(element.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (!text || text.length > 90) return false;
+
+            var yearMatch = text.match(/\b(?:19|20)\d{2}\b/);
+
+            if (!yearMatch) return false;
+
+            var remaining = text
+                .replace(/\b(?:19|20)\d{2}\b/g, '')
+                .replace(/[•·|,;:\/\-–—()[\]]/g, '')
+                .replace(/\s+/g, '')
+                .trim();
+
+            return /[\p{L}]/u.test(remaining);
+        }
+
+        var candidates = [];
+        var elements = root.querySelectorAll('*');
+
+        for (var i = 0; i < elements.length; i++) {
+            var element = elements[i];
+
+            if (
+                element.classList.contains('mi311-header-meta-hidden') ||
+                isProtected(element)
+            ) {
+                continue;
+            }
+
+            if (!isYearCountryLine(element)) continue;
+
+            var position = element.compareDocumentPosition(title);
+
+            var beforeTitle = !!(position & 4);
+
+            if (!beforeTitle) continue;
+
+            candidates.push(element);
+        }
+
+        candidates.forEach(function (element) {
+            if (!element.parentElement) return;
+
+            var target = element;
+            var current = element;
+
+            for (var depth = 0; depth < 3; depth++) {
+                var parent = current.parentElement;
+
+                if (!parent || parent === root) break;
+
+                if (isProtected(parent)) break;
+
+                var parentText = String(parent.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                var childText = String(target.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (parentText !== childText) break;
+
+                target = parent;
+                current = parent;
+            }
+
+            if (
+                target &&
+                target !== root &&
+                !isProtected(target)
+            ) {
+                target.classList.add('mi311-header-meta-hidden');
+            }
+        });
+    }
+
     function applyStyles() {
         var style = document.getElementById('mobile-interface-styles');
 
@@ -139,7 +285,7 @@
 
         var animEffect = Lampa.Storage.get(
             'mobile_interface_ui_anim_effect',
-            'fluid'
+            'cinematic'
         );
 
         var lHeight = Lampa.Storage.get(
@@ -170,7 +316,7 @@
         ];
 
         if (animNames.indexOf(animEffect) === -1) {
-            animEffect = 'fluid';
+            animEffect = 'cinematic';
         }
 
         var animTiming = animEffect === 'elastic'
@@ -179,10 +325,14 @@
 
         var enter = isUIAnim
             ? 'animation:anim_' + animEffect +
-              ' .75s ' + animTiming + ' both;'
+              ' .8s ' + animTiming + ' both;'
             : '';
 
         var css = '';
+
+        /*
+         * ANIMATIONS
+         */
 
         css += '@keyframes kenBurnsEffect{';
         css += '0%{transform:scale(1)}';
@@ -201,8 +351,8 @@
         css += '}';
 
         css += '@keyframes anim_cinematic{';
-        css += '0%{opacity:0;transform:translate3d(0,14px,0) scale(1.035);filter:blur(5px)}';
-        css += '100%{opacity:1;transform:none;filter:blur(0)}';
+        css += '0%{opacity:0;transform:translate3d(0,18px,0) scale(1.025);filter:blur(6px)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
         css += '}';
 
         css += '@keyframes anim_elastic{';
@@ -221,7 +371,16 @@
         css += '100%{opacity:1;transform:scale(1)}';
         css += '}';
 
+        css += '@keyframes premium_glow{';
+        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
+        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
+        css += '}';
+
         css += '@media screen and (max-width:480px){';
+
+        /*
+         * MAIN CARD
+         */
 
         css += '.full-start-new{';
         css += 'position:relative!important;';
@@ -235,7 +394,21 @@
         css += '}';
 
         /*
-         * Повне приховування вікового рейтингу.
+         * DUPLICATE METADATA
+         */
+
+        css += '.full-start-new .mi311-header-meta-hidden{';
+        css += 'display:none!important;';
+        css += 'visibility:hidden!important;';
+        css += 'height:0!important;';
+        css += 'min-height:0!important;';
+        css += 'margin:0!important;';
+        css += 'padding:0!important;';
+        css += 'overflow:hidden!important;';
+        css += '}';
+
+        /*
+         * AGE RATING
          */
 
         css += '.full-start-new .full-start__age,';
@@ -257,7 +430,7 @@
         css += '}';
 
         /*
-         * Кінематографічний постер.
+         * CINEMATIC POSTER
          */
 
         css += '.full-start-new .full-start-new__poster{';
@@ -277,14 +450,15 @@
         css += '.full-start-new .full-start-new__poster:after{';
         css += 'content:"";';
         css += 'position:absolute;';
-        css += 'inset:28% 0 0;';
+        css += 'inset:15% 0 0;';
         css += 'pointer-events:none;';
         css += 'z-index:2;';
         css += 'background:linear-gradient(';
         css += '180deg,';
         css += 'rgba(5,7,11,0) 0%,';
-        css += 'rgba(5,7,11,.18) 25%,';
-        css += 'rgba(5,7,11,.72) 72%,';
+        css += 'rgba(5,7,11,.12) 22%,';
+        css += 'rgba(5,7,11,.38) 48%,';
+        css += 'rgba(5,7,11,.82) 78%,';
         css += '#050608 100%';
         css += ');';
         css += '}';
@@ -295,7 +469,7 @@
         css += 'width:100%;';
         css += 'height:100%;';
         css += 'object-fit:cover;';
-        css += 'filter:saturate(1.04) contrast(1.035)!important;';
+        css += 'filter:saturate(1.06) contrast(1.045)!important;';
         css += 'transform-origin:center center!important;';
         css += 'transition:opacity 1.35s ease-in-out!important;';
 
@@ -308,7 +482,7 @@
         css += '}';
 
         /*
-         * Основний контент.
+         * MAIN CONTENT
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -324,7 +498,7 @@
         css += '}';
 
         /*
-         * Логотип студії.
+         * STUDIO LOGO
          */
 
         css += '.full-start-new .studio-header-brand{';
@@ -335,25 +509,26 @@
         css += 'display:flex;';
         css += 'justify-content:center;';
         css += 'align-items:center;';
-        css += 'margin:0 0 1px!important;';
+        css += 'margin:0 0 2px!important;';
         css += 'min-height:20px;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img{';
-        css += 'height:19px!important;';
+        css += 'height:20px!important;';
         css += 'width:auto;';
-        css += 'max-width:112px;';
+        css += 'max-width:120px;';
         css += 'object-fit:contain;';
-        css += 'opacity:.9;';
-        css += 'filter:drop-shadow(0 2px 7px rgba(0,0,0,.9));';
+        css += 'opacity:.94;';
+        css += 'filter:drop-shadow(0 2px 8px rgba(0,0,0,.95));';
+        css += 'transition:opacity .3s ease,filter .3s ease;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img.is-dark-logo{';
-        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 5px rgba(0,0,0,.8))!important;';
+        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,.8))!important;';
         css += '}';
 
         /*
-         * Логотип фільму.
+         * MOVIE LOGO
          */
 
         css += '.full-start-new .full-start-new__title{';
@@ -361,7 +536,7 @@
         css += 'animation-delay:.1s;';
         css += 'order:2;';
         css += 'width:100%!important;';
-        css += 'min-height:56px;';
+        css += 'min-height:60px;';
         css += 'display:flex!important;';
         css += 'justify-content:center!important;';
         css += 'align-items:center!important;';
@@ -376,12 +551,13 @@
         css += 'width:auto!important;';
         css += 'max-width:90vw!important;';
         css += 'object-fit:contain!important;';
-        css += 'filter:drop-shadow(0 5px 22px rgba(0,0,0,.95));';
+        css += 'filter:drop-shadow(0 5px 18px rgba(0,0,0,.95)) drop-shadow(0 0 12px rgba(255,255,255,.08));';
         css += 'margin:0!important;';
+        css += 'transition:filter .4s ease,transform .4s ease;';
         css += '}';
 
         /*
-         * Слоган.
+         * TAGLINE
          */
 
         css += '.full-start-new .full-start-new__tagline{';
@@ -389,20 +565,21 @@
         css += 'animation-delay:.17s;';
         css += 'order:3;';
         css += 'display:' + (showTagline ? 'block' : 'none') + '!important;';
-        css += 'max-width:92%;';
-        css += 'margin:0!important;';
+        css += 'max-width:90%;';
+        css += 'margin:1px 0 2px!important;';
         css += 'text-align:center!important;';
-        css += 'font-size:.88em!important;';
-        css += 'line-height:1.35!important;';
+        css += 'font-family:Georgia,serif!important;';
+        css += 'font-size:.91em!important;';
+        css += 'line-height:1.5!important;';
         css += 'font-style:italic!important;';
         css += 'font-weight:400!important;';
-        css += 'letter-spacing:.015em;';
-        css += 'color:rgba(255,255,255,.78)!important;';
-        css += 'text-shadow:0 2px 9px rgba(0,0,0,.9);';
+        css += 'letter-spacing:.025em;';
+        css += 'color:rgba(255,255,255,.82)!important;';
+        css += 'text-shadow:0 2px 12px rgba(0,0,0,.95);';
         css += '}';
 
         /*
-         * Рядок метаданих і стандартних рейтингів.
+         * PREMIUM METADATA GLASS PANEL
          */
 
         css += '.full-start-new .plugin-meta-row{';
@@ -410,26 +587,25 @@
         css += 'animation-delay:.23s;';
         css += 'order:4;';
         css += 'width:100%;';
+        css += 'max-width:96%;';
         css += 'display:flex;';
         css += 'justify-content:center;';
         css += 'align-items:center;';
         css += 'flex-wrap:wrap;';
-        css += 'gap:6px 8px;';
-        css += 'margin:2px 0 0!important;';
-        css += 'padding:8px 10px;';
+        css += 'gap:6px 9px;';
+        css += 'margin:3px 0 0!important;';
+        css += 'padding:10px 12px;';
         css += 'box-sizing:border-box;';
-        css += 'border-top:1px solid rgba(255,255,255,.13);';
-        css += 'border-bottom:1px solid rgba(255,255,255,.10);';
-        css += 'background:linear-gradient(';
-        css += '90deg,';
-        css += 'rgba(255,255,255,0),';
-        css += 'rgba(255,255,255,.055),';
-        css += 'rgba(255,255,255,0)';
-        css += ');';
+        css += 'border:1px solid rgba(255,255,255,.105);';
+        css += 'border-radius:13px;';
+        css += 'background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));';
+        css += 'box-shadow:0 7px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);';
+        css += 'backdrop-filter:blur(12px);';
+        css += '-webkit-backdrop-filter:blur(12px);';
         css += 'font-family:Inter,-apple-system,system-ui,sans-serif;';
         css += 'font-size:calc(' + rSize + ' * 2.25);';
-        css += 'line-height:1.35;';
-        css += 'color:rgba(255,255,255,.86);';
+        css += 'line-height:1.4;';
+        css += 'color:rgba(255,255,255,.9);';
         css += 'text-shadow:0 1px 5px rgba(0,0,0,.85);';
         css += '}';
 
@@ -438,21 +614,27 @@
         css += 'font-weight:500;';
         css += 'white-space:normal;';
         css += 'text-align:center;';
-        css += 'opacity:.92;';
+        css += 'letter-spacing:.015em;';
+        css += 'opacity:.94;';
         css += '}';
 
         css += '.full-start-new .plugin-meta-row .info-separator{';
         css += 'font-size:.8em;';
-        css += 'color:rgba(255,255,255,.42);';
+        css += 'color:rgba(255,255,255,.4);';
         css += 'margin:0 -2px;';
+        css += 'font-weight:400;';
         css += '}';
+
+        /*
+         * NATIVE LAMPA RATINGS
+         */
 
         css += '.full-start-new .plugin-meta-row .full-start__rates{';
         css += 'display:inline-flex!important;';
         css += 'align-items:center;';
         css += 'justify-content:center;';
         css += 'flex-wrap:wrap;';
-        css += 'gap:7px;';
+        css += 'gap:9px;';
         css += 'margin:0!important;';
         css += 'padding:0!important;';
         css += 'background:none!important;';
@@ -470,7 +652,7 @@
         css += '}';
 
         /*
-         * Кнопки керування.
+         * BUTTONS
          */
 
         css += '.full-start-new .full-start-new__buttons{';
@@ -480,40 +662,52 @@
         css += 'display:flex!important;';
         css += 'justify-content:space-around!important;';
         css += 'align-items:center!important;';
-        css += 'gap:3px;';
+        css += 'gap:5px;';
         css += 'width:100%!important;';
         css += 'max-width:100%!important;';
-        css += 'padding:4px 5px 0!important;';
+        css += 'padding:5px 5px 0!important;';
         css += 'box-sizing:border-box!important;';
-        css += 'margin:5px 0 0!important;';
+        css += 'margin:6px 0 0!important;';
         css += '}';
 
         css += '.full-start-new .full-start__button{';
         css += 'position:relative;';
-        css += 'background:rgba(255,255,255,.045)!important;';
-        css += 'border:1px solid rgba(255,255,255,.075)!important;';
-        css += 'border-radius:13px!important;';
-        css += 'box-shadow:0 5px 18px rgba(0,0,0,.16)!important;';
+        css += 'overflow:hidden;';
+        css += 'background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;';
+        css += 'border:1px solid rgba(255,255,255,.11)!important;';
+        css += 'border-radius:14px!important;';
+        css += 'box-shadow:0 6px 20px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.045)!important;';
         css += 'display:flex!important;';
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'justify-content:center!important;';
         css += 'flex:1 1 0!important;';
         css += 'min-width:0!important;';
-        css += 'min-height:54px;';
-        css += 'padding:7px 2px!important;';
-        css += 'transition:transform .2s ease,background .2s ease,border-color .2s ease,opacity .2s ease;';
+        css += 'min-height:56px;';
+        css += 'padding:8px 2px!important;';
+        css += 'transition:transform .22s cubic-bezier(.16,1,.3,1),background .22s ease,border-color .22s ease,box-shadow .22s ease;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button:before{';
+        css += 'content:"";';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'pointer-events:none;';
+        css += 'background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 55%);';
+        css += 'opacity:.65;';
         css += '}';
 
         css += '.full-start-new .full-start__button:active{';
         css += 'transform:scale(.94);';
-        css += 'background:rgba(255,255,255,.11)!important;';
-        css += 'border-color:rgba(255,255,255,.2)!important;';
-        css += 'opacity:.9;';
+        css += 'background:rgba(255,255,255,.13)!important;';
+        css += 'border-color:rgba(255,255,255,.25)!important;';
+        css += 'box-shadow:0 3px 12px rgba(0,0,0,.3)!important;';
         css += '}';
 
         css += '.full-start-new .full-start__button svg,';
         css += '.full-start-new .full-start__button img{';
+        css += 'position:relative;';
+        css += 'z-index:1;';
         css += 'width:22px!important;';
         css += 'height:22px!important;';
         css += 'margin:0 0 5px!important;';
@@ -522,15 +716,21 @@
         css += '}';
 
         css += '.full-start-new .full-start__button span{';
+        css += 'position:relative;';
+        css += 'z-index:1;';
         css += 'font-size:8px!important;';
         css += 'line-height:1.1!important;';
         css += 'text-transform:uppercase!important;';
-        css += 'opacity:.78!important;';
+        css += 'opacity:.82!important;';
         css += 'font-weight:650;';
-        css += 'letter-spacing:.045em;';
+        css += 'letter-spacing:.055em;';
         css += '}';
 
         css += '}';
+
+        /*
+         * REDUCED MOTION
+         */
 
         css += '@media (prefers-reduced-motion:reduce){';
         css += '.full-start-new *{';
@@ -551,6 +751,10 @@
 
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
+
+    /*
+     * METADATA ROW
+     */
 
     function renderMeta(container, e) {
         container.find('.plugin-meta-row').remove();
@@ -578,11 +782,19 @@
                 .appendTo($metaRow);
         }
 
+        /*
+         * YEAR
+         */
+
         var date = movie.release_date ||
             movie.first_air_date ||
             '';
 
         addText(date ? date.substring(0, 4) : '');
+
+        /*
+         * COUNTRY
+         */
 
         var country = '';
 
@@ -603,6 +815,10 @@
 
         addText(country);
 
+        /*
+         * RUNTIME
+         */
+
         var runtime = movie.runtime || (
             movie.episode_run_time &&
             movie.episode_run_time.length
@@ -613,6 +829,10 @@
         if (runtime) {
             addText(formatTime(runtime));
         }
+
+        /*
+         * GENRES
+         */
 
         if (movie.genres && movie.genres.length) {
             addText(
@@ -627,8 +847,7 @@
         }
 
         /*
-         * Переносимо штатні рейтинги Lampa.
-         * Власні рейтинги плагін не створює.
+         * NATIVE LAMPA RATINGS
          */
 
         var $card = container.closest('.full-start-new');
@@ -663,12 +882,28 @@
         container.append($metaRow);
     }
 
+    /*
+     * TMDB DETAILS
+     */
+
     function applyMovieDetailsData(
         data,
         movie,
         $render,
         renderToken
     ) {
+        if (
+            renderToken !== activeRenderToken ||
+            !$render[0] ||
+            !document.body.contains($render[0])
+        ) {
+            return;
+        }
+
+        /*
+         * MOVIE LOGO
+         */
+
         if (
             data.images &&
             data.images.logos &&
@@ -693,9 +928,17 @@
                 );
 
                 $render.find('.full-start-new__title')
-                    .html('<img src="' + logoUrl + '">');
+                    .html(
+                        $('<img>')
+                            .attr('src', logoUrl)
+                            .attr('alt', movie.title || movie.name || '')
+                    );
             }
         }
+
+        /*
+         * STUDIO LOGO
+         */
 
         if (Lampa.Storage.get('mobile_interface_studios')) {
             $render.find('.studio-header-brand').remove();
@@ -758,6 +1001,10 @@
             }
         }
 
+        /*
+         * BACKDROPS
+         */
+
         if (data.images && data.images.backdrops) {
             var backdrops = data.images.backdrops.filter(
                 function (elem) {
@@ -793,7 +1040,17 @@
                 );
             }
         }
+
+        /*
+         * RECHECK DUPLICATE METADATA
+         */
+
+        hideDuplicateHeaderMetadata($render);
     }
+
+    /*
+     * LOAD TMDB DETAILS
+     */
 
     function loadMovieDetails(movie, $render, renderToken) {
         var movieId = movie.id;
@@ -863,6 +1120,10 @@
             }
         });
     }
+
+    /*
+     * POSTER SLIDESHOW
+     */
 
     function startPosterSlideshow($poster, items, renderToken) {
         if (
@@ -957,8 +1218,13 @@
         }, intervalTime);
     }
 
+    /*
+     * INITIALIZATION
+     */
+
     function init() {
         Lampa.Listener.follow('full', function (e) {
+
             if (
                 e.type === 'destroy' ||
                 e.type === 'onBeforeDestroy'
@@ -1002,10 +1268,24 @@
                 window.lampa_settings.blur_poster = false;
             }
 
+            /*
+             * METADATA
+             */
+
             renderMeta(
                 $render.find('.full-start-new__right'),
                 e
             );
+
+            /*
+             * HIDE DUPLICATE YEAR/COUNTRY
+             */
+
+            hideDuplicateHeaderMetadata($render);
+
+            /*
+             * TMDB
+             */
 
             loadMovieDetails(
                 movie,
@@ -1014,6 +1294,10 @@
             );
         });
     }
+
+    /*
+     * SETTINGS
+     */
 
     function setupSettings() {
         Lampa.SettingsApi.addComponent({
@@ -1060,7 +1344,7 @@
                     elastic: 'Elastic Spring',
                     minimal: 'Minimal Fade'
                 },
-                default: 'fluid'
+                default: 'cinematic'
             },
             field: {
                 name: 'Стиль анімації появи'
@@ -1187,6 +1471,10 @@
         });
     }
 
+    /*
+     * START
+     */
+
     function startPlugin() {
         if (started) return;
 
@@ -1197,7 +1485,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.0 Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.1 Cinematic Premium initialized'
         );
     }
 
