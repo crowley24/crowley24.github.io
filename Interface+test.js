@@ -4,18 +4,22 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.1
+     * @version 3.1.2
      * @author Crowley24
-     * @description Cinematic Premium Mobile Interface
+     * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.1 CHANGES:
+     * 3.1.2 CHANGES:
      * - Removed duplicate year/country above movie logo
      * - Preserved year/country in metadata row
-     * - Premium glass metadata design
+     * - Minimal transparent metadata design
+     * - Removed metadata glass panel, background and border
+     * - Thin elegant metadata separators
+     * - Minimal transparent buttons
+     * - Removed button backgrounds, borders and heavy shadows
+     * - Subtle button press animation
      * - Improved logo shadows and glow
      * - Refined tagline typography
-     * - Premium glass buttons
      * - Improved poster gradients
      * - Improved animations
      * - Age rating completely hidden
@@ -25,8 +29,8 @@
      * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V311_READY) return;
-    window.MOB_INTERFACE_V311_READY = true;
+    if (window.MOB_INTERFACE_V312_READY) return;
+    window.MOB_INTERFACE_V312_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -127,17 +131,6 @@
 
     /*
      * DUPLICATE HEADER METADATA CLEANUP
-     *
-     * Прибирає стандартний рядок року/країни,
-     * який Lampa може показувати над логотипом.
-     *
-     * Не зачіпає:
-     * - логотип фільму;
-     * - логотип студії;
-     * - слоган;
-     * - кнопки;
-     * - наш метарядок;
-     * - стандартні рейтинги.
      */
 
     function hideDuplicateHeaderMetadata($render) {
@@ -212,7 +205,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi311-header-meta-hidden') ||
+                element.classList.contains('mi312-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -261,10 +254,14 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi311-header-meta-hidden');
+                target.classList.add('mi312-header-meta-hidden');
             }
         });
     }
+
+    /*
+     * STYLES
+     */
 
     function applyStyles() {
         var style = document.getElementById('mobile-interface-styles');
@@ -397,7 +394,7 @@
          * DUPLICATE METADATA
          */
 
-        css += '.full-start-new .mi311-header-meta-hidden{';
+        css += '.full-start-new .mi312-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -579,7 +576,7 @@
         css += '}';
 
         /*
-         * PREMIUM METADATA GLASS PANEL
+         * MINIMAL TRANSPARENT METADATA
          */
 
         css += '.full-start-new .plugin-meta-row{';
@@ -587,26 +584,26 @@
         css += 'animation-delay:.23s;';
         css += 'order:4;';
         css += 'width:100%;';
-        css += 'max-width:96%;';
+        css += 'max-width:100%;';
         css += 'display:flex;';
         css += 'justify-content:center;';
         css += 'align-items:center;';
         css += 'flex-wrap:wrap;';
-        css += 'gap:6px 9px;';
-        css += 'margin:3px 0 0!important;';
-        css += 'padding:10px 12px;';
+        css += 'gap:7px 9px;';
+        css += 'margin:4px 0 0!important;';
+        css += 'padding:3px 0;';
         css += 'box-sizing:border-box;';
-        css += 'border:1px solid rgba(255,255,255,.105);';
-        css += 'border-radius:13px;';
-        css += 'background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));';
-        css += 'box-shadow:0 7px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);';
-        css += 'backdrop-filter:blur(12px);';
-        css += '-webkit-backdrop-filter:blur(12px);';
+        css += 'border:none!important;';
+        css += 'border-radius:0!important;';
+        css += 'background:transparent!important;';
+        css += 'box-shadow:none!important;';
+        css += 'backdrop-filter:none!important;';
+        css += '-webkit-backdrop-filter:none!important;';
         css += 'font-family:Inter,-apple-system,system-ui,sans-serif;';
         css += 'font-size:calc(' + rSize + ' * 2.25);';
-        css += 'line-height:1.4;';
-        css += 'color:rgba(255,255,255,.9);';
-        css += 'text-shadow:0 1px 5px rgba(0,0,0,.85);';
+        css += 'line-height:1.5;';
+        css += 'color:rgba(255,255,255,.91);';
+        css += 'text-shadow:0 1px 5px rgba(0,0,0,.9);';
         css += '}';
 
         css += '.full-start-new .plugin-meta-row .info-text-item{';
@@ -614,15 +611,26 @@
         css += 'font-weight:500;';
         css += 'white-space:normal;';
         css += 'text-align:center;';
-        css += 'letter-spacing:.015em;';
+        css += 'letter-spacing:.025em;';
         css += 'opacity:.94;';
         css += '}';
 
+        /*
+         * THIN METADATA SEPARATORS
+         */
+
         css += '.full-start-new .plugin-meta-row .info-separator{';
-        css += 'font-size:.8em;';
-        css += 'color:rgba(255,255,255,.4);';
-        css += 'margin:0 -2px;';
-        css += 'font-weight:400;';
+        css += 'display:inline-block;';
+        css += 'width:1px;';
+        css += 'height:11px;';
+        css += 'min-width:1px;';
+        css += 'font-size:0;';
+        css += 'line-height:0;';
+        css += 'color:transparent;';
+        css += 'background:rgba(255,255,255,.38);';
+        css += 'margin:0 1px;';
+        css += 'opacity:.8;';
+        css += 'vertical-align:middle;';
         css += '}';
 
         /*
@@ -652,7 +660,7 @@
         css += '}';
 
         /*
-         * BUTTONS
+         * MINIMAL BUTTON CONTAINER
          */
 
         css += '.full-start-new .full-start-new__buttons{';
@@ -662,47 +670,64 @@
         css += 'display:flex!important;';
         css += 'justify-content:space-around!important;';
         css += 'align-items:center!important;';
-        css += 'gap:5px;';
+        css += 'gap:7px;';
         css += 'width:100%!important;';
         css += 'max-width:100%!important;';
-        css += 'padding:5px 5px 0!important;';
+        css += 'padding:3px 0 0!important;';
         css += 'box-sizing:border-box!important;';
-        css += 'margin:6px 0 0!important;';
+        css += 'margin:7px 0 0!important;';
+        css += 'background:transparent!important;';
+        css += 'border:none!important;';
+        css += 'box-shadow:none!important;';
         css += '}';
+
+        /*
+         * TRANSPARENT BUTTONS
+         */
 
         css += '.full-start-new .full-start__button{';
         css += 'position:relative;';
         css += 'overflow:hidden;';
-        css += 'background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;';
-        css += 'border:1px solid rgba(255,255,255,.11)!important;';
-        css += 'border-radius:14px!important;';
-        css += 'box-shadow:0 6px 20px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.045)!important;';
+        css += 'background:transparent!important;';
+        css += 'border:1px solid transparent!important;';
+        css += 'border-radius:12px!important;';
+        css += 'box-shadow:none!important;';
         css += 'display:flex!important;';
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'justify-content:center!important;';
         css += 'flex:1 1 0!important;';
         css += 'min-width:0!important;';
-        css += 'min-height:56px;';
+        css += 'min-height:54px;';
         css += 'padding:8px 2px!important;';
-        css += 'transition:transform .22s cubic-bezier(.16,1,.3,1),background .22s ease,border-color .22s ease,box-shadow .22s ease;';
+        css += 'transition:transform .22s cubic-bezier(.16,1,.3,1),background .22s ease,color .22s ease,opacity .22s ease;';
+        css += 'opacity:.9;';
         css += '}';
 
+        /*
+         * REMOVE BUTTON DECORATIVE GLASS
+         */
+
         css += '.full-start-new .full-start__button:before{';
-        css += 'content:"";';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'pointer-events:none;';
-        css += 'background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 55%);';
-        css += 'opacity:.65;';
+        css += 'display:none!important;';
+        css += 'content:none!important;';
         css += '}';
+
+        /*
+         * SUBTLE PRESS EFFECT
+         */
 
         css += '.full-start-new .full-start__button:active{';
         css += 'transform:scale(.94);';
-        css += 'background:rgba(255,255,255,.13)!important;';
-        css += 'border-color:rgba(255,255,255,.25)!important;';
-        css += 'box-shadow:0 3px 12px rgba(0,0,0,.3)!important;';
+        css += 'background:rgba(255,255,255,.075)!important;';
+        css += 'border-color:transparent!important;';
+        css += 'box-shadow:none!important;';
+        css += 'opacity:1;';
         css += '}';
+
+        /*
+         * BUTTON ICONS
+         */
 
         css += '.full-start-new .full-start__button svg,';
         css += '.full-start-new .full-start__button img{';
@@ -712,18 +737,34 @@
         css += 'height:22px!important;';
         css += 'margin:0 0 5px!important;';
         css += 'fill:#fff!important;';
-        css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.55));';
+        css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
+        css += 'transition:transform .22s ease,filter .22s ease;';
         css += '}';
+
+        /*
+         * BUTTON LABELS
+         */
 
         css += '.full-start-new .full-start__button span{';
         css += 'position:relative;';
         css += 'z-index:1;';
         css += 'font-size:8px!important;';
-        css += 'line-height:1.1!important;';
+        css += 'line-height:1.2!important;';
         css += 'text-transform:uppercase!important;';
-        css += 'opacity:.82!important;';
+        css += 'opacity:.8!important;';
         css += 'font-weight:650;';
-        css += 'letter-spacing:.055em;';
+        css += 'letter-spacing:.065em;';
+        css += 'text-shadow:0 1px 5px rgba(0,0,0,.8);';
+        css += 'transition:opacity .22s ease;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button:active svg,';
+        css += '.full-start-new .full-start__button:active img{';
+        css += 'transform:scale(.92);';
+        css += '}';
+
+        css += '.full-start-new .full-start__button:active span{';
+        css += 'opacity:1!important;';
         css += '}';
 
         css += '}';
@@ -742,6 +783,10 @@
 
         style.textContent = css;
     }
+
+    /*
+     * TIME FORMAT
+     */
 
     function formatTime(mins) {
         if (!mins) return '';
@@ -1485,7 +1530,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.1 Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.2 Minimal Cinematic Premium initialized'
         );
     }
 
