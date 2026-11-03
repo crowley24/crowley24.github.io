@@ -1,34 +1,34 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.2 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.3 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
-     * LOGO:
-     * - TMDB logos for movies and TV series
-     * - Same logo selection as Кінотрейлери 2.3
+     * BASE:
+     * - TMDB MOVIE LOGOS 1.4.2
+     *
+     * CHANGES 1.4.3:
+     * - Country added to metadata
+     * - Ukrainian country names
+     * - Production studio logo above movie logo
+     * - Studio details fallback request
+     * - Information block positioned lower
+     * - Native Lampa buttons preserved
+     * - Detailed description block hidden
+     *
+     * PRESERVED:
+     * - Original TMDB logo selection
      * - Original cache logic
      * - Original title fallback
-     *
-     * CINEMATIC MODE:
-     * - Standard Lampa backdrop preserved
-     * - Poster hidden
-     * - Information block positioned bottom-left
-     * - TMDB logo
-     * - Small italic tagline directly under logo
-     * - Single metadata row: year / rating / genres
-     * - Short description below metadata
-     * - Native Lampa buttons preserved
-     * - Reactions hidden
+     * - Original Lampa backdrop
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v142_ready) return;
+    if (window.tmdb_movie_logos_v143_ready) return;
 
-    window.tmdb_movie_logos_v142_ready = true;
+    window.tmdb_movie_logos_v143_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
@@ -37,10 +37,11 @@
     var currentCard = null;
     var currentTitle = null;
     var currentImage = null;
+    var currentStudio = null;
     var currentToken = 0;
 
     var CACHE_TIMEOUT = 20000;
-    var CSS_ID = 'tmdb_movie_logos_v142_css';
+    var CSS_ID = 'tmdb_movie_logos_v143_css';
 
     /*
      * TMDB logo selection
@@ -150,6 +151,64 @@
     }
 
     /*
+     * Studio logo selection
+     */
+    function findStudioLogo(companies) {
+        if (!companies || !companies.length) return null;
+
+        var studio = companies.filter(function (company) {
+            return company &&
+                company.logo_path &&
+                company.logo_path.length;
+        })[0];
+
+        if (!studio) return null;
+
+        return {
+            url: Lampa.Api.img(studio.logo_path, 'w300'),
+            name: studio.name || ''
+        };
+    }
+
+    /*
+     * TMDB production studio logo request
+     *
+     * 1. Try data already available in the card.
+     * 2. If no logo is found, request full movie/TV details.
+     */
+    function ensureStudioLogo(item, type, cb) {
+        cached(item, 'tml_studio_logo', function (done) {
+
+            var existing = findStudioLogo(
+                item.production_companies
+            );
+
+            if (existing) {
+                done(existing);
+                return;
+            }
+
+            tmdb.get(
+                type + '/' + item.id,
+                {},
+                function (json) {
+                    var studio = findStudioLogo(
+                        json && json.production_companies
+                            ? json.production_companies
+                            : []
+                    );
+
+                    done(studio);
+                },
+                function () {
+                    done(null);
+                }
+            );
+
+        }, cb);
+    }
+
+    /*
      * Card type
      */
     function getCardType(card) {
@@ -157,9 +216,143 @@
     }
 
     /*
+     * Country names
+     */
+    function getCountryName(code) {
+        var countries = {
+            US: 'США',
+            GB: 'Велика Британія',
+            UK: 'Велика Британія',
+            FR: 'Франція',
+            DE: 'Німеччина',
+            IT: 'Італія',
+            ES: 'Іспанія',
+            PL: 'Польща',
+            UA: 'Україна',
+            CA: 'Канада',
+            AU: 'Австралія',
+            NZ: 'Нова Зеландія',
+            JP: 'Японія',
+            KR: 'Південна Корея',
+            CN: 'Китай',
+            HK: 'Гонконг',
+            IN: 'Індія',
+            RU: 'Росія',
+            TR: 'Туреччина',
+            BR: 'Бразилія',
+            MX: 'Мексика',
+            AR: 'Аргентина',
+            SE: 'Швеція',
+            NO: 'Норвегія',
+            DK: 'Данія',
+            FI: 'Фінляндія',
+            NL: 'Нідерланди',
+            BE: 'Бельгія',
+            CH: 'Швейцарія',
+            AT: 'Австрія',
+            IE: 'Ірландія',
+            CZ: 'Чехія',
+            SK: 'Словаччина',
+            HU: 'Угорщина',
+            RO: 'Румунія',
+            BG: 'Болгарія',
+            GR: 'Греція',
+            PT: 'Португалія',
+            IL: 'Ізраїль',
+            ZA: 'ПАР',
+            EG: 'Єгипет',
+            TH: 'Таїланд',
+            ID: 'Індонезія',
+            SG: 'Сінгапур',
+            MY: 'Малайзія',
+            PH: 'Філіппіни',
+            PK: 'Пакистан',
+            IR: 'Іран',
+            AE: 'ОАЕ',
+            SA: 'Саудівська Аравія',
+            CL: 'Чилі',
+            CO: 'Колумбія',
+            PE: 'Перу',
+            IS: 'Ісландія',
+            HR: 'Хорватія',
+            RS: 'Сербія',
+            SI: 'Словенія',
+            LT: 'Литва',
+            LV: 'Латвія',
+            EE: 'Естонія',
+            GE: 'Грузія',
+            AM: 'Вірменія',
+            KZ: 'Казахстан'
+        };
+
+        if (!code) return '';
+
+        code = String(code).toUpperCase();
+
+        if (countries[code]) {
+            return countries[code];
+        }
+
+        try {
+            if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+                var display = new Intl.DisplayNames(['uk'], {
+                    type: 'region'
+                });
+
+                var name = display.of(code);
+
+                if (name && name !== code) return name;
+            }
+        } catch (e) {}
+
+        return code;
+    }
+
+    /*
+     * Country list
+     */
+    function getCountries(card) {
+        var countries = [];
+
+        if (
+            card.production_countries &&
+            card.production_countries.length
+        ) {
+            countries = card.production_countries
+                .map(function (country) {
+                    return country.name || '';
+                })
+                .filter(Boolean);
+        }
+
+        if (
+            !countries.length &&
+            card.origin_country &&
+            card.origin_country.length
+        ) {
+            countries = card.origin_country
+                .map(getCountryName)
+                .filter(Boolean);
+        }
+
+        var unique = [];
+
+        countries.forEach(function (country) {
+            if (
+                country &&
+                unique.indexOf(country) === -1
+            ) {
+                unique.push(country);
+            }
+        });
+
+        return unique.slice(0, 2);
+    }
+
+    /*
      * Metadata builder
      *
-     * Year · ★ Rating · Genres
+     * Year · Country · ★ Rating · Genres
      */
     function buildMetadata(card) {
         var parts = [];
@@ -174,6 +367,12 @@
 
         if (year) {
             parts.push(year);
+        }
+
+        var countries = getCountries(card);
+
+        if (countries.length) {
+            parts.push(countries.join(', '));
         }
 
         var rating = parseFloat(card.vote_average || 0);
@@ -200,8 +399,6 @@
 
     /*
      * CSS
-     * Default Lampa backdrop remains untouched.
-     * Native buttons are not recreated.
      */
     function addCSS() {
         if (document.getElementById(CSS_ID)) return;
@@ -222,7 +419,7 @@
             '.full-start-new__body{' +
                 'position:relative;' +
                 'display:block;' +
-                'min-height:calc(100vh - 10rem);' +
+                'min-height:calc(100vh - 7rem);' +
                 'height:auto;' +
             '}' +
 
@@ -239,7 +436,7 @@
             '.full-start-new__right{' +
                 'position:absolute !important;' +
                 'left:0 !important;' +
-                'bottom:0 !important;' +
+                'bottom:1.5rem !important;' +
                 'width:58% !important;' +
                 'max-width:58% !important;' +
                 'margin:0 !important;' +
@@ -259,6 +456,45 @@
             '}' +
 
             /*
+             * Studio logo
+             */
+            '.tml-studio-logo{' +
+                'display:flex;' +
+                'align-items:center;' +
+                'justify-content:flex-start;' +
+                'width:100%;' +
+                'max-width:100%;' +
+                'height:1.5em;' +
+                'margin:0 0 .4em 0;' +
+                'padding:0;' +
+                'overflow:hidden;' +
+                'box-sizing:border-box;' +
+                'opacity:0;' +
+                'transform:translateY(3px);' +
+                'transition:opacity .4s ease, transform .4s ease;' +
+            '}' +
+
+            '.tml-studio-logo.tml-studio-visible{' +
+                'opacity:.92;' +
+                'transform:translateY(0);' +
+            '}' +
+
+            '.tml-studio-logo img{' +
+                'display:block;' +
+                'width:auto;' +
+                'height:auto;' +
+                'max-width:8em;' +
+                'max-height:1.3em;' +
+                'object-fit:contain;' +
+                'object-position:left center;' +
+                'margin:0;' +
+                'padding:0;' +
+                'border:0;' +
+                'box-shadow:none;' +
+                'filter:none;' +
+            '}' +
+
+            /*
              * Logo / title
              */
             '.full-start-new__title{' +
@@ -267,7 +503,7 @@
                 'justify-content:flex-start;' +
                 'width:100%;' +
                 'min-height:0;' +
-                'margin:0 0 0.45em 0;' +
+                'margin:0 0 .45em 0;' +
                 'padding:0;' +
                 'font-size:2.2em;' +
                 'line-height:1.1;' +
@@ -289,19 +525,19 @@
             '}' +
 
             /*
-             * Tagline directly under logo
+             * Tagline
              */
             '.full-start-new__tagline{' +
                 'display:block;' +
                 'width:100%;' +
                 'max-width:100%;' +
-                'margin:0 0 0.8em 0;' +
+                'margin:0 0 .8em 0;' +
                 'padding:0;' +
-                'font-size:0.75em !important;' +
+                'font-size:.75em !important;' +
                 'font-weight:400 !important;' +
                 'font-style:italic !important;' +
                 'line-height:1.45 !important;' +
-                'letter-spacing:0.015em;' +
+                'letter-spacing:.015em;' +
                 'color:rgba(255,255,255,.78) !important;' +
                 'opacity:.9;' +
                 'overflow:hidden;' +
@@ -322,10 +558,10 @@
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:nowrap;' +
-                'gap:0.55em;' +
+                'gap:.55em;' +
                 'width:100%;' +
                 'max-width:100%;' +
-                'margin:0 0 0.8em 0;' +
+                'margin:0 0 .8em 0;' +
                 'padding:0;' +
                 'overflow:hidden;' +
                 'white-space:nowrap;' +
@@ -388,22 +624,19 @@
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:wrap;' +
-                'gap:0.45em;' +
+                'gap:.45em;' +
                 'width:100%;' +
                 'margin:0;' +
                 'padding:0;' +
             '}' +
 
             /*
-             * Hide reactions
+             * Hide reactions and separate details
              */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Hide separate detail description
-             */
             '.full-descr,' +
             '.full-start__description,' +
             '.full-start__descr,' +
@@ -460,6 +693,53 @@
         } catch (e) {
             return $();
         }
+    }
+
+    /*
+     * Prepare studio logo
+     */
+    function prepareStudioLogo(root, card, type, token) {
+        if (!root || !root.length) return;
+
+        var title = root.find(
+            '.full-start-new__title'
+        ).first();
+
+        if (!title.length) return;
+
+        root.find('.tml-studio-logo').remove();
+
+        ensureStudioLogo(card, type, function (studio) {
+            if (token !== currentToken) return;
+            if (currentCard !== card) return;
+
+            if (!studio || !studio.url) return;
+
+            var container = $('<div class="tml-studio-logo"></div>');
+            var image = $('<img alt="">');
+
+            image.attr('alt', studio.name || '');
+
+            image.on('error', function () {
+                container.remove();
+            });
+
+            image.on('load', function () {
+                if (token !== currentToken) return;
+
+                requestAnimationFrame(function () {
+                    if (token !== currentToken) return;
+                    if (currentCard !== card) return;
+
+                    container.addClass('tml-studio-visible');
+                });
+            });
+
+            container.append(image);
+            title.before(container);
+
+            image.attr('src', studio.url);
+        });
     }
 
     /*
@@ -573,9 +853,14 @@
             currentImage.off('error');
         }
 
+        if (currentStudio) {
+            currentStudio.find('img').off('load error');
+        }
+
         currentCard = null;
         currentTitle = null;
         currentImage = null;
+        currentStudio = null;
     }
 
     /*
@@ -658,7 +943,12 @@
         prepareDescription(root, card);
 
         /*
-         * TMDB logo
+         * Studio logo above movie logo
+         */
+        prepareStudioLogo(root, card, type, token);
+
+        /*
+         * TMDB movie logo
          */
         var elements = prepareLogo(titleBlock);
 
