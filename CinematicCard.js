@@ -1,51 +1,44 @@
+
 (function () {
     'use strict';
 
     /*
-     * NEWCARD 4.0.1 — CINEMATIC FULL CARD
+     * NEWCARD 4.1.0 — CLEAN CINEMATIC CARD
      *
      * Lampa / Android TV
      *
-     * CHANGES 4.0.1:
-     * - Removed separate background layer
-     * - Removed cas-gradient completely
-     * - Removed all background filters and overlays
-     * - TMDB backdrop is applied directly to the card
-     * - One background image, no duplicate background
-     * - Background: w1280 / cover / center
-     *
-     * FEATURES:
-     * - Smart TMDB logo selection
-     * - Interface language > English > No language
-     * - Preloaded backdrop and logo
-     * - Movie / TV metadata
-     * - TMDB rating
-     * - Genres
-     * - Description
-     * - Native Lampa buttons
+     * CORE:
+     * - TMDB backdrop directly on the card
+     * - TMDB logo loading based on КіноТрейлери logic
+     * - Interface language > English > fallback logo
+     * - TMDB metadata: year, rating, genres
+     * - TMDB overview / description
+     * - Native Lampa media buttons
      *
      * REMOVED:
-     * - Custom settings
+     * - Background gradient and filters
+     * - Logo shadow
      * - Background slideshow
      * - Background animations
      * - Studio logos
      * - Quality badges
      * - Additional ratings
+     * - Custom settings
      * - Parser integration
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.new_card_style_v401) return;
+    if (window.new_card_style_v410) return;
 
-    window.new_card_style_v401 = true;
+    window.new_card_style_v410 = true;
 
-    var VERSION = '4.0.1';
+    var VERSION = '4.1.0';
     var PLUGIN_NAME = 'NewCard';
 
     var tmdb = Lampa.Api.sources.tmdb;
 
-    var imageCache = {};
-    var requestCache = {};
+    var logoCache = {};
+    var logoRequests = {};
 
     var activeCard = null;
     var cardSequence = 0;
@@ -75,6 +68,24 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function getLanguage() {
+        try {
+            return Lampa.Storage.field('tmdb_lang') || 'en';
+        } catch (e) {
+            return 'en';
+        }
+    }
+
+    function getImageUrl(path, size) {
+        if (!path) return '';
+
+        try {
+            return Lampa.Api.img(path, size);
+        } catch (e) {
+            return '';
+        }
     }
 
     function getYear(data) {
@@ -110,6 +121,10 @@
         return '';
     }
 
+    // --------------------------------------------------
+    // METADATA — TMDB
+    // --------------------------------------------------
+
     function getMetadata(data, type) {
         var parts = [];
 
@@ -132,42 +147,41 @@
         return parts;
     }
 
-    function getImageUrl(path, size) {
-        if (!path) return '';
+    function renderMetadata(render, data, type) {
+        var parts = getMetadata(data, type);
 
-        try {
-            return Lampa.Api.img(path, size);
-        } catch (e) {
-            return '';
-        }
-    }
+        var html = parts.map(function (part, index) {
+            return (
+                (index
+                    ? '<span class="cas-meta-separator">·</span>'
+                    : '') +
+                '<span class="cas-meta-item">' +
+                escapeHtml(part) +
+                '</span>'
+            );
+        }).join('');
 
-    function getLanguage() {
-        try {
-            return Lampa.Storage.field('tmdb_lang') || 'en';
-        } catch (e) {
-            return 'en';
-        }
+        render.find('.cas-meta-info').html(html);
     }
 
     // --------------------------------------------------
-    // LOGO SELECTION
+    // LOGO SELECTION — КІНОТРЕЙЛЕРИ STYLE
     // --------------------------------------------------
 
     function pickLogo(logos) {
         if (!logos || !logos.length) return null;
 
-        var lang = getLanguage();
+        var language = getLanguage();
 
-        var order = [
-            lang,
+        var preferred = [
+            language,
             'en',
             null
         ];
 
-        for (var i = 0; i < order.length; i++) {
+        for (var i = 0; i < preferred.length; i++) {
             var found = logos.filter(function (logo) {
-                return logo.iso_639_1 === order[i];
+                return logo.iso_639_1 === preferred[i];
             })[0];
 
             if (found) return found;
@@ -183,31 +197,31 @@
     function ensureLogo(data, type, callback) {
         var key = type + '_' + data.id;
 
-        if (imageCache[key] !== undefined) {
-            callback(imageCache[key]);
+        if (logoCache[key] !== undefined) {
+            callback(logoCache[key]);
             return;
         }
 
-        if (requestCache[key]) {
-            requestCache[key].push(callback);
+        if (logoRequests[key]) {
+            logoRequests[key].push(callback);
             return;
         }
 
-        requestCache[key] = [callback];
+        logoRequests[key] = [callback];
 
-        var lang = getLanguage();
-        var langs = lang + ',en,null';
+        var language = getLanguage();
+        var languages = language + ',en,null';
 
         function finish(url) {
-            imageCache[key] = url || null;
+            logoCache[key] = url || null;
 
-            var callbacks = requestCache[key] || [];
+            var callbacks = logoRequests[key] || [];
 
-            delete requestCache[key];
+            delete logoRequests[key];
 
             callbacks.forEach(function (cb) {
                 try {
-                    cb(imageCache[key]);
+                    cb(logoCache[key]);
                 } catch (e) {}
             });
         }
@@ -217,11 +231,13 @@
                 type + '/' + data.id + '/images',
                 {
                     filter: {
-                        include_image_language: langs
+                        include_image_language: languages
                     }
                 },
                 function (json) {
-                    var logo = pickLogo(json.logos || []);
+                    var logo = pickLogo(
+                        json && json.logos ? json.logos : []
+                    );
 
                     finish(
                         logo
@@ -262,13 +278,12 @@
     }
 
     // --------------------------------------------------
-    // BACKGROUND
+    // BACKGROUND — DIRECT TMDB BACKDROP
     // --------------------------------------------------
 
     function setBackground(render, data, sequence) {
         var url = getImageUrl(data.backdrop_path, 'w1280');
 
-        // Clear the previous backdrop directly on the card.
         render.css('background-image', 'none');
 
         if (!url) return;
@@ -278,8 +293,8 @@
             if (sequence !== cardSequence) return;
             if (activeCard !== render[0]) return;
 
-            // The backdrop is applied directly to the card.
-            // No separate background element or gradient overlay.
+            // One image directly on the card.
+            // No gradient, overlay, filter or extra background layer.
             render.css(
                 'background-image',
                 'url("' + url + '")'
@@ -333,7 +348,9 @@
 
                 img.attr('src', url);
 
-                logoContainer.empty().append(img);
+                logoContainer
+                    .empty()
+                    .append(img);
 
                 requestAnimationFrame(function () {
                     if (sequence !== cardSequence) return;
@@ -346,28 +363,7 @@
     }
 
     // --------------------------------------------------
-    // METADATA
-    // --------------------------------------------------
-
-    function renderMetadata(render, data, type) {
-        var parts = getMetadata(data, type);
-
-        var html = parts.map(function (part, index) {
-            return (
-                (index
-                    ? '<span class="cas-meta-separator">·</span>'
-                    : '') +
-                '<span class="cas-meta-item">' +
-                escapeHtml(part) +
-                '</span>'
-            );
-        }).join('');
-
-        render.find('.cas-meta-info').html(html);
-    }
-
-    // --------------------------------------------------
-    // DESCRIPTION
+    // DESCRIPTION — TMDB OVERVIEW
     // --------------------------------------------------
 
     function renderDescription(render, data) {
@@ -377,7 +373,10 @@
 
         element
             .text(description)
-            .toggleClass('cas-description--visible', !!description);
+            .toggleClass(
+                'cas-description--visible',
+                !!description
+            );
     }
 
     // --------------------------------------------------
@@ -551,10 +550,10 @@
     // --------------------------------------------------
 
     function addStyles() {
-        if ($('#cas-v401-styles').length) return;
+        if ($('#cas-v410-styles').length) return;
 
         var styles = `
-        <style id="cas-v401-styles">
+        <style id="cas-v410-styles">
 
         .full-start-new.cas-full-card {
             position: relative !important;
@@ -562,7 +561,6 @@
             isolation: isolate;
             min-height: 85vh;
 
-            /* One backdrop directly on the card */
             background-color: #080808;
             background-size: cover;
             background-position: center center;
@@ -645,7 +643,8 @@
             object-position: left bottom;
             background: transparent !important;
             border: 0 !important;
-            filter: drop-shadow(0 3px 12px rgba(0,0,0,.45));
+            box-shadow: none !important;
+            filter: none !important;
         }
 
         .cas-title-fallback {
@@ -656,7 +655,6 @@
             line-height: 1.08;
             color: #fff;
             text-transform: none;
-            text-shadow: 0 3px 14px rgba(0,0,0,.8);
             opacity: 0;
             transform: translateY(8px);
             transition:
@@ -686,7 +684,6 @@
             font-weight: 400;
             line-height: 1.4;
             color: rgba(255,255,255,.88);
-            text-shadow: 0 2px 8px rgba(0,0,0,.8);
             opacity: 0;
             transform: translateY(7px);
             transition:
@@ -712,12 +709,11 @@
             max-width: 650px;
             margin: .1em 0 1.15em;
             overflow: hidden;
-            color: rgba(255,255,255,.76);
+            color: rgba(255,255,255,.9);
             font-size: 1.15em;
             font-weight: 400;
             line-height: 1.45;
             text-align: left !important;
-            text-shadow: 0 2px 7px rgba(0,0,0,.8);
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             opacity: 0;
@@ -728,7 +724,7 @@
         }
 
         .cas-card-ready .cas-description--visible {
-            opacity: .82;
+            opacity: 1;
             transform: translateY(0);
         }
 
@@ -756,25 +752,13 @@
             flex-shrink: 0;
         }
 
-        .cas-full-card .full-start-new__details {
-            display: none !important;
-        }
-
-        .cas-full-card .full-start-new__head {
-            display: none !important;
-        }
-
+        .cas-full-card .full-start-new__details,
+        .cas-full-card .full-start-new__head,
         .cas-full-card .full-start-new__poster,
-        .cas-full-card .full-start-new__title {
-            display: none !important;
-        }
-
+        .cas-full-card .full-start-new__title,
         .cas-full-card .full-start-new__reactions,
         .cas-full-card .full-start-new__rate-line,
-        .cas-full-card .rating--modss {
-            display: none !important;
-        }
-
+        .cas-full-card .rating--modss,
         .cas-full-card .buttons--container {
             display: none !important;
         }
