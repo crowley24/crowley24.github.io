@@ -3,23 +3,25 @@
 
     /*
      * @name NEWCARD
-     * @version 3.3.3
+     * @version 3.3.4
      * @author Crowley24
-     * @description Cinematic TV interface with Trailer Feed geometry
+     * @description Cinematic TV interface with Trailer Feed logo behavior
      * @platforms Lampa | Android TV
      *
-     * 3.3.3 CHANGES:
-     * - Trailer Feed 2.3 information block geometry
-     * - Trailer Feed logo sizing and language selection
-     * - Fixed common logo bounding area
+     * 3.3.4 CHANGES:
+     * - Logo display behavior copied from Trailer Feed 2.3
+     * - No custom logo entrance animation
+     * - No logo transform, scaling, shadow or filter
+     * - Logo geometry: 30em x 8em
+     * - Logo object-fit: contain
+     * - Logo object-position: left center
+     * - Logo shown immediately after successful loading
+     * - Metadata animation disabled
      * - Three-line description
      * - Rating first in metadata row
-     * - Logo-only premium entrance animation
-     * - No metadata animation
      * - 24-hour logo cache
      * - Language-filtered TMDB image request
      * - Stale request protection
-     * - Optimized studio logo rendering
      * - Preserved original NEWCARD background and controls
      */
 
@@ -41,8 +43,6 @@
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
     const TRANSLATIONS = {
-        'settings_cas_logo_quality': 'Якість логотипу',
-        'settings_cas_logo_scale': 'Розмір логотипу',
         'settings_cas_meta_size': 'Розмір шрифту',
         'settings_cas_blocks_gap': 'Відступи між блоками',
         'settings_cas_bg_animation': 'Анімація фону',
@@ -163,8 +163,6 @@
 
     function addSettings() {
         const defaults = {
-            'cas_logo_scale': '100',
-            'cas_logo_quality': 'w500',
             'cas_bg_animation': 'kenburns',
             'cas_animation_style': 'slide',
             'cas_slideshow_enabled': true,
@@ -187,27 +185,6 @@
         });
 
         const params = [
-            {
-                name: 'cas_logo_quality',
-                type: 'select',
-                values: {
-                    'w300': '300px',
-                    'w500': '500px',
-                    'original': 'Original'
-                }
-            },
-            {
-                name: 'cas_logo_scale',
-                type: 'select',
-                values: {
-                    '70': '70%',
-                    '80': '80%',
-                    '90': '90%',
-                    '100': '100%',
-                    '110': '110%',
-                    '120': '120%'
-                }
-            },
             {
                 name: 'cas_meta_size',
                 type: 'select',
@@ -275,16 +252,11 @@
     function applySettings() {
         const root = document.documentElement;
 
-        const scale = parseInt(
-            Lampa.Storage.get('cas_logo_scale') || 100
-        ) / 100;
-
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
         const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'kenburns';
 
-        root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
 
@@ -454,7 +426,6 @@
         const styles = `<style id="cas-main-styles">
 
         :root {
-            --cas-logo-scale: 1;
             --cas-blocks-gap: 20px;
             --cas-meta-size: 1.3em;
             --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1);
@@ -520,9 +491,7 @@
             transform-origin: center center;
         }
 
-        /* =================================================
-           TRAILER FEED INFORMATION BLOCK GEOMETRY
-           ================================================= */
+        /* TRAILER FEED INFORMATION BLOCK */
 
         .cas-tagline,
         .cas-studios-row,
@@ -570,8 +539,6 @@
             cursor: pointer;
         }
 
-        /* LOGO CONTAINER */
-
         .cas-logo-container {
             position: relative;
             display: flex;
@@ -615,23 +582,16 @@
             opacity: 0.95;
         }
 
-        /* MOVIE LOGO — COMMON BOUNDING AREA */
+        /* LOGO — SAME DISPLAY RULES AS TRAILER FEED 2.3 */
 
         .cas-logo {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
+            display: block;
             width: 30em;
             max-width: 100%;
             height: 8em;
             max-height: 8em;
             overflow: visible;
-            opacity: 1 !important;
-            transform: none !important;
-            transition: none !important;
-            animation: none !important;
-            filter: none !important;
-            box-shadow: none !important;
+            margin-bottom: .5em;
         }
 
         .cas-logo img {
@@ -642,21 +602,8 @@
             max-height: 8em;
             object-fit: contain;
             object-position: left center;
-            transform: scale(var(--cas-logo-scale, 1));
-            transform-origin: left center;
-            opacity: 0;
-            filter: none !important;
-            box-shadow: none !important;
-            border: none !important;
-            background: transparent !important;
-            transition:
-                opacity .55s cubic-bezier(.2,.8,.2,1),
-                transform .65s cubic-bezier(.2,.8,.2,1);
-        }
-
-        .cas-logo img.cas-logo-visible {
-            opacity: 1;
-            transform: scale(var(--cas-logo-scale, 1));
+            border: none;
+            background: transparent;
         }
 
         .cas-logo-fallback {
@@ -761,7 +708,7 @@
             white-space: nowrap;
         }
 
-        /* DESCRIPTION — EXACTLY THREE LINES */
+        /* DESCRIPTION — THREE LINES */
 
         .cas-description {
             display: -webkit-box;
@@ -789,32 +736,7 @@
             padding: 0;
         }
 
-        /* =================================================
-           LOGO-ONLY PREMIUM ANIMATION
-           ================================================= */
-
-        .cas-logo img {
-            will-change: opacity, transform;
-        }
-
-        .cas-logo-fallback {
-            animation: casLogoFallbackIn .55s ease both;
-        }
-
-        @keyframes casLogoFallbackIn {
-            from {
-                opacity: 0;
-                transform: translate3d(0,5px,0);
-            }
-            to {
-                opacity: 1;
-                transform: translate3d(0,0,0);
-            }
-        }
-
-        /* =================================================
-           CONTENT ANIMATION — NO METADATA ANIMATION
-           ================================================= */
+        /* CONTENT ANIMATION — LOGO AND METADATA EXCLUDED */
 
         .cas-anim-slide .cas-tagline,
         .cas-anim-slide .cas-studios-row,
@@ -886,9 +808,7 @@
             transition-delay: 0.16s;
         }
 
-        /* =================================================
-           MOBILE
-           ================================================= */
+        /* MOBILE */
 
         @media (max-width: 767px) {
             .left-title .full-start-new__body {
@@ -952,14 +872,6 @@
 
             .full-start-new__buttons {
                 flex-wrap: wrap;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .cas-logo img,
-            .cas-logo-fallback {
-                transition: none !important;
-                animation: none !important;
             }
         }
 
@@ -1127,7 +1039,7 @@
     }
 
     // =====================================================
-    // TMDB LOGO SYSTEM
+    // TMDB LOGO SYSTEM — TRAILER FEED LANGUAGE PRIORITY
     // =====================================================
 
     function getPreferredLogoLanguage() {
@@ -1215,10 +1127,8 @@
     function getLogoUrl(logo) {
         if (!logo || !logo.file_path) return '';
 
-        const quality = Lampa.Storage.get('cas_logo_quality') || 'w500';
-
         return Lampa.TMDB.image(
-            '/t/p/' + quality + logo.file_path
+            '/t/p/w500' + logo.file_path
         );
     }
 
@@ -1228,15 +1138,24 @@
         const title = data.title || data.name || '';
         const logoContainer = render.find('.cas-logo');
 
-        if (!title) {
-            logoContainer.empty();
-            return;
-        }
+        logoContainer.empty();
+
+        if (!title) return;
 
         logoContainer.html(
             $('<div class="cas-logo-fallback"></div>').text(title)
         );
     }
+
+    /*
+     * Trailer Feed 2.3 behavior:
+     * - Wait for the image to load.
+     * - Insert the image.
+     * - Show it directly.
+     * - No opacity transition.
+     * - No transform transition.
+     * - No animation class.
+     */
 
     async function displayMovieLogo(render, data, logos, requestId) {
         if (requestId !== logoRequestId) return;
@@ -1265,16 +1184,11 @@
 
             const image = $('<img>');
 
-            image.attr('src', logoUrl);
             image.attr('alt', data.title || data.name || '');
+            image.attr('src', logoUrl);
 
             logoContainer.append(image);
-
-            requestAnimationFrame(() => {
-                if (requestId !== logoRequestId) return;
-
-                image.addClass('cas-logo-visible');
-            });
+            image.show();
 
         } catch (e) {
             showLogoFallback(render, data, requestId);
@@ -1409,7 +1323,8 @@
             }
         });
     }
-        // =====================================================
+
+    // =====================================================
     // STUDIO LOGOS
     // =====================================================
 
@@ -1492,35 +1407,19 @@
 
         // 2. YEAR
 
-        appendMetaItem(
-            container,
-            year,
-            'cas-wave-year'
-        );
+        appendMetaItem(container, year, 'cas-wave-year');
 
         // 3. COUNTRY
 
-        appendMetaItem(
-            container,
-            country,
-            'cas-wave-country'
-        );
+        appendMetaItem(container, country, 'cas-wave-country');
 
         // 4. RUNTIME
 
-        appendMetaItem(
-            container,
-            runtime,
-            'cas-wave-time'
-        );
+        appendMetaItem(container, runtime, 'cas-wave-time');
 
         // 5. GENRES
 
-        appendMetaItem(
-            container,
-            genres,
-            'cas-wave-genre'
-        );
+        appendMetaItem(container, genres, 'cas-wave-genre');
 
         container.css('display', 'flex');
     }
@@ -1606,8 +1505,6 @@
     async function loadMovieDataOptimized(render, data, requestId) {
         if (!data || requestId !== cardRequestId) return;
 
-        // TAGLINE
-
         if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
             render.find('.cas-tagline')
                 .text('«' + data.tagline + '»')
@@ -1616,19 +1513,13 @@
             render.find('.cas-tagline').hide();
         }
 
-        // DESCRIPTION
-
         const description = String(data.overview || '').trim();
 
         render.find('.cas-description')
             .text(description)
             .css('display', description ? '-webkit-box' : 'none');
 
-        // INITIAL METADATA
-
         renderMetadata(render, data);
-
-        // DETAILS FALLBACK
 
         if (needsDetails(data)) {
             const details = await loadTMDBDetails(data);
@@ -1639,8 +1530,6 @@
             ) {
                 return;
             }
-
-            // Merge only missing fields.
 
             const merged = Object.assign({}, data);
 
@@ -1689,8 +1578,6 @@
 
             renderMetadata(render, merged);
 
-            // Update studios only when original data has none.
-
             if (
                 Lampa.Storage.get('cas_show_studios') &&
                 (
@@ -1708,8 +1595,6 @@
         }
 
         if (requestId !== cardRequestId) return;
-
-        // STUDIOS
 
         if (Lampa.Storage.get('cas_show_studios')) {
             renderStudioLogosWithColorAnalysis(
@@ -1785,15 +1670,11 @@
 
             cardRoot.removeClass('cas-animated');
 
-            // RESET
-
             render.find('.cas-description').empty().hide();
             render.find('.cas-meta-info').empty();
             render.find('.cas-logo').empty();
             render.find('.cas-tagline').empty().hide();
             render.find('.cas-studios-row').empty();
-
-            // HIDE ORIGINAL DESCRIPTION
 
             render.find(
                 '.full-start-new__details, ' +
@@ -1873,8 +1754,6 @@
                     });
                 }
 
-                // METADATA LOAD
-
                 debouncedLoadMovieData(
                     render,
                     data,
@@ -1888,8 +1767,6 @@
                     cardRoot.addClass('cas-animated');
                 });
             }
-
-            // INITIAL FOCUS
 
             setTimeout(() => {
                 if (thisCardRequest !== cardRequestId) return;
@@ -1919,7 +1796,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.3 initialized successfully'
+                'NewCard 3.3.4 initialized successfully'
             );
 
         } catch (error) {
