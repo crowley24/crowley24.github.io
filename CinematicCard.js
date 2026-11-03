@@ -3,34 +3,32 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.1 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.2 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
      * LOGO:
      * - TMDB logos for movies and TV series
      * - Same logo selection as Кінотрейлери 2.3
-     * - Same cache logic as 1.3.1
-     * - Immediate display from cache
+     * - Original cache logic
      * - Original title fallback
-     * - Original title restored if image loading fails
      *
      * CINEMATIC MODE:
      * - Standard Lampa backdrop preserved
      * - Poster hidden
      * - Information block positioned bottom-left
      * - TMDB logo
+     * - Small italic tagline directly under logo
      * - Single metadata row: year / rating / genres
      * - Short description below metadata
      * - Native Lampa buttons preserved
      * - Reactions hidden
-     * - No custom background or backdrop effects
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v141_ready) return;
+    if (window.tmdb_movie_logos_v142_ready) return;
 
-    window.tmdb_movie_logos_v141_ready = true;
+    window.tmdb_movie_logos_v142_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
@@ -42,7 +40,7 @@
     var currentToken = 0;
 
     var CACHE_TIMEOUT = 20000;
-    var CSS_ID = 'tmdb_movie_logos_v141_css';
+    var CSS_ID = 'tmdb_movie_logos_v142_css';
 
     /*
      * TMDB logo selection
@@ -118,7 +116,6 @@
 
     /*
      * TMDB logo request
-     * Same language filter and image size
      */
     function ensureLogo(item, type, cb) {
         cached(item, 'tml_logo', function (done) {
@@ -162,7 +159,6 @@
     /*
      * Metadata builder
      *
-     * Order:
      * Year · ★ Rating · Genres
      */
     function buildMetadata(card) {
@@ -204,7 +200,6 @@
 
     /*
      * CSS
-     *
      * Default Lampa backdrop remains untouched.
      * Native buttons are not recreated.
      */
@@ -272,7 +267,7 @@
                 'justify-content:flex-start;' +
                 'width:100%;' +
                 'min-height:0;' +
-                'margin:0 0 0.65em 0;' +
+                'margin:0 0 0.45em 0;' +
                 'padding:0;' +
                 'font-size:2.2em;' +
                 'line-height:1.1;' +
@@ -291,6 +286,33 @@
                 'border:0;' +
                 'box-shadow:none;' +
                 'filter:none;' +
+            '}' +
+
+            /*
+             * Tagline directly under logo
+             */
+            '.full-start-new__tagline{' +
+                'display:block;' +
+                'width:100%;' +
+                'max-width:100%;' +
+                'margin:0 0 0.8em 0;' +
+                'padding:0;' +
+                'font-size:0.75em !important;' +
+                'font-weight:400 !important;' +
+                'font-style:italic !important;' +
+                'line-height:1.45 !important;' +
+                'letter-spacing:0.015em;' +
+                'color:rgba(255,255,255,.78) !important;' +
+                'opacity:.9;' +
+                'overflow:hidden;' +
+                'display:-webkit-box;' +
+                '-webkit-box-orient:vertical;' +
+                '-webkit-line-clamp:2;' +
+                'line-clamp:2;' +
+            '}' +
+
+            '.full-start-new__tagline:empty{' +
+                'display:none !important;' +
             '}' +
 
             /*
@@ -338,17 +360,6 @@
              */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
-                'display:none !important;' +
-            '}' +
-
-            /*
-             * Tagline
-             */
-            '.full-start-new__tagline{' +
-                'margin:0 0 0.6em 0;' +
-            '}' +
-
-            '.full-start-new__tagline:empty{' +
                 'display:none !important;' +
             '}' +
 
@@ -452,12 +463,42 @@
     }
 
     /*
+     * Prepare tagline position
+     *
+     * Move existing native tagline directly
+     * after the title/logo.
+     */
+    function prepareTagline(root) {
+        if (!root || !root.length) return;
+
+        var title = root.find(
+            '.full-start-new__title'
+        ).first();
+
+        var tagline = root.find(
+            '.full-start-new__tagline'
+        ).first();
+
+        if (!title.length || !tagline.length) return;
+
+        tagline.insertAfter(title);
+    }
+
+    /*
      * Prepare metadata row
      */
     function prepareMetadata(root, card) {
         if (!root || !root.length) return;
 
         var parts = buildMetadata(card);
+
+        var title = root.find(
+            '.full-start-new__title'
+        ).first();
+
+        var tagline = root.find(
+            '.full-start-new__tagline'
+        ).first();
 
         var row = root.find(
             '.tml-cinematic-meta'
@@ -466,9 +507,11 @@
         if (!row.length) {
             row = $('<div class="tml-cinematic-meta"></div>');
 
-            row.insertAfter(
-                root.find('.full-start-new__title').first()
-            );
+            if (tagline.length) {
+                row.insertAfter(tagline);
+            } else {
+                row.insertAfter(title);
+            }
         }
 
         row.empty();
@@ -568,7 +611,6 @@
 
     /*
      * Display logo
-     * Same sequence as version 1.3.1
      */
     function displayLogo(url, titleBlock, original, logo, token) {
         if (!url || !logo || !logo.length) return;
@@ -609,8 +651,9 @@
         currentTitle = titleBlock;
 
         /*
-         * Metadata and description
+         * Position tagline and build information
          */
+        prepareTagline(root);
         prepareMetadata(root, card);
         prepareDescription(root, card);
 
