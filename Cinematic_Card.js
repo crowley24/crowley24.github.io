@@ -1,33 +1,42 @@
-
 (function () {
     'use strict';
 
     /*
      * @name NEWCARD
-     * @version 3.3.2
+     * @version 3.3.3
      * @author Crowley24
-     * @description Modern TV interface with integrated TMDB metadata and rating
+     * @description Cinematic TV interface with Trailer Feed geometry
      * @platforms Lampa | Android TV
      *
-     * 3.3.2 CHANGES:
-     * - Rating integrated directly into metadata row
-     * - Rating format: ★ 8.7
-     * - Metadata order: Year / Country / Runtime / Rating / Genres
-     * - Strict single-line metadata layout
-     * - Metadata animation removed
-     * - TMDB details fallback when metadata is incomplete
-     * - Preserved background, slideshow, logos, studios and buttons
+     * 3.3.3 CHANGES:
+     * - Trailer Feed 2.3 information block geometry
+     * - Trailer Feed logo sizing and language selection
+     * - Fixed common logo bounding area
+     * - Three-line description
+     * - Rating first in metadata row
+     * - Logo-only premium entrance animation
+     * - No metadata animation
+     * - 24-hour logo cache
+     * - Language-filtered TMDB image request
+     * - Stale request protection
+     * - Optimized studio logo rendering
+     * - Preserved original NEWCARD background and controls
      */
 
     const PLUGIN_NAME = 'NewCard';
     const PLUGIN_ID = 'new_card_style';
+
     const CACHE_LIFETIME = 1000 * 60 * 60 * 24;
-    const LOGO_CACHE_TIMEOUT = 20000;
+    const LOGO_CACHE_TIMEOUT = CACHE_LIFETIME;
+    const REQUEST_TIMEOUT = 12000;
 
     let currentInterval = null;
     let logoRequestId = 0;
+    let cardRequestId = 0;
     let logoRequests = {};
+    let detailsRequests = {};
     let debounceTimer = null;
+    let slideshowGeneration = 0;
 
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
@@ -155,7 +164,7 @@
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
-            'cas_logo_quality': 'original',
+            'cas_logo_quality': 'w500',
             'cas_bg_animation': 'kenburns',
             'cas_animation_style': 'slide',
             'cas_slideshow_enabled': true,
@@ -318,7 +327,7 @@
                         startSlideshow(
                             currentCard,
                             cached.backdrops,
-                            Lampa.Storage.get('tmdb_lang') || 'uk'
+                            Lampa.Storage.field('tmdb_lang') || 'uk'
                         );
                     }
                 }
@@ -446,7 +455,7 @@
 
         :root {
             --cas-logo-scale: 1;
-            --cas-blocks-gap: 30px;
+            --cas-blocks-gap: 20px;
             --cas-meta-size: 1.3em;
             --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1);
             --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -511,6 +520,10 @@
             transform-origin: center center;
         }
 
+        /* =================================================
+           TRAILER FEED INFORMATION BLOCK GEOMETRY
+           ================================================= */
+
         .cas-tagline,
         .cas-studios-row,
         .cas-description,
@@ -521,9 +534,98 @@
             backface-visibility: hidden;
         }
 
-        /* LOGO */
+        .left-title .full-start-new__body {
+            height: 85vh;
+            position: relative;
+        }
+
+        .left-title .full-start-new__right {
+            position: static !important;
+            width: 100% !important;
+            height: 100%;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
+        .left-title__content {
+            position: absolute !important;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 7em 12em 2.5em 3em;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            text-align: left !important;
+            background: linear-gradient(
+                to top,
+                rgba(0,0,0,.94) 0%,
+                rgba(0,0,0,.65) 48%,
+                transparent 100%
+            );
+            cursor: pointer;
+        }
+
+        /* LOGO CONTAINER */
+
+        .cas-logo-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: none;
+            overflow: visible;
+            margin: 0 0 .5em 0;
+            gap: 0;
+        }
+
+        /* STUDIOS */
+
+        .cas-studios-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start !important;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 8px 0;
+        }
+
+        .cas-studio-item {
+            height: 24px !important;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 2px;
+        }
+
+        .cas-studio-item img {
+            height: 100%;
+            width: auto;
+            max-width: 140px;
+            object-fit: contain;
+            filter: none;
+            opacity: 0.95;
+        }
+
+        /* MOVIE LOGO — COMMON BOUNDING AREA */
 
         .cas-logo {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 30em;
+            max-width: 100%;
+            height: 8em;
+            max-height: 8em;
+            overflow: visible;
             opacity: 1 !important;
             transform: none !important;
             transition: none !important;
@@ -533,108 +635,39 @@
         }
 
         .cas-logo img {
-            background: transparent !important;
-            border: none !important;
-            max-width: 450px;
-            max-height: 200px;
+            display: block;
             width: auto;
             height: auto;
-            transform: none !important;
-            transform-origin: left center;
-            display: block;
+            max-width: 30em;
+            max-height: 8em;
             object-fit: contain;
-            opacity: 1 !important;
-            transition: none !important;
-            animation: none !important;
+            object-position: left center;
+            transform: scale(var(--cas-logo-scale, 1));
+            transform-origin: left center;
+            opacity: 0;
             filter: none !important;
             box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+            transition:
+                opacity .55s cubic-bezier(.2,.8,.2,1),
+                transform .65s cubic-bezier(.2,.8,.2,1);
+        }
+
+        .cas-logo img.cas-logo-visible {
+            opacity: 1;
+            transform: scale(var(--cas-logo-scale, 1));
         }
 
         .cas-logo-fallback {
+            max-width: 30em;
+            max-height: 8em;
+            overflow: hidden;
             font-size: 3em;
             font-weight: 800;
+            line-height: 1.05;
             text-transform: uppercase;
             color: #fff;
-        }
-
-        /* LAYOUT */
-
-        .full-start-new__details,
-        .full-start-new__description,
-        .full-start-new__overview,
-        .full-start-new__text,
-        .full-start-new__head,
-        .cas-details-wrapper,
-        .full-descr,
-        .full-start__description,
-        .full-start__descr,
-        .full-description {
-            display: none !important;
-        }
-
-        .full-start-new__body {
-            display: flex;
-            height: 85vh;
-            position: relative;
-            width: 100%;
-        }
-
-        .full-start-new__left {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 4em 3em 2em 2em;
-            position: relative;
-            z-index: 2;
-        }
-
-        .full-start-new__right {
-            width: 60%;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            align-items: flex-start !important;
-            text-align: left !important;
-            padding: 4em 4em 2em 0;
-            position: relative;
-            z-index: 2;
-            margin-left: 0 !important;
-        }
-
-        .full-start-new__poster,
-        .full-start-new__title {
-            display: none;
-        }
-
-        .left-title .full-start-new__left {
-            display: none !important;
-        }
-
-        .left-title .full-start-new__right {
-            width: 100% !important;
-            padding-left: 2em !important;
-        }
-
-        .left-title__content {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start !important;
-            text-align: left !important;
-            width: 100%;
-        }
-
-        /* LOGO CONTAINER */
-
-        .cas-logo-container {
-            position: relative;
-            overflow: visible;
-            max-width: 100%;
-            margin-bottom: calc(var(--cas-blocks-gap) * 1.2);
-            max-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start !important;
         }
 
         /* TAGLINE */
@@ -643,9 +676,9 @@
             font-size: calc(var(--cas-meta-size) * 0.95);
             font-style: italic;
             color: rgba(255,255,255,0.85);
-            margin-bottom: 16px;
+            margin: 0 0 16px 0;
             text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-            max-width: 650px;
+            max-width: 70%;
             text-align: left !important;
         }
 
@@ -662,7 +695,7 @@
             max-width: 100%;
             min-width: 0;
             overflow: hidden;
-            margin-bottom: 8px;
+            margin: 0 0 8px 0;
             opacity: 0.82 !important;
             transform: none !important;
             transition: none !important;
@@ -721,24 +754,26 @@
         }
 
         .cas-wave-genre {
+            flex: 1 1 auto;
+            min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-width: 0;
+            white-space: nowrap;
         }
 
-        /* DESCRIPTION */
+        /* DESCRIPTION — EXACTLY THREE LINES */
 
         .cas-description {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
             font-size: var(--cas-meta-size) !important;
             line-height: 1.4;
             color: rgba(255,255,255,0.75);
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            max-width: 650px;
-            margin-top: 2px;
-            margin-bottom: 10px;
+            width: 70%;
+            max-width: 70%;
+            margin: 2px 0 10px 0;
             text-align: left !important;
         }
 
@@ -750,38 +785,36 @@
             align-items: center !important;
             flex-wrap: wrap;
             width: 100%;
-            margin-left: 0 !important;
-            margin-top: 0 !important;
+            margin: 0 !important;
+            padding: 0;
         }
 
-        /* STUDIOS */
+        /* =================================================
+           LOGO-ONLY PREMIUM ANIMATION
+           ================================================= */
 
-        .cas-studios-row {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-start !important;
-            gap: 8px;
-            margin-bottom: 8px;
+        .cas-logo img {
+            will-change: opacity, transform;
         }
 
-        .cas-studio-item {
-            height: 24px !important;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            margin-bottom: 2px;
+        .cas-logo-fallback {
+            animation: casLogoFallbackIn .55s ease both;
         }
 
-        .cas-studio-item img {
-            height: 100%;
-            width: auto;
-            max-width: 140px;
-            object-fit: contain;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-            opacity: 0.95;
+        @keyframes casLogoFallbackIn {
+            from {
+                opacity: 0;
+                transform: translate3d(0,5px,0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0,0,0);
+            }
         }
 
-        /* ANIMATION: SLIDE */
+        /* =================================================
+           CONTENT ANIMATION — NO METADATA ANIMATION
+           ================================================= */
 
         .cas-anim-slide .cas-tagline,
         .cas-anim-slide .cas-studios-row,
@@ -818,8 +851,6 @@
             transition-delay: 0.16s;
         }
 
-        /* ANIMATION: SPRING */
-
         .cas-anim-spring .cas-tagline,
         .cas-anim-spring .cas-studios-row,
         .cas-anim-spring .cas-description,
@@ -855,8 +886,81 @@
             transition-delay: 0.16s;
         }
 
-        .left-title .full-start-new__body {
-            height: 85vh;
+        /* =================================================
+           MOBILE
+           ================================================= */
+
+        @media (max-width: 767px) {
+            .left-title .full-start-new__body {
+                height: 100vh;
+            }
+
+            .left-title__content {
+                padding: 4em 8em 12.5em 1.5em;
+                right: 0;
+            }
+
+            .cas-logo-container {
+                width: 100%;
+                margin-bottom: .5em;
+            }
+
+            .cas-logo {
+                width: 80%;
+                max-width: 80%;
+                height: 5em;
+                max-height: 5em;
+            }
+
+            .cas-logo img {
+                max-width: 80%;
+                max-height: 5em;
+            }
+
+            .cas-logo-fallback {
+                max-width: 80%;
+                max-height: 5em;
+                font-size: 2em;
+            }
+
+            .cas-tagline {
+                max-width: 95%;
+            }
+
+            .cas-description {
+                width: 95%;
+                max-width: 95%;
+                -webkit-line-clamp: 3;
+            }
+
+            .cas-meta-line,
+            .cas-meta-info {
+                max-width: 100%;
+            }
+
+            .cas-meta-info {
+                font-size: min(var(--cas-meta-size), 1em);
+            }
+
+            .cas-meta-separator {
+                margin: 0 5px;
+            }
+
+            .cas-studio-item {
+                height: 20px !important;
+            }
+
+            .full-start-new__buttons {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .cas-logo img,
+            .cas-logo-fallback {
+                transition: none !important;
+                animation: none !important;
+            }
         }
 
         </style>`;
@@ -906,7 +1010,9 @@
 
     function cleanup() {
         stopSlideshow();
+
         logoRequestId++;
+        cardRequestId++;
 
         $('.left-title__content')
             .parent()
@@ -915,6 +1021,8 @@
     }
 
     function stopSlideshow() {
+        slideshowGeneration++;
+
         if (currentInterval) {
             clearInterval(currentInterval);
             currentInterval = null;
@@ -930,6 +1038,8 @@
         stopSlideshow();
 
         if (!backdrops || backdrops.length <= 1) return;
+
+        const generation = slideshowGeneration;
 
         let langBackdrops = [];
         let noLangBackdrops = [];
@@ -966,13 +1076,9 @@
         if (finalBackdrops.length <= 1) return;
 
         let idx = 0;
-        let isActive = true;
 
         currentInterval = setInterval(() => {
-            if (!isActive) {
-                clearInterval(currentInterval);
-                return;
-            }
+            if (generation !== slideshowGeneration) return;
 
             idx = (idx + 1) % finalBackdrops.length;
 
@@ -989,7 +1095,7 @@
             const img = new Image();
 
             img.onload = () => {
-                if (!isActive) return;
+                if (generation !== slideshowGeneration) return;
 
                 const $container = render.find('.full-start__background');
 
@@ -999,12 +1105,12 @@
                 });
 
                 setTimeout(() => {
-                    if (!isActive) return;
+                    if (generation !== slideshowGeneration) return;
 
                     $bgImg.attr('src', nextSrc);
 
                     setTimeout(() => {
-                        if (!isActive) return;
+                        if (generation !== slideshowGeneration) return;
 
                         $container.css('opacity', 0.35);
                     }, 100);
@@ -1034,7 +1140,7 @@
         } catch (e) {}
 
         if (!lang) {
-            lang = Lampa.Storage.get('tmdb_lang') || 'uk';
+            lang = Lampa.Storage.get('tmdb_lang') || 'en';
         }
 
         return String(lang).toLowerCase();
@@ -1109,7 +1215,7 @@
     function getLogoUrl(logo) {
         if (!logo || !logo.file_path) return '';
 
-        const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
+        const quality = Lampa.Storage.get('cas_logo_quality') || 'w500';
 
         return Lampa.TMDB.image(
             '/t/p/' + quality + logo.file_path
@@ -1164,9 +1270,28 @@
 
             logoContainer.append(image);
 
+            requestAnimationFrame(() => {
+                if (requestId !== logoRequestId) return;
+
+                image.addClass('cas-logo-visible');
+            });
+
         } catch (e) {
             showLogoFallback(render, data, requestId);
         }
+    }
+
+    function buildImagesUrl(data) {
+        const type = data.name ? 'tv/' : 'movie/';
+        const language = getPreferredLogoLanguage() || 'en';
+        const includeLanguage = language + ',en,null';
+
+        return Lampa.TMDB.api(
+            type + data.id +
+            '/images?api_key=' + Lampa.TMDB.key() +
+            '&include_image_language=' +
+            encodeURIComponent(includeLanguage)
+        );
     }
 
     function loadMovieLogo(render, data, imagesData) {
@@ -1230,12 +1355,6 @@
             return;
         }
 
-        const type = data.name ? 'tv/' : 'movie/';
-
-        const imagesUrl = Lampa.TMDB.api(
-            type + data.id + '/images?api_key=' + Lampa.TMDB.key()
-        );
-
         const request = new Promise(resolve => {
             let completed = false;
 
@@ -1245,9 +1364,9 @@
                 completed = true;
                 resolve(null);
 
-            }, LOGO_CACHE_TIMEOUT);
+            }, REQUEST_TIMEOUT);
 
-            $.getJSON(imagesUrl, result => {
+            $.getJSON(buildImagesUrl(data), result => {
                 if (completed) return;
 
                 completed = true;
@@ -1290,8 +1409,7 @@
             }
         });
     }
-
-    // =====================================================
+        // =====================================================
     // STUDIO LOGOS
     // =====================================================
 
@@ -1307,64 +1425,14 @@
                 '/t/p/w200' + studio.logo_path
             );
 
-            const id = 'cas_studio_' +
-                Math.random().toString(36).substr(2, 9);
+            const item = $('<div class="cas-studio-item cas-wave-studio"></div>');
+            const image = $('<img>');
 
-            container.append(
-                `<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`
-            );
+            image.attr('src', logoUrl);
+            image.attr('alt', studio.name || '');
 
-            const img = new Image();
-
-            img.crossOrigin = 'anonymous';
-
-            img.onload = function () {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                canvas.width = this.width;
-                canvas.height = this.height;
-
-                ctx.drawImage(this, 0, 0);
-
-                try {
-                    const imageData = ctx.getImageData(
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    ).data;
-
-                    let r = 0;
-                    let g = 0;
-                    let b = 0;
-                    let count = 0;
-
-                    for (let i = 0; i < imageData.length; i += 4) {
-                        if (imageData[i + 3] > 50) {
-                            r += imageData[i];
-                            g += imageData[i + 1];
-                            b += imageData[i + 2];
-                            count++;
-                        }
-                    }
-
-                    if (count > 0) {
-                        const brightness =
-                            (0.299 * r + 0.587 * g + 0.114 * b) / count;
-
-                        if (brightness < 40) {
-                            $('#' + id + ' img').css(
-                                'filter',
-                                'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))'
-                            );
-                        }
-                    }
-
-                } catch (e) {}
-            };
-
-            img.src = logoUrl;
+            item.append(image);
+            container.append(item);
         });
     }
 
@@ -1405,39 +1473,9 @@
             .slice(0, 3)
             .join(', ');
 
-        // 1. YEAR
-
-        appendMetaItem(
-            container,
-            year,
-            'cas-wave-year'
-        );
-
-        // 2. COUNTRY
-
-        appendMetaItem(
-            container,
-            country,
-            'cas-wave-country'
-        );
-
-        // 3. RUNTIME
-
-        appendMetaItem(
-            container,
-            runtime,
-            'cas-wave-time'
-        );
-
-        // 4. RATING
+        // 1. RATING
 
         if (rating > 0) {
-            if (container.children().length) {
-                container.append(
-                    '<span class="cas-meta-separator">·</span>'
-                );
-            }
-
             const ratingElement = $(`
                 <span class="cas-meta-item cas-wave-rating">
                     <span class="cas-wave-rating-star">★</span>
@@ -1451,6 +1489,30 @@
 
             container.append(ratingElement);
         }
+
+        // 2. YEAR
+
+        appendMetaItem(
+            container,
+            year,
+            'cas-wave-year'
+        );
+
+        // 3. COUNTRY
+
+        appendMetaItem(
+            container,
+            country,
+            'cas-wave-country'
+        );
+
+        // 4. RUNTIME
+
+        appendMetaItem(
+            container,
+            runtime,
+            'cas-wave-time'
+        );
 
         // 5. GENRES
 
@@ -1467,13 +1529,16 @@
     // TMDB DETAILS FALLBACK
     // =====================================================
 
-    const detailsRequests = {};
-
     function needsDetails(data) {
         return !getCountry(data) ||
             !getRuntime(data) ||
             !(data.genres && data.genres.length) ||
-            !getRating(data);
+            !getRating(data) ||
+            !data.overview ||
+            (
+                Lampa.Storage.get('cas_show_tagline') &&
+                !data.tagline
+            );
     }
 
     function loadTMDBDetails(data) {
@@ -1491,11 +1556,12 @@
                 return;
             }
 
+            const language = getPreferredLogoLanguage() || 'uk';
+
             const url = Lampa.TMDB.api(
                 type + data.id + '?api_key=' +
                 Lampa.TMDB.key() +
-                '&language=' +
-                (Lampa.Storage.get('tmdb_lang') || 'uk')
+                '&language=' + encodeURIComponent(language)
             );
 
             const request = new Promise(done => {
@@ -1506,7 +1572,7 @@
 
                     completed = true;
                     done(null);
-                }, 12000);
+                }, REQUEST_TIMEOUT);
 
                 $.getJSON(url, result => {
                     if (completed) return;
@@ -1537,8 +1603,8 @@
     // MOVIE METADATA + DESCRIPTION
     // =====================================================
 
-    async function loadMovieDataOptimized(render, data) {
-        if (!data) return;
+    async function loadMovieDataOptimized(render, data, requestId) {
+        if (!data || requestId !== cardRequestId) return;
 
         // TAGLINE
 
@@ -1567,72 +1633,81 @@
         if (needsDetails(data)) {
             const details = await loadTMDBDetails(data);
 
-            if (details) {
-                // Merge only missing fields.
-                const merged = Object.assign({}, data);
+            if (
+                !details ||
+                requestId !== cardRequestId
+            ) {
+                return;
+            }
 
-                if (!getRating(merged)) {
-                    merged.vote_average = details.vote_average;
-                }
+            // Merge only missing fields.
 
-                if (!getCountry(merged)) {
-                    merged.production_countries =
-                        details.production_countries;
+            const merged = Object.assign({}, data);
 
-                    if (!merged.origin_country) {
-                        merged.origin_country = details.origin_country;
-                    }
-                }
+            if (!getRating(merged)) {
+                merged.vote_average = details.vote_average;
+            }
 
-                if (!getRuntime(merged)) {
-                    merged.runtime = details.runtime;
-                    merged.episode_run_time = details.episode_run_time;
-                }
+            if (!getCountry(merged)) {
+                merged.production_countries =
+                    details.production_countries;
 
-                if (!(merged.genres && merged.genres.length)) {
-                    merged.genres = details.genres;
-                }
-
-                if (!merged.overview && details.overview) {
-                    merged.overview = details.overview;
-
-                    render.find('.cas-description')
-                        .text(String(details.overview).trim())
-                        .css(
-                            'display',
-                            details.overview ? '-webkit-box' : 'none'
-                        );
-                }
-
-                if (!merged.tagline && details.tagline) {
-                    merged.tagline = details.tagline;
-
-                    if (Lampa.Storage.get('cas_show_tagline')) {
-                        render.find('.cas-tagline')
-                            .text('«' + details.tagline + '»')
-                            .show();
-                    }
-                }
-
-                renderMetadata(render, merged);
-
-                // Update studios if missing in the original data.
-
-                if (
-                    Lampa.Storage.get('cas_show_studios') &&
-                    (
-                        !data.production_companies ||
-                        !data.production_companies.length
-                    ) &&
-                    details.production_companies
-                ) {
-                    renderStudioLogosWithColorAnalysis(
-                        render.find('.cas-studios-row'),
-                        details
-                    );
+                if (!merged.origin_country) {
+                    merged.origin_country = details.origin_country;
                 }
             }
+
+            if (!getRuntime(merged)) {
+                merged.runtime = details.runtime;
+                merged.episode_run_time = details.episode_run_time;
+            }
+
+            if (!(merged.genres && merged.genres.length)) {
+                merged.genres = details.genres;
+            }
+
+            if (!merged.overview && details.overview) {
+                merged.overview = details.overview;
+
+                render.find('.cas-description')
+                    .text(String(details.overview).trim())
+                    .css(
+                        'display',
+                        details.overview ? '-webkit-box' : 'none'
+                    );
+            }
+
+            if (!merged.tagline && details.tagline) {
+                merged.tagline = details.tagline;
+
+                if (Lampa.Storage.get('cas_show_tagline')) {
+                    render.find('.cas-tagline')
+                        .text('«' + details.tagline + '»')
+                        .show();
+                }
+            }
+
+            renderMetadata(render, merged);
+
+            // Update studios only when original data has none.
+
+            if (
+                Lampa.Storage.get('cas_show_studios') &&
+                (
+                    !data.production_companies ||
+                    !data.production_companies.length
+                ) &&
+                details.production_companies &&
+                details.production_companies.length
+            ) {
+                renderStudioLogosWithColorAnalysis(
+                    render.find('.cas-studios-row'),
+                    details
+                );
+            }
         }
+
+        if (requestId !== cardRequestId) return;
 
         // STUDIOS
 
@@ -1646,15 +1721,24 @@
         }
     }
 
-    const debouncedLoadMovieData = debounce((render, data) => {
-        loadMovieDataOptimized(render, data).catch(() => {});
-    }, 150);
+    const debouncedLoadMovieData = debounce(
+        (render, data, requestId) => {
+            loadMovieDataOptimized(
+                render,
+                data,
+                requestId
+            ).catch(() => {});
+        },
+        150
+    );
 
     // =====================================================
     // IMAGE PROCESSING
     // =====================================================
 
-    async function processImages(render, data, res) {
+    async function processImages(render, data, res, requestId) {
+        if (requestId !== cardRequestId) return;
+
         try {
             loadMovieLogo(render, data, res);
 
@@ -1666,7 +1750,7 @@
                 res.backdrops.length > 1
             ) {
                 const currentLang =
-                    Lampa.Storage.get('tmdb_lang') || 'uk';
+                    Lampa.Storage.field('tmdb_lang') || 'uk';
 
                 startSlideshow(
                     render,
@@ -1694,6 +1778,8 @@
             const cardRoot = render.find(
                 '.full-start-new.left-title'
             );
+
+            const thisCardRequest = ++cardRequestId;
 
             logoRequestId++;
 
@@ -1730,8 +1816,15 @@
                 const cached = getCachedData(cacheId);
 
                 const processImagesWrapper = async res => {
+                    if (thisCardRequest !== cardRequestId) return;
+
                     try {
-                        await processImages(render, data, res);
+                        await processImages(
+                            render,
+                            data,
+                            res,
+                            thisCardRequest
+                        );
 
                     } catch (e) {
                         showLogoFallback(
@@ -1741,9 +1834,13 @@
                         );
 
                     } finally {
-                        requestAnimationFrame(() => {
-                            cardRoot.addClass('cas-animated');
-                        });
+                        if (thisCardRequest === cardRequestId) {
+                            requestAnimationFrame(() => {
+                                if (thisCardRequest !== cardRequestId) return;
+
+                                cardRoot.addClass('cas-animated');
+                            });
+                        }
                     }
                 };
 
@@ -1751,18 +1848,17 @@
                     processImagesWrapper(cached);
 
                 } else {
-                    const imagesUrl = Lampa.TMDB.api(
-                        (data.name ? 'tv/' : 'movie/') +
-                        data.id +
-                        '/images?api_key=' +
-                        Lampa.TMDB.key()
-                    );
+                    const imagesUrl = buildImagesUrl(data);
 
                     $.getJSON(imagesUrl, res => {
+                        if (thisCardRequest !== cardRequestId) return;
+
                         setCachedData(cacheId, res);
                         processImagesWrapper(res);
 
                     }).fail(() => {
+                        if (thisCardRequest !== cardRequestId) return;
+
                         showLogoFallback(
                             render,
                             data,
@@ -1770,6 +1866,8 @@
                         );
 
                         requestAnimationFrame(() => {
+                            if (thisCardRequest !== cardRequestId) return;
+
                             cardRoot.addClass('cas-animated');
                         });
                     });
@@ -1777,10 +1875,16 @@
 
                 // METADATA LOAD
 
-                debouncedLoadMovieData(render, data);
+                debouncedLoadMovieData(
+                    render,
+                    data,
+                    thisCardRequest
+                );
 
             } else {
                 requestAnimationFrame(() => {
+                    if (thisCardRequest !== cardRequestId) return;
+
                     cardRoot.addClass('cas-animated');
                 });
             }
@@ -1788,6 +1892,8 @@
             // INITIAL FOCUS
 
             setTimeout(() => {
+                if (thisCardRequest !== cardRequestId) return;
+
                 const firstButton = render.find(
                     '.full-start-new__buttons .full-start__button'
                 ).first();
@@ -1813,7 +1919,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.2 initialized successfully'
+                'NewCard 3.3.3 initialized successfully'
             );
 
         } catch (error) {
