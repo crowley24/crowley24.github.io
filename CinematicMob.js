@@ -3,36 +3,45 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.2.0
+     * @version 3.2.1
      * @author Crowley24
-     * @description Cinematic Premium Evolution
+     * @description Cinematic Premium — Smooth Performance
      * @platforms Lampa | Mobile
      *
-     * 3.2.0 CHANGES:
-     * - Cinematic staggered entrance animations
-     * - Lightweight opacity + transform animations
-     * - Removed expensive blur animations
-     * - Refined metadata typography and separators
-     * - Premium studio logo presentation
-     * - Improved movie logo responsive sizing
-     * - Refined button press feedback
-     * - Optimized mobile WebView animations
-     * - Added TMDB logo image quality setting
+     * 3.2.1 CHANGES:
+     * - Replaced keyframe animations with lightweight transitions
+     * - Smooth sequential element entrance
+     * - No blur filters in entrance animations
+     * - No permanent will-change
+     * - No animation on large content containers
+     * - Optimized movie card rendering
+     * - TMDB details request deduplication
+     * - TMDB details cache works independently of active card
+     * - Studio darkness detection cache and deduplication
+     * - Deferred studio logo processing
+     * - Optimized movie logo presentation
      * - Preserved native Lampa background
-     * - Removed blur_poster modification
-     * - Preserved TMDB logo loading and caching
-     * - Preserved studio logos and metadata
-     * - Preserved native Lampa ratings and buttons
+     * - Preserved native ratings and buttons
      */
 
-    if (window.MOB_INTERFACE_V320_READY) return;
-    window.MOB_INTERFACE_V320_READY = true;
+    if (
+        window.MOB_INTERFACE_V321_READY ||
+        window.MOB_INTERFACE_V320_READY
+    ) return;
+
+    window.MOB_INTERFACE_V321_READY = true;
 
     var detailsCache = {};
+    var detailsRequests = {};
+
     var logoCache = {};
     var logoRequests = {};
+
     var logoImageCache = {};
     var logoImageRequests = {};
+
+    var studioDarkCache = {};
+    var studioDarkRequests = {};
 
     var currentActiveId = null;
     var activeRenderToken = 0;
@@ -60,8 +69,16 @@
     });
 
     // --------------------------------------------------
-    // HELPERS
+    // CACHE HELPERS
     // --------------------------------------------------
+
+    function trimCache(cache, max) {
+        var keys = Object.keys(cache);
+
+        while (keys.length > max) {
+            delete cache[keys.shift()];
+        }
+    }
 
     function isElementCurrent($render, renderToken) {
         return (
@@ -72,11 +89,11 @@
         );
     }
 
-    function trimCache(cache, max) {
-        var keys = Object.keys(cache);
-
-        if (keys.length > max) {
-            delete cache[keys[0]];
+    function requestFrame(callback) {
+        if (window.requestAnimationFrame) {
+            window.requestAnimationFrame(callback);
+        } else {
+            setTimeout(callback, 16);
         }
     }
 
@@ -95,6 +112,142 @@
         return allowed.indexOf(quality) !== -1
             ? quality
             : 'w500';
+    }
+
+    // --------------------------------------------------
+    // ANIMATION CONFIGURATION
+    // --------------------------------------------------
+
+    function getAnimationSettings() {
+        var effect = Lampa.Storage.get(
+            'mobile_interface_ui_anim_effect',
+            'cinematic'
+        );
+
+        var configurations = {
+            cinematic: {
+                duration: 380,
+                delay: 65,
+                offset: '8px',
+                easing: 'cubic-bezier(.22,.75,.25,1)'
+            },
+
+            fluid: {
+                duration: 440,
+                delay: 75,
+                offset: '10px',
+                easing: 'cubic-bezier(.2,.8,.2,1)'
+            },
+
+            cyber: {
+                duration: 300,
+                delay: 45,
+                offset: '5px',
+                easing: 'cubic-bezier(.16,1,.3,1)'
+            },
+
+            elastic: {
+                duration: 430,
+                delay: 65,
+                offset: '8px',
+                easing: 'cubic-bezier(.22,1.15,.36,1)'
+            },
+
+            minimal: {
+                duration: 280,
+                delay: 40,
+                offset: '4px',
+                easing: 'ease-out'
+            }
+        };
+
+        if (!configurations[effect]) {
+            effect = 'cinematic';
+        }
+
+        return {
+            enabled: !!Lampa.Storage.get(
+                'mobile_interface_ui_anim',
+                true
+            ),
+            effect: effect,
+            config: configurations[effect]
+        };
+    }
+
+    // --------------------------------------------------
+    // LIGHTWEIGHT ELEMENT ANIMATION
+    // --------------------------------------------------
+
+    function animateElement(element, delay) {
+        if (!element) return;
+
+        var settings = getAnimationSettings();
+
+        if (!settings.enabled) {
+            element.classList.remove(
+                'mi321-enter',
+                'mi321-visible'
+            );
+            return;
+        }
+
+        element.classList.remove('mi321-visible');
+        element.classList.add('mi321-enter');
+
+        element.style.transitionDelay =
+            Math.max(0, delay || 0) + 'ms';
+
+        requestFrame(function () {
+            if (!element || !element.isConnected) return;
+
+            element.classList.add('mi321-visible');
+        });
+    }
+
+    function animateCardElements($render, renderToken) {
+        if (!isElementCurrent($render, renderToken)) return;
+
+        var settings = getAnimationSettings();
+
+        if (!settings.enabled) return;
+
+        var delay = settings.config.delay;
+
+        var studio = $render.find(
+            '.studio-header-brand'
+        ).first()[0];
+
+        var tagline = $render.find(
+            '.full-start-new__tagline'
+        ).first()[0];
+
+        var meta = $render.find(
+            '.plugin-meta-row'
+        ).first()[0];
+
+        var buttons = $render.find(
+            '.full-start-new__buttons .full-start__button'
+        );
+
+        if (studio) {
+            animateElement(studio, 0);
+        }
+
+        if (tagline) {
+            animateElement(tagline, delay);
+        }
+
+        if (meta) {
+            animateElement(meta, delay * 2);
+        }
+
+        buttons.each(function (index) {
+            animateElement(
+                this,
+                delay * 3 + index * 35
+            );
+        });
     }
 
     // --------------------------------------------------
@@ -153,7 +306,7 @@
 
         var timer = setTimeout(function () {
             finish(null, false);
-        }, 20000);
+        }, 15000);
 
         function finish(result, shouldCache) {
             if (completed) return;
@@ -213,9 +366,14 @@
         }
 
         var lang = Lampa.Storage.field('tmdb_lang') || 'en';
+        var quality = getLogoQuality();
         var langs = lang + ',en,null';
 
-        var cacheKey = type + ':' + movie.id + ':' + lang;
+        var cacheKey =
+            type + ':' +
+            movie.id + ':' +
+            lang + ':' +
+            quality;
 
         if (
             Object.prototype.hasOwnProperty.call(
@@ -270,7 +428,7 @@
 
         request.timer = setTimeout(function () {
             finish(null, false);
-        }, 20000);
+        }, 15000);
 
         try {
             tmdb.get(
@@ -304,7 +462,7 @@
 
                     var logoUrl = Lampa.Api.img(
                         logo.file_path,
-                        getLogoQuality()
+                        quality
                     );
 
                     finish(logoUrl, true);
@@ -356,8 +514,8 @@
 
         $title
             .empty()
-            .removeClass('mi320-logo-ready')
-            .addClass('mi320-logo-pending');
+            .removeClass('mi321-logo-ready')
+            .addClass('mi321-logo-pending');
 
         var type = getMovieType(movie);
 
@@ -371,8 +529,8 @@
             if (!$finalTitle.length) return;
 
             $finalTitle
-                .removeClass('mi320-logo-pending')
-                .removeClass('mi320-logo-ready')
+                .removeClass('mi321-logo-pending')
+                .removeClass('mi321-logo-ready')
                 .empty()
                 .append(nativeTitle);
         }
@@ -407,7 +565,7 @@
                         var $logo = $(image.cloneNode(false));
 
                         $logo
-                            .addClass('mi320-movie-logo')
+                            .addClass('mi321-movie-logo')
                             .attr(
                                 'alt',
                                 movie.title ||
@@ -419,9 +577,11 @@
 
                         $finalTitle
                             .empty()
-                            .removeClass('mi320-logo-pending')
-                            .addClass('mi320-logo-ready')
+                            .removeClass('mi321-logo-pending')
+                            .addClass('mi321-logo-ready')
                             .append($logo);
+
+                        animateElement($logo[0], 0);
                     }
                 );
             }
@@ -429,11 +589,59 @@
     }
 
     // --------------------------------------------------
-    // IMAGE DARKNESS DETECTION
+    // STUDIO LOGO DARKNESS CACHE
     // --------------------------------------------------
 
     function isImageDark(imgSrc, callback) {
+        if (!imgSrc) {
+            callback(false);
+            return;
+        }
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                studioDarkCache,
+                imgSrc
+            )
+        ) {
+            callback(studioDarkCache[imgSrc]);
+            return;
+        }
+
+        if (studioDarkRequests[imgSrc]) {
+            studioDarkRequests[imgSrc].push(callback);
+            return;
+        }
+
+        studioDarkRequests[imgSrc] = [callback];
+
         var img = new Image();
+        var completed = false;
+
+        var timer = setTimeout(function () {
+            finish(false);
+        }, 10000);
+
+        function finish(result) {
+            if (completed) return;
+
+            completed = true;
+
+            clearTimeout(timer);
+
+            studioDarkCache[imgSrc] = !!result;
+            trimCache(studioDarkCache, 100);
+
+            var waiters = studioDarkRequests[imgSrc] || [];
+
+            delete studioDarkRequests[imgSrc];
+
+            waiters.forEach(function (waiter) {
+                try {
+                    waiter(!!result);
+                } catch (e) {}
+            });
+        }
 
         img.crossOrigin = 'Anonymous';
 
@@ -442,14 +650,24 @@
                 var canvas = document.createElement('canvas');
                 var ctx = canvas.getContext('2d');
 
-                canvas.width = 40;
-                canvas.height = 40;
+                if (!ctx) {
+                    finish(false);
+                    return;
+                }
 
-                ctx.drawImage(img, 0, 0, 40, 40);
+                canvas.width = 32;
+                canvas.height = 32;
 
-                var imgData = ctx.getImageData(0, 0, 40, 40);
+                ctx.drawImage(img, 0, 0, 32, 32);
+
+                var imgData = ctx.getImageData(
+                    0,
+                    0,
+                    32,
+                    32
+                );
+
                 var data = imgData.data;
-
                 var totalBrightness = 0;
                 var hasColor = false;
                 var count = 0;
@@ -462,10 +680,9 @@
                         var g = data[i + 1];
                         var b = data[i + 2];
 
-                        var brightness =
+                        totalBrightness +=
                             (r * 299 + g * 587 + b * 114) / 1000;
 
-                        totalBrightness += brightness;
                         count++;
 
                         if (
@@ -477,19 +694,19 @@
                     }
                 }
 
-                var avgBrightness = count > 0
+                var average = count
                     ? totalBrightness / count
                     : 255;
 
-                callback(avgBrightness < 110 && !hasColor);
+                finish(average < 110 && !hasColor);
 
             } catch (e) {
-                callback(false);
+                finish(false);
             }
         };
 
         img.onerror = function () {
-            callback(false);
+            finish(false);
         };
 
         img.src = imgSrc;
@@ -581,7 +798,9 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi312-header-meta-hidden') ||
+                element.classList.contains(
+                    'mi312-header-meta-hidden'
+                ) ||
                 isProtected(element)
             ) {
                 continue;
@@ -628,40 +847,11 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi312-header-meta-hidden');
+                target.classList.add(
+                    'mi312-header-meta-hidden'
+                );
             }
         });
-    }
-
-    // --------------------------------------------------
-    // ANIMATION CONFIGURATION
-    // --------------------------------------------------
-
-    function getAnimationSettings() {
-        var effect = Lampa.Storage.get(
-            'mobile_interface_ui_anim_effect',
-            'cinematic'
-        );
-
-        var allowed = [
-            'fluid',
-            'cyber',
-            'cinematic',
-            'elastic',
-            'minimal'
-        ];
-
-        if (allowed.indexOf(effect) === -1) {
-            effect = 'cinematic';
-        }
-
-        return {
-            enabled: !!Lampa.Storage.get(
-                'mobile_interface_ui_anim',
-                true
-            ),
-            effect: effect
-        };
     }
 
     // --------------------------------------------------
@@ -680,6 +870,7 @@
         }
 
         var animation = getAnimationSettings();
+        var config = animation.config;
 
         var lHeight = parseInt(
             Lampa.Storage.get(
@@ -708,52 +899,7 @@
             '0.45em'
         );
 
-        var effect = animation.effect;
-
-        var timing = effect === 'elastic'
-            ? 'cubic-bezier(.22,1.35,.45,1)'
-            : 'cubic-bezier(.16,1,.3,1)';
-
-        var enter = animation.enabled
-            ? 'animation:mi320_' + effect + ' .68s ' +
-              timing + ' both;'
-            : '';
-
         var css = '';
-
-        // --------------------------------------------------
-        // LIGHTWEIGHT ANIMATIONS
-        // --------------------------------------------------
-
-        css += '@keyframes mi320_cinematic{';
-        css += '0%{opacity:0;transform:translate3d(0,14px,0) scale(.985)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
-        css += '}';
-
-        css += '@keyframes mi320_fluid{';
-        css += '0%{opacity:0;transform:translate3d(0,18px,0) scale(.98)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
-        css += '}';
-
-        css += '@keyframes mi320_cyber{';
-        css += '0%{opacity:0;transform:translate3d(-12px,0,0)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0)}';
-        css += '}';
-
-        css += '@keyframes mi320_elastic{';
-        css += '0%{opacity:0;transform:translate3d(0,10px,0) scale(.96)}';
-        css += '72%{opacity:1;transform:translate3d(0,0,0) scale(1.012)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
-        css += '}';
-
-        css += '@keyframes mi320_minimal{';
-        css += '0%{opacity:0;transform:translate3d(0,7px,0)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0)}';
-        css += '}';
-
-        // --------------------------------------------------
-        // MOBILE
-        // --------------------------------------------------
 
         css += '@media screen and (max-width:480px){';
 
@@ -765,7 +911,7 @@
         css += 'background:transparent!important;';
         css += '}';
 
-        // HIDE REACTIONS
+        // REACTIONS
 
         css += '.full-start-new .full-start__reactions,';
         css += '.full-start-new [class*="reactions"]{';
@@ -784,7 +930,7 @@
         css += 'overflow:hidden!important;';
         css += '}';
 
-        // HIDE AGE / STATUS / DETAILS
+        // AGE / STATUS / DETAILS
 
         css += '.full-start-new .full-start__age,';
         css += '.full-start-new .full-start-new__age,';
@@ -803,13 +949,7 @@
 
         /*
          * NATIVE LAMPA BACKGROUND
-         *
-         * Не змінюємо:
-         * - poster
-         * - backdrop
-         * - висоту фонового зображення
-         * - маску та градієнт
-         * - фонові анімації
+         * No poster or backdrop modifications.
          */
 
         // MAIN CONTENT
@@ -827,12 +967,30 @@
         css += '}';
 
         // --------------------------------------------------
+        // LIGHTWEIGHT ENTRANCE TRANSITIONS
+        // --------------------------------------------------
+
+        css += '.full-start-new .mi321-enter{';
+        css += 'opacity:0!important;';
+        css += 'transform:translate3d(0,' +
+            config.offset + ',0)!important;';
+        css += 'transition:opacity ' +
+            config.duration + 'ms ' +
+            config.easing + ',transform ' +
+            config.duration + 'ms ' +
+            config.easing + '!important;';
+        css += '}';
+
+        css += '.full-start-new .mi321-enter.mi321-visible{';
+        css += 'opacity:1!important;';
+        css += 'transform:translate3d(0,0,0)!important;';
+        css += '}';
+
+        // --------------------------------------------------
         // STUDIO LOGO
         // --------------------------------------------------
 
         css += '.full-start-new .studio-header-brand{';
-        css += enter;
-        css += 'animation-delay:.04s;';
         css += 'order:1;';
         css += 'width:100%;';
         css += 'display:flex;';
@@ -840,7 +998,7 @@
         css += 'align-items:center;';
         css += 'margin:0 0 3px!important;';
         css += 'min-height:19px;';
-        css += 'opacity:.92;';
+        css += 'opacity:.94;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img{';
@@ -849,9 +1007,8 @@
         css += 'width:auto!important;';
         css += 'max-width:112px!important;';
         css += 'object-fit:contain;';
-        css += 'opacity:.88;';
+        css += 'opacity:.9;';
         css += 'filter:drop-shadow(0 2px 7px rgba(0,0,0,.8));';
-        css += 'transition:opacity .28s ease,filter .28s ease;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img.is-dark-logo{';
@@ -877,16 +1034,16 @@
         css += 'transform:none!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi320-logo-pending{';
+        css += '.full-start-new .full-start-new__title.mi321-logo-pending{';
         css += 'display:none!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi320-logo-ready{';
+        css += '.full-start-new .full-start-new__title.mi321-logo-ready{';
         css += 'display:flex!important;';
         css += 'visibility:visible!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title img.mi320-movie-logo{';
+        css += '.full-start-new .full-start-new__title img.mi321-movie-logo{';
         css += 'display:block!important;';
         css += 'height:auto!important;';
         css += 'max-height:' + lHeight + 'px!important;';
@@ -901,13 +1058,24 @@
         css += 'animation:none!important;';
         css += '}';
 
+        // LOGO APPEARANCE
+
+        css += '.full-start-new .mi321-movie-logo.mi321-enter{';
+        css += 'opacity:0!important;';
+        css += 'transform:translate3d(0,5px,0)!important;';
+        css += 'transition:opacity 420ms ease,transform 420ms ease!important;';
+        css += '}';
+
+        css += '.full-start-new .mi321-movie-logo.mi321-enter.mi321-visible{';
+        css += 'opacity:1!important;';
+        css += 'transform:translate3d(0,0,0)!important;';
+        css += '}';
+
         // --------------------------------------------------
         // TAGLINE
         // --------------------------------------------------
 
         css += '.full-start-new .full-start-new__tagline{';
-        css += enter;
-        css += 'animation-delay:.14s;';
         css += 'order:3;';
         css += 'display:' + (showTagline ? 'block' : 'none') + '!important;';
         css += 'max-width:88%;';
@@ -924,12 +1092,10 @@
         css += '}';
 
         // --------------------------------------------------
-        // METADATA ROW
+        // METADATA
         // --------------------------------------------------
 
         css += '.full-start-new .plugin-meta-row{';
-        css += enter;
-        css += 'animation-delay:.22s;';
         css += 'order:4;';
         css += 'width:100%;';
         css += 'max-width:100%;';
@@ -963,7 +1129,7 @@
         css += 'opacity:.91;';
         css += '}';
 
-        // METADATA SEPARATORS
+        // SEPARATORS
 
         css += '.full-start-new .plugin-meta-row .info-separator{';
         css += 'display:inline-block;';
@@ -1008,8 +1174,6 @@
         // --------------------------------------------------
 
         css += '.full-start-new .full-start-new__buttons{';
-        css += enter;
-        css += 'animation-delay:.30s;';
         css += 'order:6;';
         css += 'display:flex!important;';
         css += 'justify-content:space-around!important;';
@@ -1042,10 +1206,9 @@
         css += 'min-width:0!important;';
         css += 'min-height:56px;';
         css += 'padding:8px 3px!important;';
-        css += 'opacity:.88;';
+        css += 'opacity:.9;';
         css += 'transform:translateZ(0);';
-        css += 'transition:transform .24s cubic-bezier(.2,.8,.2,1),background .24s ease,opacity .24s ease;';
-        css += 'will-change:transform;';
+        css += 'transition:transform .2s ease,background .2s ease,opacity .2s ease;';
         css += '}';
 
         css += '.full-start-new .full-start__button:before,';
@@ -1065,7 +1228,7 @@
         css += 'margin:0 0 6px!important;';
         css += 'fill:#fff!important;';
         css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
-        css += 'transition:transform .24s cubic-bezier(.2,.8,.2,1),opacity .2s ease;';
+        css += 'transition:transform .2s ease,opacity .2s ease;';
         css += '}';
 
         // BUTTON LABELS
@@ -1076,7 +1239,7 @@
         css += 'font-size:8px!important;';
         css += 'line-height:1.25!important;';
         css += 'text-transform:uppercase!important;';
-        css += 'opacity:.78!important;';
+        css += 'opacity:.8!important;';
         css += 'font-weight:650;';
         css += 'letter-spacing:.075em;';
         css += 'text-shadow:0 1px 5px rgba(0,0,0,.85);';
@@ -1086,16 +1249,15 @@
         // PRESS FEEDBACK
 
         css += '.full-start-new .full-start__button:active{';
-        css += 'transform:scale(.93)!important;';
-        css += 'background:rgba(255,255,255,.09)!important;';
-        css += 'border-color:rgba(255,255,255,.08)!important;';
-        css += 'box-shadow:0 2px 12px rgba(0,0,0,.12)!important;';
+        css += 'transform:scale(.95)!important;';
+        css += 'background:rgba(255,255,255,.08)!important;';
+        css += 'border-color:rgba(255,255,255,.07)!important;';
         css += 'opacity:1;';
         css += '}';
 
         css += '.full-start-new .full-start__button:active svg,';
         css += '.full-start-new .full-start__button:active img{';
-        css += 'transform:scale(.9);';
+        css += 'transform:scale(.94);';
         css += 'opacity:1;';
         css += '}';
 
@@ -1104,7 +1266,7 @@
         css += '}';
 
         // --------------------------------------------------
-        // RESPONSIVE TUNING
+        // SMALL SCREENS
         // --------------------------------------------------
 
         css += '@media screen and (max-width:360px){';
@@ -1132,16 +1294,19 @@
 
         css += '}';
 
-        // --------------------------------------------------
         // REDUCED MOTION
-        // --------------------------------------------------
 
         css += '@media (prefers-reduced-motion:reduce){';
 
-        css += '.full-start-new *{';
-        css += 'animation-duration:.01ms!important;';
-        css += 'animation-iteration-count:1!important;';
-        css += 'transition-duration:.01ms!important;';
+        css += '.full-start-new .mi321-enter,';
+        css += '.full-start-new .mi321-movie-logo{';
+        css += 'transition:none!important;';
+        css += 'opacity:1!important;';
+        css += 'transform:none!important;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button{';
+        css += 'transition:none!important;';
         css += '}';
 
         css += '}';
@@ -1251,7 +1416,9 @@
         // NATIVE LAMPA RATINGS
 
         var $card = container.closest('.full-start-new');
-        var $nativeRates = $card.find('.full-start__rates').first();
+        var $nativeRates = $card.find(
+            '.full-start__rates'
+        ).first();
 
         if (!$nativeRates.length) {
             var $rates = $card.find(
@@ -1284,7 +1451,7 @@
 
     // --------------------------------------------------
     // TMDB DETAILS
-    // Studio logos only — no backdrop handling
+    // STUDIO LOGOS ONLY
     // --------------------------------------------------
 
     function applyMovieDetailsData(
@@ -1321,19 +1488,28 @@
                     '/t/p/w200' + studio.logo_path
                 );
 
-                var $brand = $(
-                    '<div class="studio-header-brand">' +
-                    '<img src="' + studioLogoUrl +
-                    '" alt="' + (studio.name || '') +
-                    '">' +
-                    '</div>'
-                );
+                var $brand = $('<div class="studio-header-brand"></div>');
 
-                var $img = $brand.find('img');
+                var $img = $('<img>');
+                $img.attr('src', studioLogoUrl);
+                $img.attr('alt', studio.name || '');
 
                 $img.on('error', function () {
                     $brand.remove();
                 });
+
+                $brand.append($img);
+
+                var $title = $render.find(
+                    '.full-start-new__title'
+                ).first();
+
+                if ($title.length) {
+                    $title.before($brand);
+                    animateElement($brand[0], 0);
+                }
+
+                // DARKNESS CHECK ONLY ONCE PER URL
 
                 isImageDark(studioLogoUrl, function (isDark) {
                     if (!isElementCurrent($render, renderToken)) return;
@@ -1342,9 +1518,6 @@
                         $img.addClass('is-dark-logo');
                     }
                 });
-
-                $render.find('.full-start-new__title')
-                    .before($brand);
             }
         }
 
@@ -1353,6 +1526,7 @@
 
     // --------------------------------------------------
     // LOAD TMDB DETAILS
+    // REQUEST DEDUPLICATION
     // --------------------------------------------------
 
     function loadMovieDetails(movie, $render, renderToken) {
@@ -1362,18 +1536,40 @@
 
         currentActiveId = cacheKey;
 
+        // CACHE HIT
+
         if (detailsCache[cacheKey]) {
-            if (renderToken === activeRenderToken) {
-                applyMovieDetailsData(
-                    detailsCache[cacheKey],
-                    movie,
-                    $render,
-                    renderToken
-                );
-            }
+            applyMovieDetailsData(
+                detailsCache[cacheKey],
+                movie,
+                $render,
+                renderToken
+            );
 
             return;
         }
+
+        // REQUEST ALREADY RUNNING
+
+        if (detailsRequests[cacheKey]) {
+            detailsRequests[cacheKey].waiters.push({
+                movie: movie,
+                render: $render,
+                token: renderToken
+            });
+
+            return;
+        }
+
+        var request = {
+            waiters: [{
+                movie: movie,
+                render: $render,
+                token: renderToken
+            }]
+        };
+
+        detailsRequests[cacheKey] = request;
 
         var url =
             'https://api.themoviedb.org/3/' +
@@ -1387,27 +1583,37 @@
             timeout: 12000,
 
             success: function (data) {
-                if (
-                    !data ||
-                    renderToken !== activeRenderToken ||
-                    currentActiveId !== cacheKey
-                ) {
-                    return;
-                }
+                delete detailsRequests[cacheKey];
+
+                if (!data) return;
+
+                // CACHE EVEN IF THE USER HAS ALREADY
+                // OPENED ANOTHER MOVIE CARD
 
                 detailsCache[cacheKey] = data;
                 trimCache(detailsCache, 100);
 
-                applyMovieDetailsData(
-                    data,
-                    movie,
-                    $render,
-                    renderToken
-                );
+                var waiters = request.waiters.slice();
+
+                waiters.forEach(function (waiter) {
+                    if (
+                        isElementCurrent(
+                            waiter.render,
+                            waiter.token
+                        )
+                    ) {
+                        applyMovieDetailsData(
+                            data,
+                            waiter.movie,
+                            waiter.render,
+                            waiter.token
+                        );
+                    }
+                });
             },
 
             error: function () {
-                // TMDB error must not interrupt card rendering.
+                delete detailsRequests[cacheKey];
             }
         });
     }
@@ -1455,6 +1661,9 @@
                 return;
             }
 
+            currentActiveId =
+                getMovieType(movie) + ':' + movie.id;
+
             // METADATA
 
             renderMeta(
@@ -1462,14 +1671,21 @@
                 e
             );
 
-            // HIDE DUPLICATE YEAR / COUNTRY
+            // DUPLICATE YEAR / COUNTRY
 
             hideDuplicateHeaderMetadata($render);
 
-            // TMDB LOGO
+            // LOGO
 
             displayMovieLogo(
                 movie,
+                $render,
+                renderToken
+            );
+
+            // ANIMATE EXISTING ELEMENTS
+
+            animateCardElements(
                 $render,
                 renderToken
             );
@@ -1563,7 +1779,6 @@
                 name: 'Якість логотипу TMDB'
             },
             onChange: function () {
-                // Новий логотип буде завантажено при наступному відкритті картки.
                 logoCache = {};
                 logoImageCache = {};
             }
@@ -1648,7 +1863,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.2.0 Cinematic Premium Evolution initialized'
+            '[MOB_INTERFACE] 3.2.1 Smooth Performance initialized'
         );
     }
 
