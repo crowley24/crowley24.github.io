@@ -518,7 +518,7 @@
             z-index: 5;
             box-sizing: border-box;
             width: 100%;
-            padding: 7em 12em 2.5em 3em;
+            padding: 7em 12em 2.5em 1.5em;
             display: flex;
             flex-direction: column;
             align-items: flex-start !important;
