@@ -2,18 +2,22 @@
     'use strict';
 
     /*
-     * NEWCARD 4.0.0 — CINEMATIC FULL CARD
+     * NEWCARD 4.0.1 — CINEMATIC FULL CARD
      *
      * Lampa / Android TV
      *
-     * Based on visual and loading logic from:
-     * КІНОТРЕЙЛЕРИ 2.3
+     * CHANGES 4.0.1:
+     * - Removed separate background layer
+     * - Removed cas-gradient completely
+     * - Removed all background filters and overlays
+     * - TMDB backdrop is applied directly to the card
+     * - One background image, no duplicate background
+     * - Background: w1280 / cover / center
      *
      * FEATURES:
-     * - TMDB backdrop w1280
      * - Smart TMDB logo selection
      * - Interface language > English > No language
-     * - Smooth backdrop and logo loading
+     * - Preloaded backdrop and logo
      * - Movie / TV metadata
      * - TMDB rating
      * - Genres
@@ -27,16 +31,15 @@
      * - Studio logos
      * - Quality badges
      * - Additional ratings
-     * - Old image cache
      * - Parser integration
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.new_card_style_v400) return;
+    if (window.new_card_style_v401) return;
 
-    window.new_card_style_v400 = true;
+    window.new_card_style_v401 = true;
 
-    var VERSION = '4.0.0';
+    var VERSION = '4.0.1';
     var PLUGIN_NAME = 'NewCard';
 
     var tmdb = Lampa.Api.sources.tmdb;
@@ -93,10 +96,14 @@
 
         if (data.genre_ids && tmdb.getGenresNameFromIds) {
             try {
-                return tmdb.getGenresNameFromIds(
+                var genres = tmdb.getGenresNameFromIds(
                     type,
                     data.genre_ids
-                ).slice(0, 3).join(', ');
+                );
+
+                if (Array.isArray(genres)) {
+                    return genres.slice(0, 3).join(', ');
+                }
             } catch (e) {}
         }
 
@@ -135,6 +142,14 @@
         }
     }
 
+    function getLanguage() {
+        try {
+            return Lampa.Storage.field('tmdb_lang') || 'en';
+        } catch (e) {
+            return 'en';
+        }
+    }
+
     // --------------------------------------------------
     // LOGO SELECTION
     // --------------------------------------------------
@@ -142,7 +157,7 @@
     function pickLogo(logos) {
         if (!logos || !logos.length) return null;
 
-        var lang = Lampa.Storage.field('tmdb_lang') || 'en';
+        var lang = getLanguage();
 
         var order = [
             lang,
@@ -180,8 +195,7 @@
 
         requestCache[key] = [callback];
 
-        var lang = Lampa.Storage.field('tmdb_lang') || 'en';
-
+        var lang = getLanguage();
         var langs = lang + ',en,null';
 
         function finish(url) {
@@ -201,13 +215,11 @@
         try {
             tmdb.get(
                 type + '/' + data.id + '/images',
-
                 {
                     filter: {
                         include_image_language: langs
                     }
                 },
-
                 function (json) {
                     var logo = pickLogo(json.logos || []);
 
@@ -217,7 +229,6 @@
                             : null
                     );
                 },
-
                 function () {
                     finish(null);
                 }
@@ -255,15 +266,10 @@
     // --------------------------------------------------
 
     function setBackground(render, data, sequence) {
-        var background = render.find('.cas-background');
-
-        if (!background.length) return;
-
         var url = getImageUrl(data.backdrop_path, 'w1280');
 
-        background
-            .removeClass('cas-background--loaded')
-            .css('background-image', 'none');
+        // Clear the previous backdrop directly on the card.
+        render.css('background-image', 'none');
 
         if (!url) return;
 
@@ -272,16 +278,12 @@
             if (sequence !== cardSequence) return;
             if (activeCard !== render[0]) return;
 
-            background.css(
+            // The backdrop is applied directly to the card.
+            // No separate background element or gradient overlay.
+            render.css(
                 'background-image',
                 'url("' + url + '")'
             );
-
-            requestAnimationFrame(function () {
-                if (sequence !== cardSequence) return;
-
-                background.addClass('cas-background--loaded');
-            });
         });
     }
 
@@ -335,6 +337,7 @@
 
                 requestAnimationFrame(function () {
                     if (sequence !== cardSequence) return;
+                    if (activeCard !== render[0]) return;
 
                     logoContainer.addClass('cas-logo--loaded');
                 });
@@ -351,7 +354,9 @@
 
         var html = parts.map(function (part, index) {
             return (
-                (index ? '<span class="cas-meta-separator">·</span>' : '') +
+                (index
+                    ? '<span class="cas-meta-separator">·</span>'
+                    : '') +
                 '<span class="cas-meta-item">' +
                 escapeHtml(part) +
                 '</span>'
@@ -383,17 +388,14 @@
         if (!data || !data.id) return;
 
         var type = getType(data);
-
         var sequence = ++cardSequence;
 
         activeCard = render[0];
 
         render
             .removeClass('cas-card-ready')
-            .attr('data-cas-id', data.id);
-
-        render.find('.cas-background')
-            .removeClass('cas-background--loaded');
+            .attr('data-cas-id', data.id)
+            .css('background-image', 'none');
 
         render.find('.cas-logo')
             .removeClass('cas-logo--loaded')
@@ -405,7 +407,9 @@
 
         render.find('.cas-meta-info').empty();
 
-        render.find('.cas-description').empty();
+        render.find('.cas-description')
+            .removeClass('cas-description--visible')
+            .empty();
 
         setBackground(render, data, sequence);
 
@@ -417,6 +421,7 @@
 
         requestAnimationFrame(function () {
             if (sequence !== cardSequence) return;
+            if (activeCard !== render[0]) return;
 
             render.addClass('cas-card-ready');
         });
@@ -428,7 +433,6 @@
 
     function cleanup() {
         cardSequence++;
-
         activeCard = null;
     }
 
@@ -439,9 +443,6 @@
     function addCustomTemplate() {
         var template = `
         <div class="full-start-new left-title cas-full-card">
-
-            <div class="cas-background"></div>
-            <div class="cas-gradient"></div>
 
             <div class="full-start-new__body">
 
@@ -550,64 +551,27 @@
     // --------------------------------------------------
 
     function addStyles() {
-        if ($('#cas-v400-styles').length) return;
+        if ($('#cas-v401-styles').length) return;
 
         var styles = `
-        <style id="cas-v400-styles">
+        <style id="cas-v401-styles">
 
         .full-start-new.cas-full-card {
             position: relative !important;
             overflow: hidden !important;
             isolation: isolate;
             min-height: 85vh;
-        }
 
-        .cas-background {
-            position: absolute;
-            inset: 0;
-            z-index: 0;
+            /* One backdrop directly on the card */
             background-color: #080808;
             background-size: cover;
             background-position: center center;
             background-repeat: no-repeat;
-            opacity: 0;
-            transform: scale(1.015);
-            transition:
-                opacity .85s cubic-bezier(.2,.8,.2,1),
-                transform 1.8s ease;
-            will-change: opacity, transform;
-            pointer-events: none;
-        }
-
-        .cas-background--loaded {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .cas-gradient {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            pointer-events: none;
-            background:
-                linear-gradient(
-                    90deg,
-                    rgba(0,0,0,.10) 0%,
-                    rgba(0,0,0,.16) 35%,
-                    rgba(0,0,0,.48) 100%
-                ),
-                linear-gradient(
-                    0deg,
-                    rgba(0,0,0,.96) 0%,
-                    rgba(0,0,0,.78) 22%,
-                    rgba(0,0,0,.22) 65%,
-                    rgba(0,0,0,.08) 100%
-                );
         }
 
         .cas-full-card .full-start-new__body {
             position: relative;
-            z-index: 2;
+            z-index: 1;
             display: flex;
             width: 100%;
             height: 85vh;
@@ -621,7 +585,7 @@
 
         .cas-full-card .full-start-new__right {
             position: relative;
-            z-index: 2;
+            z-index: 1;
             width: 100% !important;
             margin: 0 !important;
             padding: 4em 4em 3em 3em !important;
