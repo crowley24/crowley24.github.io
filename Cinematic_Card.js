@@ -2,1428 +2,1546 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.6 — CONTROLLER-BASED BACKDROP CLEANUP
-     *
-     * Lampa / Android TV
-     *
-     * FIXES 1.5.6:
-     * - Instant backdrop cleanup on Lampa controller switch to content
-     * - Uses Lampa.Controller.listener.toggle event
-     * - Keeps full destroy cleanup as fallback
-     * - Keeps MutationObserver as fallback
-     * - Synchronous DOM backdrop removal
-     * - Invalidates pending asynchronous callbacks on cleanup
-     *
-     * PRESERVED:
-     * - TMDB logo selection: Ukrainian > English > fallback
-     * - Logo cache and request coalescing
-     * - Studio logo with details fallback
-     * - Ukrainian country names
-     * - Metadata and description
-     * - Original Lampa buttons and navigation
-     * - Premium logo appearance animation
-     * - Clean stationary fullscreen backdrop
+     * @name NEWCARD
+     * @version 3.1
+     * @author Crowley24
+     * @description Modern TV interface with native-style TMDB logo display
+     * @platforms Lampa | Android TV
      */
 
-    if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v156_ready) return;
+    const PLUGIN_NAME = 'NewCard';
+    const PLUGIN_ID = 'new_card_style';
+    const ASSETS_PATH = 'https://crowley38.github.io/Icons/';
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;
+    const LOGO_CACHE_TIMEOUT = 20000;
 
-    window.tmdb_movie_logos_v156_ready = true;
+    let currentInterval = null;
+    let logoRequestId = 0;
+    let logoRequests = {};
 
-    var tmdb = Lampa.Api.sources.tmdb;
+    const ICONS = {
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
+        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
+    };
 
-    if (!tmdb) return;
+    const QUALITY_ICONS = {
+        '4K': ASSETS_PATH + '4K.svg',
+        '2K': ASSETS_PATH + '2K.svg',
+        'FULL HD': ASSETS_PATH + 'FULL HD.svg',
+        'HD': ASSETS_PATH + 'HD.svg',
+        'HDR': ASSETS_PATH + 'HDR.svg',
+        'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
+        'UKR': ASSETS_PATH + 'UKR.svg',
+        '7.1': ASSETS_PATH + '7.1.svg',
+        '5.1': ASSETS_PATH + '5.1.svg',
+        '4.0': ASSETS_PATH + '4.0.svg',
+        '2.0': ASSETS_PATH + '2.0.svg',
+        'DUB': ASSETS_PATH + 'DUB.svg'
+    };
 
-    var VERSION = '1.5.6';
-    var CSS_ID = 'tml_v156_css';
+    const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
-    var currentCard = null;
-    var currentToken = 0;
-    var currentRoot = null;
-    var currentTitle = null;
-    var currentLogo = null;
-    var currentBackdrop = null;
+    const TRANSLATIONS = {
+        'settings_cas_logo_quality': 'Якість логотипу',
+        'settings_cas_logo_scale': 'Розмір логотипу',
+        'settings_cas_meta_size': 'Розмір шрифту',
+        'settings_cas_blocks_gap': 'Відступи між блоками',
+        'settings_cas_bg_animation': 'Анімація фону',
+        'settings_cas_animation_style': 'Стиль анімації появи',
+        'settings_cas_slideshow_enabled': 'Слайд-шоу фону',
+        'settings_cas_show_studios': 'Показувати студії',
+        'settings_cas_show_quality': 'Показувати якість',
+        'settings_cas_show_rating': 'Показувати рейтинги',
+        'settings_cas_show_description': 'Опис фільму',
+        'settings_cas_show_tagline': 'Показувати слоган'
+    };
 
-    var currentDimLayer = null;
-    var currentScrollHandler = null;
-    var scrollFrame = null;
+    let debounceTimer;
 
-    var cardObserver = null;
+    function debounce(func, delay) {
+        return function () {
+            const context = this;
+            const args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
 
-    var CACHE_TIMEOUT = 20000;
+    function preloadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    function getRatingColor(val) {
+        const n = parseFloat(val);
+        return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
+    }
+
+    function formatTime(mins) {
+        if (!mins) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
+
+    function initializePlugin() {
+        addCustomTemplate();
+        addStyles();
+        addSettings();
+        attachLoader();
+    }
+
+    function addSettings() {
+        const defaults = {
+            'cas_logo_scale': '100',
+            'cas_logo_quality': 'original',
+            'cas_bg_animation': 'kenburns',
+            'cas_animation_style': 'slide',
+            'cas_slideshow_enabled': true,
+            'cas_blocks_gap': '20',
+            'cas_meta_size': '1.3',
+            'cas_show_studios': true,
+            'cas_show_quality': true,
+            'cas_show_rating': true,
+            'cas_show_description': true,
+            'cas_show_tagline': true
+        };
+
+        Object.keys(defaults).forEach(key => {
+            if (Lampa.Storage.get(key) === undefined) {
+                Lampa.Storage.set(key, defaults[key]);
+            }
+        });
+
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: SETTINGS_ICON
+        });
+
+        const params = [
+            {
+                name: 'cas_logo_quality',
+                type: 'select',
+                values: {
+                    'w300': '300px',
+                    'w500': '500px',
+                    'original': 'Original'
+                }
+            },
+            {
+                name: 'cas_logo_scale',
+                type: 'select',
+                values: {
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': '100%',
+                    '110': '110%',
+                    '120': '120%'
+                }
+            },
+            {
+                name: 'cas_meta_size',
+                type: 'select',
+                values: {
+                    '1.1': 'Міні',
+                    '1.2': 'Малий',
+                    '1.3': 'Стандартний',
+                    '1.4': 'Збільшений',
+                    '1.5': 'Великий'
+                }
+            },
+            {
+                name: 'cas_blocks_gap',
+                type: 'select',
+                values: {
+                    '10': 'Дуже тісно',
+                    '15': 'Тісно',
+                    '20': 'Стандарт',
+                    '25': 'Просторе',
+                    '30': 'Дуже просторе'
+                }
+            },
+            {
+                name: 'cas_bg_animation',
+                type: 'select',
+                values: {
+                    'off': 'Вимкнено',
+                    'kenburns': 'Ken Burns (Зум + Паралакс)',
+                    'panscan': 'Кінематографічний дрейф (Pan & Scan)',
+                    'tiltzoom': 'Динамічний кут (Tilt Zoom)'
+                }
+            },
+            {
+                name: 'cas_animation_style',
+                type: 'select',
+                values: {
+                    'slide': 'Slide from Left (Виїзд зліва)',
+                    'spring': 'Elastic Spring (Жива пружина)'
+                }
+            },
+            { name: 'cas_slideshow_enabled', type: 'trigger' },
+            { name: 'cas_show_studios', type: 'trigger' },
+            { name: 'cas_show_quality', type: 'trigger' },
+            { name: 'cas_show_rating', type: 'trigger' },
+            { name: 'cas_show_description', type: 'trigger' },
+            { name: 'cas_show_tagline', type: 'trigger' }
+        ];
+
+        params.forEach(p => {
+            Lampa.SettingsApi.addParam({
+                component: PLUGIN_ID,
+                param: {
+                    name: p.name,
+                    type: p.type,
+                    values: p.values,
+                    default: defaults[p.name]
+                },
+                field: {
+                    name: TRANSLATIONS['settings_' + p.name]
+                },
+                onChange: applySettings
+            });
+        });
+
+        applySettings();
+    }
+
+    function applySettings() {
+        const root = document.documentElement;
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'kenburns';
+
+        root.style.setProperty('--cas-logo-scale', scale);
+        root.style.setProperty('--cas-blocks-gap', gap + 'px');
+        root.style.setProperty('--cas-meta-size', metaSize + 'em');
+
+        const bodyEl = $('body');
+
+        bodyEl.removeClass(
+            'cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom'
+        );
+
+        if (bgAnim !== 'off') {
+            bodyEl.addClass('cas--zoom-' + bgAnim);
+        }
+
+        const currentCard = $('.full-start-new.left-title');
+
+        if (currentCard.length > 0) {
+            currentCard
+                .removeClass('cas-anim-slide cas-anim-spring')
+                .addClass('cas-anim-' + animStyle);
+
+            const showDesc = !!Lampa.Storage.get('cas_show_description');
+            const showTag = !!Lampa.Storage.get('cas_show_tagline');
+
+            currentCard.find('.cas-description').toggle(showDesc);
+            currentCard.find('.cas-tagline').toggle(showTag);
+            currentCard.find('.cas-studios-row').toggle(
+                !!Lampa.Storage.get('cas_show_studios')
+            );
+            currentCard.find('.cas-quality-row').toggle(
+                !!Lampa.Storage.get('cas_show_quality')
+            );
+            currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(
+                !!Lampa.Storage.get('cas_show_rating')
+            );
+
+            const buttons = currentCard.find('.full-start-new__buttons');
+            buttons.css('margin-top', showDesc ? '' : '0px');
+
+            stopSlideshow();
+
+            if (Lampa.Storage.get('cas_slideshow_enabled')) {
+                const bg = currentCard.find(
+                    '.full-start__background img, img.full-start__background'
+                );
+
+                if (bg.length && bg.attr('src')) {
+                    const movieData = currentCard.data('movie');
+
+                    if (movieData && movieData.id) {
+                        const cached = getCachedData('tmdb_' + movieData.id);
+
+                        if (cached && cached.backdrops?.length > 1) {
+                            startSlideshow(
+                                currentCard,
+                                cached.backdrops,
+                                Lampa.Storage.get('tmdb_lang') || 'uk'
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function addCustomTemplate() {
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
+            <div class="full-start-new__body">
+                <div class="full-start-new__left hide">
+                    <div class="full-start-new__poster">
+                        <img class="full-start-new__img full--poster" />
+                    </div>
+                </div>
+
+                <div class="full-start-new__right">
+                    <div class="left-title__content">
+                        <div class="cas-logo-container">
+                            <div class="cas-studios-row"></div>
+                            <div class="cas-logo"></div>
+                        </div>
+
+                        <div class="cas-tagline" style="display: none;"></div>
+
+                        <div class="cas-meta-line">
+                            <div class="cas-meta-info"></div>
+                            <div class="cas-quality-row"></div>
+                        </div>
+
+                        <div class="cas-description"></div>
+
+                        <div class="cas-details-wrapper">
+                            <div class="full-start-new__head hide"></div>
+                            <div class="full-start-new__details hide"></div>
+                        </div>
+
+                        <div class="full-start-new__buttons">
+                            <div class="full-start__button selector button--play">
+                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
+                                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_watch}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--book">
+                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{settings_input_links}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--reaction">
+                                <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
+                                    <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_reactions}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--subscribe hide">
+                                <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6.01892 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
+                                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{title_subscribe}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--options">
+                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="full-start-new__reactions selector hide"></div>
+                    <div class="cas-bottom-ratings"></div>
+                    <div class="full-start-new__rate-line hide"></div>
+                    <div class="rating--modss" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="hide buttons--container">
+                <div class="full-start__button view--torrent hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24">
+                        <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
+                    </svg>
+                    <span>#{full_torrents}</span>
+                </div>
+
+                <div class="full-start__button selector view--trailer">
+                    <svg height="24" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>
+                    </svg>
+                    <span>#{full_trailers}</span>
+                </div>
+            </div>
+        </div>`;
+
+        Lampa.Template.add('full_start_new', template);
+    }
+
+    function addStyles() {
+        if ($('#cas-main-styles').length) return;
+
+        const styles = `<style id="cas-main-styles">
+        :root {
+            --cas-logo-scale: 1;
+            --cas-blocks-gap: 30px;
+            --cas-meta-size: 1.3em;
+            --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1);
+            --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .full-start__background {
+            height: calc(100% + 6em);
+            left: 0 !important;
+            opacity: 0 !important;
+            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+            will-change: opacity;
+            overflow: hidden !important;
+            transform: translateZ(0);
+        }
+
+        .full-start__background.loaded { opacity: 1 !important; }
+        .full-start__background.dim { opacity: 0.35 !important; }
+
+        @keyframes casKenBurnsParallax {
+            0% { transform: scale(1.02) translate3d(0, 0, 0); }
+            50% { transform: scale(1.10) translate3d(5px, -15px, 0); }
+            100% { transform: scale(1.02) translate3d(0, 0, 0); }
+        }
+
+        @keyframes casCinematicPanScan {
+            0% { transform: scale(1.06) translate3d(0, 0, 0); }
+            33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
+            66% { transform: scale(1.10) translate3d(20px, 15px, 0); }
+            100% { transform: scale(1.06) translate3d(0, 0, 0); }
+        }
+
+        @keyframes casDynamicTiltZoom {
+            0% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
+            33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px, 10px, 0); }
+            66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px, -10px, 0); }
+            100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
+        }
+
+        body.cas--zoom-kenburns .full-start__background img,
+        body.cas--zoom-kenburns img.full-start__background {
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        body.cas--zoom-panscan .full-start__background img,
+        body.cas--zoom-panscan img.full-start__background {
+            animation: casCinematicPanScan 35s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        body.cas--zoom-tiltzoom .full-start__background img,
+        body.cas--zoom-tiltzoom img.full-start__background {
+            animation: casDynamicTiltZoom 25s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        .cas-tagline,
+        .cas-studios-row,
+        .cas-rate-items,
+        .cas-meta-info,
+        .cas-quality-row,
+        .cas-description,
+        .cas-details-wrapper,
+        .full-start-new__buttons,
+        .cas-bottom-ratings {
+            opacity: 0 !important;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+
+        /* Логотип не бере участі в анімаціях інтерфейсу */
+        .cas-logo {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
+            filter: none !important;
+            box-shadow: none !important;
+        }
+
+        .cas-logo img {
+            background: transparent !important;
+            border: none !important;
+            max-width: 450px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            transform: none !important;
+            transform-origin: left center;
+            display: block;
+            object-fit: contain;
+            opacity: 1 !important;
+            transition: none !important;
+            animation: none !important;
+            filter: none !important;
+            box-shadow: none !important;
+        }
+
+        .cas-logo-fallback {
+            font-size: 3em;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .cas-quality-row .cas-quality-item {
+            opacity: 0;
+            transform: translate3d(0, 6px, 0) scale(0.9);
+            transition: opacity 0.3s var(--cas-curve-slide), transform 0.3s var(--cas-curve-slide);
+        }
+
+        .cas-quality-row.show-quality .cas-quality-item {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(1) { transition-delay: 0s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(2) { transition-delay: 0.05s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(3) { transition-delay: 0.10s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(4) { transition-delay: 0.15s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(5) { transition-delay: 0.20s; }
+
+        .cas-anim-slide .cas-tagline,
+        .cas-anim-slide .cas-studios-row,
+        .cas-anim-slide .cas-rate-items,
+        .cas-anim-slide .cas-meta-info,
+        .cas-anim-slide .cas-quality-row,
+        .cas-anim-slide .cas-description,
+        .cas-anim-slide .cas-details-wrapper,
+        .cas-anim-slide .full-start-new__buttons,
+        .cas-anim-slide .cas-bottom-ratings {
+            transform: translate3d(0, 8px, 0);
+            transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);
+        }
+
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.03s; }
+        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.09s; }
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.18s; }
+
+        .cas-anim-spring .cas-tagline,
+        .cas-anim-spring .cas-studios-row,
+        .cas-anim-spring .cas-rate-items,
+        .cas-anim-spring .cas-meta-info,
+        .cas-anim-spring .cas-quality-row,
+        .cas-anim-spring .cas-description,
+        .cas-anim-spring .cas-details-wrapper,
+        .cas-anim-spring .full-start-new__buttons,
+        .cas-anim-spring .cas-bottom-ratings {
+            transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);
+            transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);
+        }
+
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.03s; }
+        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.09s; }
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.18s; }
+
+        .full-start-new__details { display: none !important; }
+        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }
+
+        .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }
+        .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }
+        .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }
+        .full-start-new__poster, .full-start-new__title { display: none; }
+
+        .left-title .full-start-new__left { display: none !important; }
+        .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }
+        .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
+
+        .cas-logo-container {
+            position: relative;
+            overflow: visible;
+            max-width: 100%;
+            margin-bottom: calc(var(--cas-blocks-gap) * 1.2);
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+
+        .cas-tagline {
+            font-size: calc(var(--cas-meta-size) * 0.95);
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            max-width: 650px;
+            text-align: left !important;
+        }
+
+        .cas-meta-line {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .cas-meta-info {
+            margin-right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start !important;
+            gap: 8px;
+            font-weight: 400;
+        }
+
+        .cas-quality-row {
+            margin-top: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start !important;
+            gap: 6px;
+        }
+
+        .full-start-new__buttons {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            flex-wrap: wrap;
+            width: 100%;
+            margin-left: 0 !important;
+            margin-top: 0px !important;
+        }
+
+        .cas-studios-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start !important;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .cas-studio-item {
+            height: 24px !important;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 2px;
+        }
+
+        .cas-studio-item img {
+            height: 100%;
+            width: auto;
+            max-width: 140px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+            opacity: 0.95;
+        }
+
+        .cas-description {
+            font-size: var(--cas-meta-size) !important;
+            line-height: 1.35;
+            color: rgba(255,255,255,0.7);
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            max-width: 650px;
+            margin-top: 4px;
+            margin-bottom: 8px;
+            text-align: left !important;
+        }
+
+        .cas-quality-item img { height: 12px; }
+
+        .cas-bottom-ratings {
+            position: absolute;
+            right: 2.5em;
+            bottom: 2em;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: var(--cas-meta-size);
+            font-weight: 600;
+            z-index: 3;
+        }
+
+        .cas-rate-item { display: flex; align-items: center; gap: 6px; }
+        .cas-rate-item img { height: 1.1em; }
+        .left-title .full-start-new__body { height: 85vh; }
+
+        .cas-audio-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+        }
+        </style>`;
+
+        Lampa.Template.add('left_title_css', styles);
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));
+    }
+
+    function getCachedData(id) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
+        const item = cache[id];
+
+        if (item && Date.now() - item.time < CACHE_LIFETIME) {
+            return item.data;
+        }
+
+        return null;
+    }
+
+    function setCachedData(id, data) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
+
+        cache[id] = {
+            time: Date.now(),
+            data: data
+        };
+
+        const keys = Object.keys(cache);
+
+        if (keys.length > 100) {
+            delete cache[keys[0]];
+        }
+
+        Lampa.Storage.set('cas_images_cache', cache);
+    }
+
+    function cleanup() {
+        stopSlideshow();
+        logoRequestId++;
+        $('.left-title__content').parent().parent().removeClass('cas-animated');
+    }
+
+    function stopSlideshow() {
+        if (currentInterval) {
+            clearInterval(currentInterval);
+            currentInterval = null;
+        }
+
+        if (window.casBgInterval) {
+            clearInterval(window.casBgInterval);
+            window.casBgInterval = null;
+        }
+    }
+
+    function startSlideshow(render, backdrops, currentLang) {
+        stopSlideshow();
+
+        if (!backdrops || backdrops.length <= 1) return;
+
+        let lang_backdrops = [];
+        let no_lang_backdrops = [];
+        let other_backdrops = [];
+
+        backdrops.forEach((b) => {
+            let lang = b.iso_639_1;
+
+            if (lang === currentLang) lang_backdrops.push(b);
+            else if (!lang || lang === 'xx' || lang === 'null') no_lang_backdrops.push(b);
+            else other_backdrops.push(b);
+        });
+
+        let final_backdrops = [].concat(no_lang_backdrops);
+
+        if (final_backdrops.length < 3 && lang_backdrops.length > 0) {
+            final_backdrops = final_backdrops.concat(lang_backdrops);
+        }
+
+        if (final_backdrops.length < 3 && other_backdrops.length > 0) {
+            other_backdrops.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+            final_backdrops = final_backdrops.concat(other_backdrops);
+        }
+
+        final_backdrops = final_backdrops.slice(0, 15);
+
+        if (final_backdrops.length <= 1) return;
+
+        let idx = 0;
+        let is_active = true;
+
+        currentInterval = setInterval(() => {
+            if (!is_active) {
+                clearInterval(currentInterval);
+                return;
+            }
+
+            idx = (idx + 1) % final_backdrops.length;
+
+            let nextSrc = Lampa.TMDB.image(
+                '/t/p/original' + final_backdrops[idx].file_path
+            );
+
+            let $bgImg = render.find(
+                '.full-start__background img, img.full-start__background'
+            ).last();
+
+            if (!$bgImg.length) return;
+
+            let img = new Image();
+
+            img.onload = () => {
+                if (!is_active) return;
+
+                let $container = render.find('.full-start__background');
+
+                $container.css({
+                    transition: 'opacity 0.4s ease',
+                    opacity: 0
+                });
+
+                setTimeout(() => {
+                    if (!is_active) return;
+
+                    $bgImg.attr('src', nextSrc);
+
+                    setTimeout(() => {
+                        if (!is_active) return;
+                        $container.css('opacity', 0.35);
+                    }, 100);
+                }, 400);
+            };
+
+            img.onerror = () => {};
+            img.src = nextSrc;
+
+        }, 15000);
+
+        window.casBgInterval = currentInterval;
+    }
 
     /*
-     * Scroll darkening settings
+     * LOGO SYSTEM
+     * Поведінка як у Кінотрейлери 2.3:
+     * мова Lampa -> en -> null -> перший логотип.
+     * Без проміжного тексту та без анімації логотипа.
      */
-    var SCROLL_DISTANCE = 700;
-    var MAX_DARKNESS = 0.30;
 
-    /*
-     * TMDB logo selection
-     */
+    function getPreferredLogoLanguage() {
+        let lang = '';
+
+        try {
+            if (Lampa.Storage.field) {
+                lang = Lampa.Storage.field('tmdb_lang') || '';
+            }
+        } catch (e) {}
+
+        if (!lang) {
+            lang = Lampa.Storage.get('tmdb_lang') || 'uk';
+        }
+
+        return String(lang).toLowerCase();
+    }
+
     function pickLogo(logos) {
-        if (!logos || !logos.length) return null;
+        if (!Array.isArray(logos) || !logos.length) return null;
 
-        var language = Lampa.Storage.field('tmdb_lang');
+        const preferred = getPreferredLogoLanguage();
 
-        var order = [
-            language,
+        const languages = [
+            preferred,
             'en',
             null
         ];
 
-        for (var i = 0; i < order.length; i++) {
-            var found = logos.filter(function (logo) {
-                return logo.iso_639_1 === order[i];
-            })[0];
+        for (let i = 0; i < languages.length; i++) {
+            const lang = languages[i];
+
+            const found = logos.find(logo => {
+                if (!logo || !logo.file_path) return false;
+
+                if (lang === null) {
+                    return !logo.iso_639_1 ||
+                        logo.iso_639_1 === 'xx' ||
+                        logo.iso_639_1 === 'null';
+                }
+
+                return String(logo.iso_639_1 || '').toLowerCase() === lang;
+            });
 
             if (found) return found;
         }
 
-        return logos[0] || null;
+        return logos.find(logo => logo && logo.file_path) || null;
     }
 
-    /*
-     * Request cache
-     */
-    function cached(item, key, request, callback) {
-        if (item[key] !== undefined) {
-            callback(item[key]);
+    function getLogoCache() {
+        return Lampa.Storage.get('cas_logo_cache') || {};
+    }
+
+    function getCachedLogo(cacheId) {
+        const cache = getLogoCache();
+        const item = cache[cacheId];
+
+        if (!item || !item.time) return null;
+
+        if (Date.now() - item.time > LOGO_CACHE_TIMEOUT) {
+            return null;
+        }
+
+        return item.data || null;
+    }
+
+    function setCachedLogo(cacheId, data) {
+        const cache = getLogoCache();
+
+        cache[cacheId] = {
+            time: Date.now(),
+            data: data
+        };
+
+        const keys = Object.keys(cache);
+
+        if (keys.length > 100) {
+            delete cache[keys[0]];
+        }
+
+        Lampa.Storage.set('cas_logo_cache', cache);
+    }
+
+    function getLogoUrl(logo) {
+        if (!logo || !logo.file_path) return '';
+
+        return Lampa.TMDB.image('/t/p/w500' + logo.file_path);
+    }
+
+    function showLogoFallback(render, data, requestId) {
+        if (requestId !== logoRequestId) return;
+
+        const title = data.title || data.name || '';
+
+        const logoContainer = render.find('.cas-logo');
+
+        if (!title) {
+            logoContainer.empty();
             return;
         }
 
-        if (item[key + '_wait']) {
-            item[key + '_wait'].push(callback);
+        logoContainer.html(
+            $('<div class="cas-logo-fallback"></div>').text(title)
+        );
+    }
+
+    async function displayMovieLogo(render, data, logos, requestId) {
+        if (requestId !== logoRequestId) return;
+
+        const logoContainer = render.find('.cas-logo');
+        const selectedLogo = pickLogo(logos);
+
+        if (!selectedLogo) {
+            showLogoFallback(render, data, requestId);
             return;
         }
 
-        item[key + '_wait'] = [callback];
+        const logoUrl = getLogoUrl(selectedLogo);
 
-        var completed = false;
-
-        var timer = setTimeout(function () {
-            finish(null);
-        }, CACHE_TIMEOUT);
-
-        function finish(value) {
-            if (completed) return;
-
-            completed = true;
-
-            clearTimeout(timer);
-
-            item[key] = value || null;
-
-            var list = item[key + '_wait'] || [];
-
-            item[key + '_wait'] = null;
-
-            list.forEach(function (cb) {
-                try {
-                    cb(item[key]);
-                } catch (e) {}
-            });
+        if (!logoUrl) {
+            showLogoFallback(render, data, requestId);
+            return;
         }
 
         try {
-            request(finish);
+            await preloadImage(logoUrl);
+
+            if (requestId !== logoRequestId) return;
+
+            logoContainer.empty();
+
+            const image = $('<img>');
+            image.attr('src', logoUrl);
+            image.attr('alt', data.title || data.name || '');
+
+            logoContainer.append(image);
         } catch (e) {
-            finish(null);
+            showLogoFallback(render, data, requestId);
         }
     }
 
-    /*
-     * Card type
-     */
-    function getCardType(card) {
-        return card.name ? 'tv' : 'movie';
-    }
+    function loadMovieLogo(render, data, imagesData) {
+        const requestId = ++logoRequestId;
+        const cacheId = 'tmdb_logo_' + data.id;
 
-    /*
-     * TMDB logo
-     */
-    function ensureLogo(card, type, callback) {
-        cached(card, 'tml_logo', function (done) {
-            var language = Lampa.Storage.field('tmdb_lang');
-            var languages = (language || 'uk') + ',en,null';
+        const logoContainer = render.find('.cas-logo');
 
-            tmdb.get(
-                type + '/' + card.id + '/images',
-                {
-                    filter: {
-                        include_image_language: languages
+        // Не показуємо текстову назву під час завантаження логотипа.
+        logoContainer.empty();
+
+        const cachedLogo = getCachedLogo(cacheId);
+
+        if (cachedLogo && cachedLogo.file_path) {
+            displayMovieLogo(render, data, [cachedLogo], requestId);
+            return;
+        }
+
+        if (imagesData && Array.isArray(imagesData.logos)) {
+            const selected = pickLogo(imagesData.logos);
+
+            if (selected) {
+                setCachedLogo(cacheId, selected);
+                displayMovieLogo(render, data, imagesData.logos, requestId);
+                return;
+            }
+
+            showLogoFallback(render, data, requestId);
+            return;
+        }
+
+        if (logoRequests[cacheId]) {
+            logoRequests[cacheId].then(result => {
+                if (requestId !== logoRequestId) return;
+
+                if (result && Array.isArray(result.logos)) {
+                    const selected = pickLogo(result.logos);
+
+                    if (selected) {
+                        setCachedLogo(cacheId, selected);
+                        displayMovieLogo(render, data, result.logos, requestId);
+                    } else {
+                        showLogoFallback(render, data, requestId);
                     }
-                },
-                function (json) {
-                    var logo = json &&
-                        json.logos &&
-                        json.logos.length
-                            ? pickLogo(json.logos)
-                            : null;
-
-                    done(
-                        logo
-                            ? Lampa.Api.img(logo.file_path, 'w500')
-                            : null
-                    );
-                },
-                function () {
-                    done(null);
+                } else {
+                    showLogoFallback(render, data, requestId);
                 }
-            );
-        }, callback);
-    }
+            });
 
-    /*
-     * Studio logo
-     */
-    function findStudioLogo(companies) {
-        if (!companies || !companies.length) return null;
-
-        var studio = companies.filter(function (company) {
-            return company &&
-                company.logo_path &&
-                company.logo_path.length;
-        })[0];
-
-        if (!studio) return null;
-
-        return {
-            url: Lampa.Api.img(studio.logo_path, 'w300'),
-            name: studio.name || ''
-        };
-    }
-
-    function ensureStudioLogo(card, type, callback) {
-        cached(card, 'tml_studio_logo', function (done) {
-            var existing = findStudioLogo(
-                card.production_companies
-            );
-
-            if (existing) {
-                done(existing);
-                return;
-            }
-
-            tmdb.get(
-                type + '/' + card.id,
-                {},
-                function (json) {
-                    done(
-                        findStudioLogo(
-                            json && json.production_companies
-                                ? json.production_companies
-                                : []
-                        )
-                    );
-                },
-                function () {
-                    done(null);
-                }
-            );
-        }, callback);
-    }
-
-    /*
-     * Backdrop
-     */
-    function ensureBackdrop(card, type, callback) {
-        cached(card, 'tml_backdrop', function (done) {
-            if (card.backdrop_path) {
-                done(card.backdrop_path);
-                return;
-            }
-
-            tmdb.get(
-                type + '/' + card.id,
-                {},
-                function (json) {
-                    done(
-                        json && json.backdrop_path
-                            ? json.backdrop_path
-                            : null
-                    );
-                },
-                function () {
-                    done(null);
-                }
-            );
-        }, callback);
-    }
-
-    /*
-     * Country names
-     */
-    function getCountryName(code) {
-        var countries = {
-            US: 'США',
-            GB: 'Велика Британія',
-            UK: 'Велика Британія',
-            FR: 'Франція',
-            DE: 'Німеччина',
-            IT: 'Італія',
-            ES: 'Іспанія',
-            PL: 'Польща',
-            UA: 'Україна',
-            CA: 'Канада',
-            AU: 'Австралія',
-            NZ: 'Нова Зеландія',
-            JP: 'Японія',
-            KR: 'Південна Корея',
-            CN: 'Китай',
-            HK: 'Гонконг',
-            IN: 'Індія',
-            RU: 'Росія',
-            TR: 'Туреччина',
-            BR: 'Бразилія',
-            MX: 'Мексика',
-            AR: 'Аргентина',
-            SE: 'Швеція',
-            NO: 'Норвегія',
-            DK: 'Данія',
-            FI: 'Фінляндія',
-            NL: 'Нідерланди',
-            BE: 'Бельгія',
-            CH: 'Швейцарія',
-            AT: 'Австрія',
-            IE: 'Ірландія',
-            CZ: 'Чехія',
-            SK: 'Словаччина',
-            HU: 'Угорщина',
-            RO: 'Румунія',
-            BG: 'Болгарія',
-            GR: 'Греція',
-            PT: 'Португалія',
-            IL: 'Ізраїль',
-            ZA: 'ПАР',
-            EG: 'Єгипет',
-            TH: 'Таїланд',
-            ID: 'Індонезія',
-            SG: 'Сінгапур',
-            MY: 'Малайзія',
-            PH: 'Філіппіни',
-            PK: 'Пакистан',
-            IR: 'Іран',
-            AE: 'ОАЕ',
-            SA: 'Саудівська Аравія',
-            CL: 'Чилі',
-            CO: 'Колумбія',
-            PE: 'Перу',
-            IS: 'Ісландія',
-            HR: 'Хорватія',
-            RS: 'Сербія',
-            SI: 'Словенія',
-            LT: 'Литва',
-            LV: 'Латвія',
-            EE: 'Естонія',
-            GE: 'Грузія',
-            AM: 'Вірменія',
-            KZ: 'Казахстан'
-        };
-
-        if (!code) return '';
-
-        code = String(code).toUpperCase();
-
-        if (countries[code]) return countries[code];
-
-        try {
-            if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
-                var display = new Intl.DisplayNames(['uk'], {
-                    type: 'region'
-                });
-
-                var name = display.of(code);
-
-                if (name && name !== code) return name;
-            }
-        } catch (e) {}
-
-        return code;
-    }
-
-    /*
-     * Countries
-     */
-    function getCountries(card) {
-        var countries = [];
-
-        if (
-            card.production_countries &&
-            card.production_countries.length
-        ) {
-            countries = card.production_countries
-                .map(function (country) {
-                    return country.name || '';
-                })
-                .filter(Boolean);
-        }
-
-        if (
-            !countries.length &&
-            card.origin_country &&
-            card.origin_country.length
-        ) {
-            countries = card.origin_country
-                .map(getCountryName)
-                .filter(Boolean);
-        }
-
-        var unique = [];
-
-        countries.forEach(function (country) {
-            if (
-                country &&
-                unique.indexOf(country) === -1
-            ) {
-                unique.push(country);
-            }
-        });
-
-        return unique.slice(0, 2);
-    }
-
-    /*
-     * Metadata
-     */
-    function buildMetadata(card) {
-        var parts = [];
-
-        var release = (
-            card.release_date ||
-            card.first_air_date ||
-            ''
-        ) + '';
-
-        var year = release ? release.slice(0, 4) : '';
-
-        if (year) parts.push(year);
-
-        var countries = getCountries(card);
-
-        if (countries.length) {
-            parts.push(countries.join(', '));
-        }
-
-        var rating = parseFloat(card.vote_average || 0);
-
-        if (rating > 0) {
-            if (rating > 10) rating = 10;
-            parts.push('★ ' + rating.toFixed(1));
-        }
-
-        var genres = (card.genres || [])
-            .slice(0, 3)
-            .map(function (genre) {
-                return genre.name || '';
-            })
-            .filter(Boolean);
-
-        if (genres.length) {
-            parts.push(genres.join(', '));
-        }
-
-        return parts;
-    }
-
-    /*
-     * CSS
-     */
-    function addCSS() {
-        if (document.getElementById(CSS_ID)) return;
-
-        var css = document.createElement('style');
-        css.id = CSS_ID;
-
-        css.textContent =
-
-            'body.tml-cinematic-active .background,' +
-            'body.tml-cinematic-active .full-start__background,' +
-            'body.tml-cinematic-active .full-start__background-image,' +
-            'body.tml-cinematic-active .full-start-new__background,' +
-            'body.tml-cinematic-active .full-start-new__background-image,' +
-            'body.tml-cinematic-active .full-start-new__backdrop,' +
-            'body.tml-cinematic-active .full-start-new__bg,' +
-            'body.tml-cinematic-active .full-start-new__background-overlay,' +
-            'body.tml-cinematic-active .full-start-new__overlay,' +
-            'body.tml-cinematic-active .full-start__background-overlay,' +
-            'body.tml-cinematic-active .full-start__background-layer{' +
-                'display:none !important;' +
-                'opacity:0 !important;' +
-                'visibility:hidden !important;' +
-                'pointer-events:none !important;' +
-                'background:none !important;' +
-                'background-image:none !important;' +
-            '}' +
-
-            'body.tml-cinematic-active .full-start-new,' +
-            'body.tml-cinematic-active .full-start-new__body,' +
-            'body.tml-cinematic-active .full-start-new__right,' +
-            'body.tml-cinematic-active .full-start-new__left{' +
-                'background:transparent !important;' +
-                'background-color:transparent !important;' +
-                'background-image:none !important;' +
-                'box-shadow:none !important;' +
-            '}' +
-
-            'body.tml-cinematic-active .full-start-new:before,' +
-            'body.tml-cinematic-active .full-start-new:after,' +
-            'body.tml-cinematic-active .full-start-new__body:before,' +
-            'body.tml-cinematic-active .full-start-new__body:after{' +
-                'content:none !important;' +
-                'display:none !important;' +
-                'background:none !important;' +
-                'background-image:none !important;' +
-                'box-shadow:none !important;' +
-            '}' +
-
-            '.full-start-new{' +
-                'position:relative !important;' +
-                'z-index:1 !important;' +
-                'isolation:isolate;' +
-                'background:transparent !important;' +
-            '}' +
-
-            '.tml-cinematic-backdrop{' +
-                'position:fixed !important;' +
-                'top:0 !important;' +
-                'left:0 !important;' +
-                'right:0 !important;' +
-                'bottom:0 !important;' +
-                'width:100vw !important;' +
-                'height:100vh !important;' +
-                'z-index:0 !important;' +
-                'overflow:hidden;' +
-                'pointer-events:none;' +
-                'opacity:0;' +
-                'transition:opacity .65s ease;' +
-                'background:transparent;' +
-                'background-image:none !important;' +
-                'filter:none !important;' +
-            '}' +
-
-            '.tml-cinematic-backdrop.tml-backdrop-visible{' +
-                'opacity:1;' +
-            '}' +
-
-            '.tml-cinematic-backdrop img{' +
-                'position:absolute;' +
-                'top:0;' +
-                'left:0;' +
-                'width:100%;' +
-                'height:100%;' +
-                'object-fit:cover;' +
-                'object-position:center center;' +
-                'opacity:0;' +
-                'transition:opacity .75s ease;' +
-                'filter:none !important;' +
-                'transform:none !important;' +
-            '}' +
-
-            '.tml-cinematic-backdrop img.tml-image-visible{' +
-                'opacity:1;' +
-            '}' +
-
-            '.tml-backdrop-dim{' +
-                'position:absolute;' +
-                'inset:0;' +
-                'z-index:2;' +
-                'background:#000;' +
-                'opacity:0;' +
-                'transition:opacity .18s linear;' +
-                'pointer-events:none;' +
-                'will-change:opacity;' +
-            '}' +
-
-            '.full-start-new__body{' +
-                'position:relative !important;' +
-                'z-index:2;' +
-                'display:block;' +
-                'min-height:100vh;' +
-                'height:auto;' +
-                'background:transparent !important;' +
-            '}' +
-
-            '.full-start-new__left{' +
-                'display:none !important;' +
-            '}' +
-
-            '.full-start-new__right{' +
-                'position:absolute !important;' +
-                'left:0 !important;' +
-                'bottom:2.5rem !important;' +
-                'width:58% !important;' +
-                'max-width:58% !important;' +
-                'margin:0 !important;' +
-                'padding:0 !important;' +
-                'display:flex;' +
-                'flex-direction:column;' +
-                'align-items:flex-start;' +
-                'box-sizing:border-box;' +
-                'z-index:3;' +
-            '}' +
-
-            '.full-start-new__head{' +
-                'display:none !important;' +
-            '}' +
-
-            '.tml-studio-logo{' +
-                'display:flex;' +
-                'align-items:center;' +
-                'justify-content:flex-start;' +
-                'width:100%;' +
-                'max-width:100%;' +
-                'height:1.5em;' +
-                'margin:0 0 .45em 0;' +
-                'padding:0;' +
-                'overflow:hidden;' +
-                'box-sizing:border-box;' +
-                'opacity:0;' +
-                'transform:translateY(5px);' +
-                'transition:' +
-                    'opacity .65s cubic-bezier(.2,.8,.2,1),' +
-                    'transform .65s cubic-bezier(.2,.8,.2,1);' +
-            '}' +
-
-            '.tml-studio-logo.tml-studio-visible{' +
-                'opacity:.92;' +
-                'transform:translateY(0);' +
-            '}' +
-
-            '.tml-studio-logo img{' +
-                'display:block;' +
-                'width:auto;' +
-                'height:auto;' +
-                'max-width:8em;' +
-                'max-height:1.3em;' +
-                'object-fit:contain;' +
-                'object-position:left center;' +
-                'margin:0;' +
-                'padding:0;' +
-                'border:0;' +
-                'box-shadow:none;' +
-                'filter:none;' +
-            '}' +
-
-            '.full-start-new__title{' +
-                'display:flex;' +
-                'align-items:flex-start;' +
-                'justify-content:flex-start;' +
-                'width:100%;' +
-                'min-height:0;' +
-                'margin:0 0 .5em 0;' +
-                'padding:0;' +
-                'font-size:2.2em;' +
-                'line-height:1.1;' +
-            '}' +
-
-            '.full-start-new__title .tml-logo-image{' +
-                'display:block;' +
-                'width:auto;' +
-                'height:auto;' +
-                'max-width:100%;' +
-                'max-height:4.2em;' +
-                'object-fit:contain;' +
-                'object-position:left center;' +
-                'margin:0;' +
-                'padding:0;' +
-                'border:0;' +
-                'box-shadow:none;' +
-                'filter:none;' +
-                'opacity:0;' +
-                'transform:translateY(12px) scale(.985);' +
-                'transition:' +
-                    'opacity .8s cubic-bezier(.16,1,.3,1),' +
-                    'transform .8s cubic-bezier(.16,1,.3,1);' +
-                'will-change:opacity,transform;' +
-            '}' +
-
-            '.full-start-new__title .tml-logo-image.tml-logo-visible{' +
-                'opacity:1;' +
-                'transform:translateY(0) scale(1);' +
-            '}' +
-
-            '.full-start-new__tagline{' +
-                'width:100%;' +
-                'max-width:100%;' +
-                'margin:0 0 .8em 0;' +
-                'padding:0;' +
-                'font-size:.75em !important;' +
-                'font-weight:400 !important;' +
-                'font-style:italic !important;' +
-                'line-height:1.45 !important;' +
-                'letter-spacing:.015em;' +
-                'color:rgba(255,255,255,.82) !important;' +
-                'opacity:.9;' +
-                'overflow:hidden;' +
-                'display:-webkit-box;' +
-                '-webkit-box-orient:vertical;' +
-                '-webkit-line-clamp:2;' +
-                'line-clamp:2;' +
-            '}' +
-
-            '.full-start-new__tagline:empty{' +
-                'display:none !important;' +
-            '}' +
-
-            '.tml-cinematic-meta{' +
-                'display:flex;' +
-                'align-items:center;' +
-                'flex-wrap:nowrap;' +
-                'gap:.55em;' +
-                'width:100%;' +
-                'max-width:100%;' +
-                'margin:0 0 .8em 0;' +
-                'padding:0;' +
-                'overflow:hidden;' +
-                'white-space:nowrap;' +
-                'font-family:Inter,system-ui,sans-serif;' +
-                'font-size:1.05em;' +
-                'font-weight:400;' +
-                'line-height:1.4;' +
-                'color:rgba(255,255,255,.9);' +
-                'box-sizing:border-box;' +
-            '}' +
-
-            '.tml-cinematic-meta-item{' +
-                'display:inline-block;' +
-                'flex:0 0 auto;' +
-                'white-space:nowrap;' +
-            '}' +
-
-            '.tml-cinematic-meta-separator{' +
-                'display:inline-block;' +
-                'flex:0 0 auto;' +
-                'opacity:.65;' +
-                'font-size:.9em;' +
-            '}' +
-
-            '.tml-cinematic-meta-item:last-child{' +
-                'overflow:hidden;' +
-                'text-overflow:ellipsis;' +
-            '}' +
-
-            '.full-start-new__rate-line,' +
-            '.full-start-new__details{' +
-                'display:none !important;' +
-            '}' +
-
-            '.tml-cinematic-description{' +
-                'display:-webkit-box;' +
-                'width:100%;' +
-                'max-width:100%;' +
-                'margin:0 0 1.1em 0;' +
-                'padding:0;' +
-                'overflow:hidden;' +
-                'font-size:1em;' +
-                'line-height:1.45;' +
-                'color:rgba(255,255,255,.9);' +
-                'opacity:.92;' +
-                '-webkit-box-orient:vertical;' +
-                '-webkit-line-clamp:3;' +
-                'line-clamp:3;' +
-            '}' +
-
-            '.full-start-new__buttons{' +
-                'position:relative;' +
-                'z-index:5;' +
-                'display:flex;' +
-                'align-items:center;' +
-                'flex-wrap:wrap;' +
-                'gap:.45em;' +
-                'width:100%;' +
-                'margin:0;' +
-                'padding:0;' +
-            '}' +
-
-            '.full-start-new__reactions{' +
-                'display:none !important;' +
-            '}' +
-
-            '.full-descr,' +
-            '.full-start__description,' +
-            '.full-start__descr,' +
-            '.full-description{' +
-                'display:none !important;' +
-            '}';
-
-        document.head.appendChild(css);
-    }
-
-    /*
-     * Get rendered card root.
-     */
-    function getCardRoot(ev) {
-        try {
-            if (
-                !ev ||
-                !ev.object ||
-                !ev.object.activity ||
-                typeof ev.object.activity.render !== 'function'
-            ) {
-                return $();
-            }
-
-            return ev.object.activity
-                .render()
-                .find('.full-start-new')
-                .first();
-
-        } catch (e) {
-            return $();
-        }
-    }
-
-    /*
-     * Calculate current scroll position.
-     */
-    function getScrollPosition(root) {
-        var position = 0;
-
-        if (window.pageYOffset) {
-            position = Math.max(position, window.pageYOffset);
-        }
-
-        if (document.documentElement) {
-            position = Math.max(
-                position,
-                document.documentElement.scrollTop || 0
-            );
-        }
-
-        if (document.body) {
-            position = Math.max(
-                position,
-                document.body.scrollTop || 0
-            );
-        }
-
-        var element = root && root[0];
-
-        while (element && element !== document) {
-            if (typeof element.scrollTop === 'number') {
-                position = Math.max(
-                    position,
-                    element.scrollTop || 0
-                );
-            }
-
-            element = element.parentElement;
-        }
-
-        if (root && root.length) {
-            var rect = root[0].getBoundingClientRect();
-
-            if (rect.top < 0) {
-                position = Math.max(position, -rect.top);
-            }
-        }
-
-        return Math.max(0, position);
-    }
-
-    /*
-     * Update background darkness.
-     */
-    function updateBackdropDarkness() {
-        scrollFrame = null;
-
-        if (
-            !currentRoot ||
-            !currentRoot.length ||
-            !currentDimLayer ||
-            !currentDimLayer.length
-        ) {
             return;
         }
 
-        var scroll = getScrollPosition(currentRoot);
-
-        var progress = Math.min(
-            1,
-            scroll / SCROLL_DISTANCE
+        const type = data.name ? 'tv/' : 'movie/';
+        const imagesUrl = Lampa.TMDB.api(
+            type + data.id + '/images?api_key=' + Lampa.TMDB.key()
         );
 
-        progress = progress * (2 - progress);
+        const request = new Promise(resolve => {
+            let completed = false;
 
-        var darkness = MAX_DARKNESS * progress;
+            const timeout = setTimeout(() => {
+                if (completed) return;
+                completed = true;
+                resolve(null);
+            }, LOGO_CACHE_TIMEOUT);
 
-        currentDimLayer.css(
-            'opacity',
-            darkness.toFixed(3)
-        );
-    }
+            $.getJSON(imagesUrl, result => {
+                if (completed) return;
 
-    /*
-     * Start lightweight scroll tracking.
-     */
-    function startScrollTracking(root, token) {
-        stopScrollTracking();
+                completed = true;
+                clearTimeout(timeout);
+                resolve(result || null);
+            }).fail(() => {
+                if (completed) return;
 
-        if (!root || !root.length) return;
-
-        currentScrollHandler = function () {
-            if (token !== currentToken) return;
-            if (scrollFrame !== null) return;
-
-            scrollFrame = requestAnimationFrame(
-                updateBackdropDarkness
-            );
-        };
-
-        document.addEventListener(
-            'scroll',
-            currentScrollHandler,
-            true
-        );
-
-        window.addEventListener(
-            'scroll',
-            currentScrollHandler,
-            { passive: true }
-        );
-
-        updateBackdropDarkness();
-    }
-
-    /*
-     * Stop scroll tracking.
-     */
-    function stopScrollTracking() {
-        if (currentScrollHandler) {
-            document.removeEventListener(
-                'scroll',
-                currentScrollHandler,
-                true
-            );
-
-            window.removeEventListener(
-                'scroll',
-                currentScrollHandler
-            );
-
-            currentScrollHandler = null;
-        }
-
-        if (scrollFrame !== null) {
-            cancelAnimationFrame(scrollFrame);
-            scrollFrame = null;
-        }
-    }
-
-    /*
-     * Stop card observer.
-     */
-    function stopCardObserver() {
-        if (cardObserver) {
-            cardObserver.disconnect();
-            cardObserver = null;
-        }
-    }
-
-    /*
-     * Check whether current card is still active.
-     *
-     * No requestAnimationFrame here.
-     * Cleanup is performed immediately after DOM mutation.
-     */
-    function checkCardPresence(token) {
-        if (token !== currentToken) return;
-        if (!currentRoot || !currentRoot.length) return;
-
-        var rootElement = currentRoot[0];
-
-        if (!document.documentElement.contains(rootElement)) {
-            clearCurrent();
-        }
-    }
-
-    /*
-     * Observe DOM changes while card is active.
-     */
-    function startCardObserver(root, token) {
-        stopCardObserver();
-
-        if (!root || !root.length) return;
-        if (typeof MutationObserver === 'undefined') return;
-
-        cardObserver = new MutationObserver(function () {
-            if (token !== currentToken) return;
-
-            checkCardPresence(token);
+                completed = true;
+                clearTimeout(timeout);
+                resolve(null);
+            });
         });
 
-        cardObserver.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-        });
-    }
+        logoRequests[cacheId] = request;
 
-    /*
-     * Create independent fixed backdrop.
-     */
-    function prepareBackdrop(root, card, type, token) {
-        if (!root || !root.length) return;
-        if (!document.body) return;
+        request.then(result => {
+            delete logoRequests[cacheId];
 
-        $('.tml-cinematic-backdrop').remove();
+            if (requestId !== logoRequestId) return;
 
-        var backdrop = $(
-            '<div class="tml-cinematic-backdrop"></div>'
-        );
+            if (result && Array.isArray(result.logos)) {
+                const selected = pickLogo(result.logos);
 
-        var image = $('<img alt="">');
-
-        var dimLayer = $(
-            '<div class="tml-backdrop-dim"></div>'
-        );
-
-        backdrop.append(image);
-        backdrop.append(dimLayer);
-
-        $(document.body).append(backdrop);
-
-        currentBackdrop = backdrop;
-        currentDimLayer = dimLayer;
-
-        startScrollTracking(root, token);
-        startCardObserver(root, token);
-
-        ensureBackdrop(card, type, function (path) {
-            if (token !== currentToken) return;
-            if (currentCard !== card) return;
-
-            if (!path) {
-                backdrop.addClass('tml-backdrop-visible');
-                return;
-            }
-
-            var url = Lampa.Api.img(path, 'w1280');
-
-            image.off('load error');
-
-            image.on('load', function () {
-                if (token !== currentToken) return;
-                if (currentCard !== card) return;
-
-                requestAnimationFrame(function () {
-                    if (token !== currentToken) return;
-                    if (currentCard !== card) return;
-
-                    image.addClass('tml-image-visible');
-                    backdrop.addClass('tml-backdrop-visible');
-                });
-            });
-
-            image.on('error', function () {
-                if (token !== currentToken) return;
-                if (currentCard !== card) return;
-
-                backdrop.addClass('tml-backdrop-visible');
-            });
-
-            image.attr('src', url);
-        });
-    }
-
-    /*
-     * Prepare studio logo.
-     */
-    function prepareStudioLogo(root, card, type, token) {
-        var title = root.find(
-            '.full-start-new__title'
-        ).first();
-
-        if (!title.length) return;
-
-        root.find('.tml-studio-logo').remove();
-
-        ensureStudioLogo(card, type, function (studio) {
-            if (token !== currentToken) return;
-            if (currentCard !== card) return;
-
-            if (!studio || !studio.url) return;
-
-            var container = $('<div class="tml-studio-logo"></div>');
-            var image = $('<img alt="">');
-
-            image.attr('alt', studio.name || '');
-
-            image.on('error', function () {
-                container.remove();
-            });
-
-            image.on('load', function () {
-                if (token !== currentToken) return;
-
-                requestAnimationFrame(function () {
-                    if (token !== currentToken) return;
-                    if (currentCard !== card) return;
-
-                    container.addClass('tml-studio-visible');
-                });
-            });
-
-            container.append(image);
-            title.before(container);
-
-            image.attr('src', studio.url);
-        });
-    }
-
-    /*
-     * Move tagline after title.
-     */
-    function prepareTagline(root) {
-        var title = root.find(
-            '.full-start-new__title'
-        ).first();
-
-        var tagline = root.find(
-            '.full-start-new__tagline'
-        ).first();
-
-        if (!title.length || !tagline.length) return;
-
-        tagline.insertAfter(title);
-    }
-
-    /*
-     * Metadata.
-     */
-    function prepareMetadata(root, card) {
-        var parts = buildMetadata(card);
-
-        var title = root.find(
-            '.full-start-new__title'
-        ).first();
-
-        var tagline = root.find(
-            '.full-start-new__tagline'
-        ).first();
-
-        var row = root.find(
-            '.tml-cinematic-meta'
-        ).first();
-
-        if (!row.length) {
-            row = $('<div class="tml-cinematic-meta"></div>');
-
-            if (tagline.length) {
-                row.insertAfter(tagline);
+                if (selected) {
+                    setCachedLogo(cacheId, selected);
+                    displayMovieLogo(render, data, result.logos, requestId);
+                } else {
+                    showLogoFallback(render, data, requestId);
+                }
             } else {
-                row.insertAfter(title);
+                showLogoFallback(render, data, requestId);
             }
-        }
-
-        row.empty();
-
-        parts.forEach(function (part, index) {
-            if (index > 0) {
-                row.append(
-                    $('<span class="tml-cinematic-meta-separator">·</span>')
-                );
-            }
-
-            row.append(
-                $('<span class="tml-cinematic-meta-item"></span>').text(part)
-            );
         });
+    }
 
-        if (!parts.length) {
-            row.hide();
+    function renderStudioLogosWithColorAnalysis(container, data) {
+        container.empty();
+
+        const studios = (
+            data.networks || data.production_companies || []
+        ).filter(s => s.logo_path).slice(0, 1);
+
+        studios.forEach(studio => {
+            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);
+
+            container.append(
+                `<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`
+            );
+
+            const img = new Image();
+
+            img.crossOrigin = 'anonymous';
+
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = this.width;
+                canvas.height = this.height;
+
+                ctx.drawImage(this, 0, 0);
+
+                try {
+                    const imageData = ctx.getImageData(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    ).data;
+
+                    let r = 0;
+                    let g = 0;
+                    let b = 0;
+                    let count = 0;
+
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        if (imageData[i + 3] > 50) {
+                            r += imageData[i];
+                            g += imageData[i + 1];
+                            b += imageData[i + 2];
+                            count++;
+                        }
+                    }
+
+                    if (count > 0) {
+                        const brightness =
+                            (0.299 * r + 0.587 * g + 0.114 * b) / count;
+
+                        if (brightness < 40) {
+                            $('#' + id + ' img').css(
+                                'filter',
+                                'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))'
+                            );
+                        }
+                    }
+                } catch (e) {}
+            };
+
+            img.src = logoUrl;
+        });
+    }
+
+    async function processImages(render, data, res) {
+        try {
+            loadMovieLogo(render, data, res);
+
+            stopSlideshow();
+
+            if (
+                Lampa.Storage.get('cas_slideshow_enabled') &&
+                res.backdrops &&
+                res.backdrops.length > 1
+            ) {
+                const currentLang =
+                    Lampa.Storage.get('tmdb_lang') || 'uk';
+
+                startSlideshow(render, res.backdrops, currentLang);
+            }
+        } catch (error) {
+            showLogoFallback(render, data, logoRequestId);
+        }
+    }
+
+    async function loadMovieDataOptimized(render, data) {
+        const tasks = [];
+
+        if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
+            render.find('.cas-tagline').text(`«${data.tagline}»`).show();
         } else {
-            row.show();
-        }
-    }
-
-    /*
-     * Description.
-     */
-    function prepareDescription(root, card) {
-        var metadata = root.find(
-            '.tml-cinematic-meta'
-        ).first();
-
-        if (!metadata.length) return;
-
-        var description = root.find(
-            '.tml-cinematic-description'
-        ).first();
-
-        if (!card.overview) {
-            description.remove();
-            return;
+            render.find('.cas-tagline').hide();
         }
 
-        if (!description.length) {
-            description = $('<div class="tml-cinematic-description"></div>');
-            description.insertAfter(metadata);
-        }
-
-        description.text(card.overview);
-    }
-
-    /*
-     * Prepare logo element.
-     */
-    function prepareLogo(titleBlock) {
-        var original = titleBlock.contents().clone(true, true);
-
-        var logo = $('<img class="tml-logo-image" alt="">');
-
-        titleBlock.empty();
-        titleBlock.append(logo);
-
-        return {
-            logo: logo,
-            original: original
-        };
-    }
-
-    /*
-     * Restore original title.
-     */
-    function showOriginalTitle(titleBlock, original, logo) {
-        if (!titleBlock || !titleBlock.length) return;
-
-        if (logo) logo.off('error load');
-
-        titleBlock.empty();
-        titleBlock.append(original);
-    }
-
-    /*
-     * Display TMDB logo with premium animation.
-     */
-    function displayLogo(url, titleBlock, original, logo, token) {
-        if (!url || !logo || !logo.length) return;
-        if (token !== currentToken) return;
-
-        logo.off('error load');
-
-        logo.on('error', function () {
-            if (token !== currentToken) return;
-
-            showOriginalTitle(
-                titleBlock,
-                original,
-                logo
+        if (Lampa.Storage.get('cas_show_description')) {
+            tasks.push(
+                Promise.resolve().then(() => {
+                    render.find('.cas-description')
+                        .html(data.overview || '')
+                        .css('opacity', '1')
+                        .show();
+                })
             );
-        });
-
-        logo.on('load', function () {
-            if (token !== currentToken) return;
-
-            requestAnimationFrame(function () {
-                if (token !== currentToken) return;
-
-                logo.addClass('tml-logo-visible');
-            });
-        });
-
-        logo.attr('src', url);
-    }
-
-    /*
-     * Remove backdrop nodes synchronously.
-     *
-     * Native DOM removal does not wait for CSS transitions.
-     */
-    function removeBackdropImmediately() {
-        var backdrops = document.querySelectorAll(
-            '.tml-cinematic-backdrop'
-        );
-
-        for (var i = 0; i < backdrops.length; i++) {
-            var element = backdrops[i];
-
-            if (element && element.parentNode) {
-                element.parentNode.removeChild(element);
-            }
-        }
-    }
-
-    /*
-     * Clear current card immediately.
-     */
-    function clearCurrent() {
-        /*
-         * Invalidate pending asynchronous callbacks.
-         */
-        currentToken++;
-
-        /*
-         * Stop observers and event handlers first.
-         */
-        stopScrollTracking();
-        stopCardObserver();
-
-        if (currentLogo) {
-            currentLogo.off('error load');
         }
 
-        if (currentBackdrop && currentBackdrop.length) {
-            currentBackdrop.find('img').off('load error');
-        }
+        tasks.push(
+            Promise.resolve().then(() => {
+                const year = data.release_date
+                    ? new Date(data.release_date).getFullYear()
+                    : (
+                        data.first_air_date
+                            ? new Date(data.first_air_date).getFullYear()
+                            : ''
+                    );
 
-        /*
-         * Remove all backdrop elements synchronously.
-         * No opacity transition or animation is awaited.
-         */
-        removeBackdropImmediately();
+                const country = (
+                    data.production_countries &&
+                    data.production_countries.length > 0
+                )
+                    ? data.production_countries[0].name
+                    : '';
 
-        /*
-         * Restore normal Lampa background immediately.
-         */
-        document.body.classList.remove(
-            'tml-cinematic-active'
-        );
-
-        /*
-         * Reset references.
-         */
-        currentCard = null;
-        currentRoot = null;
-        currentTitle = null;
-        currentLogo = null;
-        currentBackdrop = null;
-        currentDimLayer = null;
-    }
-
-    /*
-     * Process full card.
-     */
-    function processCard(ev) {
-        if (!ev || ev.type !== 'complite') return;
-
-        var card = ev.data && ev.data.movie;
-
-        if (!card || !card.id) return;
-
-        var root = getCardRoot(ev);
-
-        if (!root.length) return;
-
-        var titleBlock = root.find(
-            '.full-start-new__title'
-        ).first();
-
-        if (!titleBlock.length) return;
-
-        clearCurrent();
-
-        var token = ++currentToken;
-        var type = getCardType(card);
-
-        currentCard = card;
-        currentRoot = root;
-        currentTitle = titleBlock;
-
-        $('body').addClass('tml-cinematic-active');
-
-        /*
-         * Independent body-level fixed backdrop.
-         */
-        prepareBackdrop(root, card, type, token);
-
-        /*
-         * Information layout.
-         */
-        prepareTagline(root);
-        prepareMetadata(root, card);
-        prepareDescription(root, card);
-
-        /*
-         * Studio logo.
-         */
-        prepareStudioLogo(root, card, type, token);
-
-        /*
-         * Movie / series logo.
-         */
-        var elements = prepareLogo(titleBlock);
-
-        currentLogo = elements.logo;
-
-        ensureLogo(card, type, function (url) {
-            if (token !== currentToken) return;
-            if (currentCard !== card) return;
-
-            if (!url) {
-                showOriginalTitle(
-                    titleBlock,
-                    elements.original,
-                    elements.logo
+                const time = formatTime(
+                    data.runtime ||
+                    (data.episode_run_time ? data.episode_run_time[0] : 0)
                 );
 
-                return;
+                const genres = (data.genres || [])
+                    .map(g => g.name)
+                    .join(', ');
+
+                let ratings = '';
+
+                const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+
+                if (tmdbV > 0) {
+                    ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                }
+
+                if (data.reactions && data.reactions.result) {
+                    let sum = 0;
+                    let cnt = 0;
+
+                    const coef = {
+                        fire: 10,
+                        nice: 7.5,
+                        think: 5,
+                        bore: 2.5,
+                        shit: 0
+                    };
+
+                    data.reactions.result.forEach(r => {
+                        if (r.counter) {
+                            sum += r.counter * coef[r.type];
+                            cnt += r.counter;
+                        }
+                    });
+
+                    if (cnt >= 1) {
+                        const isTv = !!data.name;
+
+                        const cubV = (
+                            (
+                                (isTv ? 7.4 : 6.5) * (isTv ? 50 : 150) +
+                                sum
+                            ) /
+                            ((isTv ? 50 : 150) + cnt)
+                        ).toFixed(1);
+
+                        ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                    }
+                }
+
+                let metaParts = [];
+
+                if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
+                if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
+                if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
+                if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
+
+                render.find('.cas-meta-info').html(
+                    metaParts.join(' &bull; ')
+                );
+
+                render.find('.cas-bottom-ratings').html(ratings);
+            })
+        );
+
+        if (Lampa.Storage.get('cas_show_studios')) {
+            tasks.push(
+                Promise.resolve().then(() => {
+                    renderStudioLogosWithColorAnalysis(
+                        render.find('.cas-studios-row'),
+                        data
+                    );
+                })
+            );
+        }
+
+        await Promise.all(tasks);
+
+        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
+            let qualityElement = render.find('.cas-quality-row');
+            let buttonsBlock = render.find('.full-start-new__buttons');
+
+            qualityElement.hide();
+
+            Lampa.Parser.get(
+                {
+                    search: data.title || data.name,
+                    movie: data,
+                    page: 1
+                },
+                res => {
+                    try {
+                        const items = res.Results || res;
+
+                        if (
+                            items &&
+                            Array.isArray(items) &&
+                            items.length > 0
+                        ) {
+                            const b = {
+                                res: '',
+                                hdr: false,
+                                dv: false,
+                                ukr: false,
+                                audio: '',
+                                dub: false
+                            };
+
+                            items.slice(0, 8).forEach(i => {
+                                const t = (
+                                    i.Title || i.title || ''
+                                ).toLowerCase();
+
+                                if (t.includes('4k') || t.includes('2160')) {
+                                    b.res = '4K';
+                                } else if (
+                                    !b.res &&
+                                    (t.includes('1080') || t.includes('fhd'))
+                                ) {
+                                    b.res = 'FULL HD';
+                                }
+
+                                if (t.includes('hdr')) b.hdr = true;
+
+                                if (
+                                    t.includes('dv') ||
+                                    t.includes('dovi') ||
+                                    t.includes('vision')
+                                ) {
+                                    b.dv = true;
+                                }
+
+                                if (
+                                    t.includes('ukr') ||
+                                    t.includes('укр')
+                                ) {
+                                    b.ukr = true;
+                                }
+
+                                if (
+                                    t.includes('5.1') ||
+                                    t.includes('5 1')
+                                ) {
+                                    b.audio = '5.1';
+                                } else if (
+                                    t.includes('7.1') ||
+                                    t.includes('7 1')
+                                ) {
+                                    b.audio = '7.1';
+                                }
+
+                                if (
+                                    t.includes('4.0') ||
+                                    t.includes('4 0')
+                                ) {
+                                    b.audio = '4.0';
+                                } else if (
+                                    t.includes('2.0') ||
+                                    t.includes('2 0')
+                                ) {
+                                    b.audio = '2.0';
+                                }
+
+                                if (
+                                    t.includes('dub') ||
+                                    t.includes('дубл')
+                                ) {
+                                    b.dub = true;
+                                }
+                            });
+
+                            let qH = '';
+
+                            if (b.res) {
+                                qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;
+                            }
+
+                            if (b.dv) {
+                                qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
+                            } else if (b.hdr) {
+                                qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                            }
+
+                            if (b.audio) {
+                                qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;
+                            }
+
+                            if (b.dub) {
+                                qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;
+                            }
+
+                            if (b.ukr) {
+                                qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;
+                            }
+
+                            if (qH) {
+                                qualityElement.html(qH).show();
+
+                                if (buttonsBlock.length) {
+                                    buttonsBlock.off(
+                                        'transitionend.casQuality animationend.casQuality'
+                                    );
+
+                                    buttonsBlock.on(
+                                        'transitionend.casQuality animationend.casQuality',
+                                        function handler(e) {
+                                            if (e.target === this) {
+                                                qualityElement.addClass('show-quality');
+
+                                                buttonsBlock.off(
+                                                    'transitionend.casQuality animationend.casQuality',
+                                                    handler
+                                                );
+                                            }
+                                        }
+                                    );
+                                } else {
+                                    qualityElement.addClass('show-quality');
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        qualityElement.hide();
+                    }
+                }
+            ).fail(() => {
+                qualityElement.hide();
+            });
+        } else {
+            render.find('.cas-quality-row').hide();
+        }
+    }
+
+    const debouncedLoadMovieData = debounce((render, data) => {
+        try {
+            loadMovieDataOptimized(render, data);
+        } catch (error) {}
+    }, 250);
+
+    function attachLoader() {
+        Lampa.Listener.follow('full', event => {
+            if (event.type !== 'complite') return;
+
+            const data = event.data.movie;
+            const render = event.object.activity.render();
+            const cardRoot = render.find('.full-start-new.left-title');
+
+            // Кожна нова картка отримує власний ідентифікатор запиту логотипа.
+            logoRequestId++;
+
+            cardRoot.removeClass('cas-animated');
+
+            render.find('.cas-quality-row').removeClass('show-quality');
+
+            // Порожній контейнер до отримання логотипа.
+            render.find('.cas-logo').empty();
+
+            event.object.activity.onBeforeDestroy = cleanup;
+
+            if (data && data.id) {
+                render.data('movie', data);
+
+                const cacheId = 'tmdb_' + data.id;
+                const cached = getCachedData(cacheId);
+
+                const processImagesWrapper = async res => {
+                    try {
+                        await processImages(render, data, res);
+                    } catch (e) {
+                        showLogoFallback(render, data, logoRequestId);
+                    } finally {
+                        requestAnimationFrame(() => {
+                            cardRoot.addClass('cas-animated');
+                        });
+                    }
+                };
+
+                if (cached) {
+                    processImagesWrapper(cached);
+                } else {
+                    const imagesUrl = Lampa.TMDB.api(
+                        (data.name ? 'tv/' : 'movie/') +
+                        data.id +
+                        '/images?api_key=' +
+                        Lampa.TMDB.key()
+                    );
+
+                    $.getJSON(imagesUrl, res => {
+                        setCachedData(cacheId, res);
+                        processImagesWrapper(res);
+                    }).fail(() => {
+                        showLogoFallback(render, data, logoRequestId);
+
+                        requestAnimationFrame(() => {
+                            cardRoot.addClass('cas-animated');
+                        });
+                    });
+                }
+
+                if (event.data.reactions) {
+                    data.reactions = event.data.reactions;
+                }
+
+                debouncedLoadMovieData(render, data);
+            } else {
+                requestAnimationFrame(() => {
+                    cardRoot.addClass('cas-animated');
+                });
             }
 
-            displayLogo(
-                url,
-                titleBlock,
-                elements.original,
-                elements.logo,
-                token
-            );
+            setTimeout(() => {
+                const firstButton = render.find(
+                    '.full-start-new__buttons .full-start__button'
+                ).first();
+
+                if (firstButton.length) {
+                    render.find('.full-start__button').removeClass('focus');
+                    firstButton.addClass('focus').trigger('focus');
+                }
+            }, 200);
         });
     }
 
-    /*
-     * Lampa controller navigation listener.
-     *
-     * When the controller switches back to "content",
-     * the full card is no longer the active screen.
-     *
-     * This is the primary instant-cleanup trigger.
-     */
-    function bindControllerListener() {
-        if (
-            !Lampa.Controller ||
-            !Lampa.Controller.listener ||
-            typeof Lampa.Controller.listener.follow !== 'function'
-        ) {
-            return;
+    function startPlugin() {
+        try {
+            initializePlugin();
+            console.log('NewCard plugin initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize NewCard plugin:', error);
         }
-
-        Lampa.Controller.listener.follow('toggle', function (ev) {
-            if (!ev || ev.name !== 'content') return;
-
-            /*
-             * Do not touch the background if this plugin
-             * does not currently own an active movie card.
-             */
-            if (!currentCard && !currentBackdrop) return;
-
-            clearCurrent();
-        });
     }
 
-    /*
-     * Lampa full card events.
-     */
-    Lampa.Listener.follow('full', function (ev) {
-        if (!ev) return;
-
-        if (ev.type === 'complite') {
-            addCSS();
-            processCard(ev);
-        }
-
-        if (ev.type === 'destroy') {
-            clearCurrent();
-        }
-    });
-
-    /*
-     * Initialize.
-     */
-    addCSS();
-
-    /*
-     * Bind controller listener after plugin initialization.
-     */
-    bindControllerListener();
-
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', e => {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 })();
