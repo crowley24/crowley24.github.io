@@ -3,17 +3,17 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.4 — CLEAN CINEMATIC BACKDROP
+     * TMDB MOVIE LOGOS 1.5.5 — INSTANT BACKDROP CLEANUP
      *
      * Lampa / Android TV
      *
-     * FIXES 1.5.4:
-     * - Reliable backdrop cleanup after card closing
-     * - MutationObserver monitors card removal
-     * - Body class cleanup
-     * - Scroll tracking cleanup
-     * - Safe handling of card transitions
-     * - Protection against premature backdrop removal
+     * FIXES 1.5.5:
+     * - Instant backdrop removal when card closes
+     * - MutationObserver checks card presence immediately
+     * - Removed requestAnimationFrame delay from observer cleanup
+     * - Synchronous DOM backdrop removal
+     * - Immediate body class cleanup
+     * - Invalidates pending asynchronous callbacks on cleanup
      *
      * PRESERVED:
      * - TMDB logo selection: Ukrainian > English > fallback
@@ -27,16 +27,16 @@
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v154_ready) return;
+    if (window.tmdb_movie_logos_v155_ready) return;
 
-    window.tmdb_movie_logos_v154_ready = true;
+    window.tmdb_movie_logos_v155_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    var VERSION = '1.5.4';
-    var CSS_ID = 'tml_v154_css';
+    var VERSION = '1.5.5';
+    var CSS_ID = 'tml_v155_css';
 
     var currentCard = null;
     var currentToken = 0;
@@ -50,7 +50,6 @@
     var scrollFrame = null;
 
     var cardObserver = null;
-    var observerCheckFrame = null;
 
     var CACHE_TIMEOUT = 20000;
 
@@ -748,6 +747,7 @@
             '.full-description{' +
                 'display:none !important;' +
             '}';
+
         document.head.appendChild(css);
     }
 
@@ -920,23 +920,15 @@
             cardObserver.disconnect();
             cardObserver = null;
         }
-
-        if (observerCheckFrame !== null) {
-            cancelAnimationFrame(observerCheckFrame);
-            observerCheckFrame = null;
-        }
     }
 
     /*
      * Check whether current card is still active.
      *
-     * Important:
-     * Do not rely on destroy event alone.
-     * The card may be removed from DOM without destroy.
+     * No requestAnimationFrame here.
+     * Cleanup is performed immediately after DOM mutation.
      */
     function checkCardPresence(token) {
-        observerCheckFrame = null;
-
         if (token !== currentToken) return;
         if (!currentRoot || !currentRoot.length) return;
 
@@ -958,11 +950,8 @@
 
         cardObserver = new MutationObserver(function () {
             if (token !== currentToken) return;
-            if (observerCheckFrame !== null) return;
 
-            observerCheckFrame = requestAnimationFrame(function () {
-                checkCardPresence(token);
-            });
+            checkCardPresence(token);
         });
 
         cardObserver.observe(document.documentElement, {
@@ -1238,9 +1227,36 @@
     }
 
     /*
-     * Clear current card.
+     * Remove backdrop nodes synchronously.
+     *
+     * Native DOM removal does not wait for CSS transitions.
+     */
+    function removeBackdropImmediately() {
+        var backdrops = document.querySelectorAll(
+            '.tml-cinematic-backdrop'
+        );
+
+        for (var i = 0; i < backdrops.length; i++) {
+            var element = backdrops[i];
+
+            if (element && element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+        }
+    }
+
+    /*
+     * Clear current card immediately.
      */
     function clearCurrent() {
+        /*
+         * Invalidate pending asynchronous callbacks.
+         */
+        currentToken++;
+
+        /*
+         * Stop observers and event handlers first.
+         */
         stopScrollTracking();
         stopCardObserver();
 
@@ -1248,19 +1264,26 @@
             currentLogo.off('error load');
         }
 
-        if (currentBackdrop) {
+        if (currentBackdrop && currentBackdrop.length) {
             currentBackdrop.find('img').off('load error');
-            currentBackdrop.remove();
         }
 
-        if (currentRoot && currentRoot.length) {
-            currentRoot.find('.tml-cinematic-backdrop').remove();
-        }
+        /*
+         * Remove all backdrop elements synchronously.
+         * No opacity transition or animation is awaited.
+         */
+        removeBackdropImmediately();
 
-        $('.tml-cinematic-backdrop').remove();
+        /*
+         * Restore normal Lampa background immediately.
+         */
+        document.body.classList.remove(
+            'tml-cinematic-active'
+        );
 
-        $('body').removeClass('tml-cinematic-active');
-
+        /*
+         * Reset references.
+         */
         currentCard = null;
         currentRoot = null;
         currentTitle = null;
@@ -1360,7 +1383,6 @@
         }
 
         if (ev.type === 'destroy') {
-            currentToken++;
             clearCurrent();
         }
     });
