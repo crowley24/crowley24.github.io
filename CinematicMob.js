@@ -3,61 +3,46 @@
     'use strict';
 
     /*
-     * TMDB CINEMATIC MOBILE 1.0.0
+     * TMDB CINEMATIC MOBILE 1.0.1
      *
      * Lampa / Mobile
      *
-     * Based on:
-     * TMDB MOVIE LOGOS 1.4.6 — CINEMATIC NETFLIX MODE
+     * FIX 1.0.1:
+     * - Fixed native Lampa backdrop visibility
+     * - Background positioned relative to activity root
+     * - Restored background image dimensions
+     * - Fixed stacking order
+     * - Removed opaque card background
      *
      * FEATURES:
      * - TMDB movie / TV logos
-     * - Ukrainian > English > original logo selection
+     * - Ukrainian > English > neutral logo selection
      * - Production studio logo
      * - Original Lampa tagline
      * - Cinematic metadata
-     * - Original movie description
-     * - Native TMDB backdrop
-     * - Smooth logo and studio transitions
-     * - Request cache and timeout protection
-     * - Protection against outdated requests
-     *
-     * REMOVED:
-     * - Backdrop slideshow
-     * - TV / Android TV layout
-     * - Custom media button styling
-     * - Custom button actions
-     * - Netflix remote focus effects
-     * - Reactions and duplicate descriptions
+     * - Description
+     * - Native Lampa backdrop
+     * - Smooth transitions
+     * - Cache and timeout protection
      */
 
     if (!window.Lampa || !window.$) return;
-
-    if (window.tmdb_cinematic_mobile_v100_ready) return;
+    if (window.tmdb_cinematic_mobile_v101_ready) return;
 
     var tmdb = Lampa.Api.sources.tmdb;
-
     if (!tmdb) return;
 
-    window.tmdb_cinematic_mobile_v100_ready = true;
+    window.tmdb_cinematic_mobile_v101_ready = true;
 
     var currentCard = null;
-    var currentTitle = null;
     var currentImage = null;
     var currentToken = 0;
 
     var CACHE_TIMEOUT = 20000;
-
-    var CSS_ID = 'tmdb_cinematic_mobile_v100_css';
+    var CSS_ID = 'tmdb_cinematic_mobile_v101_css';
 
     /*
-     * TMDB LOGO SELECTION
-     *
-     * Priority:
-     * 1. Selected Lampa TMDB language
-     * 2. English
-     * 3. Language-neutral logo
-     * 4. First available logo
+     * LOGO SELECTION
      */
 
     function pickLogo(logos) {
@@ -107,13 +92,11 @@
             if (completed) return;
 
             completed = true;
-
             clearTimeout(timer);
 
             item[key] = value || null;
 
             var list = item[key + '_wait'] || [];
-
             item[key + '_wait'] = null;
 
             list.forEach(function (callback) {
@@ -131,13 +114,12 @@
     }
 
     /*
-     * TMDB MOVIE / TV LOGO
+     * TMDB LOGO
      */
 
     function ensureLogo(item, type, cb) {
         cached(item, 'tml_mobile_logo', function (done) {
             var lang = Lampa.Storage.field('tmdb_lang');
-
             var langs = (lang || 'en') + ',en,null';
 
             tmdb.get(
@@ -168,7 +150,7 @@
     }
 
     /*
-     * PRODUCTION STUDIO LOGO
+     * STUDIO LOGO
      */
 
     function ensureStudioLogo(item, cb) {
@@ -202,7 +184,7 @@
     }
 
     /*
-     * COUNTRY NAMES
+     * COUNTRIES
      */
 
     function getCountries(card) {
@@ -232,8 +214,6 @@
 
     /*
      * METADATA
-     *
-     * Year · Country · Rating · Genres
      */
 
     function buildMetadata(card) {
@@ -247,9 +227,7 @@
 
         var year = release ? release.slice(0, 4) : '';
 
-        if (year) {
-            parts.push(year);
-        }
+        if (year) parts.push(year);
 
         var countries = getCountries(card);
 
@@ -261,7 +239,6 @@
 
         if (rating > 0) {
             if (rating > 10) rating = 10;
-
             parts.push('★ ' + rating.toFixed(1));
         }
 
@@ -280,42 +257,76 @@
     }
 
     /*
-     * MOBILE CSS
-     *
-     * All styles are scoped to:
-     * .full-start-new.tml-mobile-active
-     *
-     * This prevents unnecessary interference
-     * with other Lampa interfaces.
+     * CSS
      */
 
     function addCSS() {
         if (document.getElementById(CSS_ID)) return;
 
         var css = document.createElement('style');
-
         css.id = CSS_ID;
 
         css.textContent =
 
             /*
-             * MAIN CARD
+             * ACTIVITY ROOT
              */
 
-            '.full-start-new.tml-mobile-active{' +
-                'position:relative;' +
+            '.tml-mobile-activity{' +
+                'position:relative !important;' +
                 'min-height:100vh;' +
                 'min-height:100svh;' +
-                'overflow:hidden;' +
-                'box-sizing:border-box;' +
                 'background:#000;' +
+                'overflow:hidden;' +
             '}' +
 
             /*
-             * CINEMATIC BACKDROP GRADIENT
+             * FIXED NATIVE BACKDROP
+             *
+             * Important:
+             * Background belongs to the outer Lampa activity,
+             * not to .full-start-new.
              */
 
-            '.full-start-new.tml-mobile-active:after{' +
+            '.tml-mobile-activity .full-start__background{' +
+                'position:absolute !important;' +
+                'top:0 !important;' +
+                'left:0 !important;' +
+                'right:0 !important;' +
+                'width:100% !important;' +
+                'height:100% !important;' +
+                'min-height:100vh !important;' +
+                'min-height:100svh !important;' +
+                'display:block !important;' +
+                'visibility:visible !important;' +
+                'opacity:1 !important;' +
+                'object-fit:cover !important;' +
+                'object-position:center center !important;' +
+                'z-index:0 !important;' +
+                'pointer-events:none !important;' +
+            '}' +
+
+            /*
+             * CARD ROOT
+             */
+
+            '.tml-mobile-activity .full-start-new{' +
+                'position:relative !important;' +
+                'z-index:1 !important;' +
+                'display:block;' +
+                'min-height:100vh;' +
+                'min-height:100svh;' +
+                'height:auto !important;' +
+                'overflow:hidden;' +
+                'background:transparent !important;' +
+                'box-sizing:border-box;' +
+            '}' +
+
+            /*
+             * BOTTOM GRADIENT
+             */
+
+            '.tml-mobile-activity .full-start-new:after{' +
                 'content:"";' +
                 'position:absolute;' +
                 'left:0;' +
@@ -329,48 +340,49 @@
                     'rgba(0,0,0,0) 0%,' +
                     'rgba(0,0,0,.12) 28%,' +
                     'rgba(0,0,0,.62) 65%,' +
-                    'rgba(0,0,0,.94) 100%' +
+                    'rgba(0,0,0,.96) 100%' +
                 ');' +
             '}' +
 
             /*
-             * MAIN BODY
+             * BODY
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__body{' +
-                'position:relative;' +
-                'z-index:1;' +
-                'display:flex;' +
+            '.tml-mobile-activity .full-start-new__body{' +
+                'position:relative !important;' +
+                'z-index:1 !important;' +
+                'display:flex !important;' +
                 'flex-direction:column;' +
                 'justify-content:flex-end;' +
                 'align-items:stretch;' +
                 'width:100%;' +
                 'min-height:100vh;' +
                 'min-height:100svh;' +
-                'height:auto;' +
+                'height:auto !important;' +
                 'padding:0;' +
                 'margin:0;' +
                 'box-sizing:border-box;' +
+                'background:transparent !important;' +
             '}' +
 
             /*
-             * HIDE ORIGINAL LEFT COLUMN
+             * LEFT COLUMN
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__left{' +
+            '.tml-mobile-activity .full-start-new__left{' +
                 'display:none !important;' +
             '}' +
 
             /*
-             * CONTENT COLUMN
+             * RIGHT COLUMN
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__right{' +
+            '.tml-mobile-activity .full-start-new__right{' +
                 'position:relative !important;' +
                 'left:auto !important;' +
                 'right:auto !important;' +
-                'bottom:auto !important;' +
                 'top:auto !important;' +
+                'bottom:auto !important;' +
                 'display:flex !important;' +
                 'flex-direction:column;' +
                 'align-items:flex-start;' +
@@ -384,10 +396,10 @@
             '}' +
 
             /*
-             * ORIGINAL HEAD
+             * ORIGINAL HEADER
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__head{' +
+            '.tml-mobile-activity .full-start-new__head{' +
                 'display:none !important;' +
             '}' +
 
@@ -395,12 +407,11 @@
              * STUDIO LOGO
              */
 
-            '.full-start-new.tml-mobile-active .tml-studio-logo{' +
+            '.tml-mobile-activity .tml-studio-logo{' +
                 'display:flex;' +
                 'align-items:center;' +
                 'justify-content:flex-start;' +
                 'width:100%;' +
-                'max-width:100%;' +
                 'height:1.45em;' +
                 'margin:0 0 .55em 0;' +
                 'padding:0;' +
@@ -411,12 +422,12 @@
                 'transition:opacity .5s ease,transform .5s ease;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .tml-studio-logo.tml-studio-visible{' +
+            '.tml-mobile-activity .tml-studio-logo.tml-studio-visible{' +
                 'opacity:.9;' +
                 'transform:translateY(0);' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .tml-studio-logo img{' +
+            '.tml-mobile-activity .tml-studio-logo img{' +
                 'display:block;' +
                 'width:auto;' +
                 'height:auto;' +
@@ -432,10 +443,10 @@
             '}' +
 
             /*
-             * MOVIE LOGO / TITLE
+             * TITLE / LOGO
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__title{' +
+            '.tml-mobile-activity .full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
                 'justify-content:flex-start;' +
@@ -449,7 +460,7 @@
                 'box-sizing:border-box;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .full-start-new__title .tml-logo-image{' +
+            '.tml-mobile-activity .full-start-new__title .tml-logo-image{' +
                 'display:block;' +
                 'width:auto;' +
                 'height:auto;' +
@@ -467,7 +478,7 @@
                 'transition:opacity .65s ease,transform .65s ease;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .full-start-new__title .tml-logo-image.tml-logo-visible{' +
+            '.tml-mobile-activity .full-start-new__title .tml-logo-image.tml-logo-visible{' +
                 'opacity:1;' +
                 'transform:translateY(0);' +
             '}' +
@@ -476,8 +487,8 @@
              * TAGLINE
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__tagline{' +
-                'display:block;' +
+            '.tml-mobile-activity .full-start-new__tagline{' +
+                'display:-webkit-box;' +
                 'width:100%;' +
                 'max-width:100%;' +
                 'margin:0 0 .8em 0;' +
@@ -490,13 +501,12 @@
                 'color:rgba(255,255,255,.8) !important;' +
                 'opacity:.92;' +
                 'overflow:hidden;' +
-                'display:-webkit-box;' +
                 '-webkit-box-orient:vertical;' +
                 '-webkit-line-clamp:2;' +
                 'line-clamp:2;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .full-start-new__tagline:empty{' +
+            '.tml-mobile-activity .full-start-new__tagline:empty{' +
                 'display:none !important;' +
             '}' +
 
@@ -504,7 +514,7 @@
              * METADATA
              */
 
-            '.full-start-new.tml-mobile-active .tml-cinematic-meta{' +
+            '.tml-mobile-activity .tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:wrap;' +
@@ -513,7 +523,6 @@
                 'max-width:100%;' +
                 'margin:0 0 .85em 0;' +
                 'padding:0;' +
-                'overflow:hidden;' +
                 'font-family:Inter,system-ui,sans-serif;' +
                 'font-size:.83em;' +
                 'font-weight:400;' +
@@ -522,7 +531,7 @@
                 'box-sizing:border-box;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .tml-cinematic-meta-item{' +
+            '.tml-mobile-activity .tml-cinematic-meta-item{' +
                 'display:inline-block;' +
                 'flex:0 1 auto;' +
                 'min-width:0;' +
@@ -531,18 +540,18 @@
                 'white-space:nowrap;' +
             '}' +
 
-            '.full-start-new.tml-mobile-active .tml-cinematic-meta-separator{' +
+            '.tml-mobile-activity .tml-cinematic-meta-separator{' +
                 'display:inline-block;' +
                 'flex:0 0 auto;' +
                 'opacity:.55;' +
             '}' +
 
             /*
-             * HIDE DUPLICATE NATIVE METADATA
+             * HIDE DUPLICATE METADATA
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__rate-line,' +
-            '.full-start-new.tml-mobile-active .full-start-new__details{' +
+            '.tml-mobile-activity .full-start-new__rate-line,' +
+            '.tml-mobile-activity .full-start-new__details{' +
                 'display:none !important;' +
             '}' +
 
@@ -550,7 +559,7 @@
              * DESCRIPTION
              */
 
-            '.full-start-new.tml-mobile-active .tml-cinematic-description{' +
+            '.tml-mobile-activity .tml-cinematic-description{' +
                 'display:-webkit-box;' +
                 'width:100%;' +
                 'max-width:100%;' +
@@ -571,7 +580,7 @@
              * HIDE REACTIONS
              */
 
-            '.full-start-new.tml-mobile-active .full-start-new__reactions{' +
+            '.tml-mobile-activity .full-start-new__reactions{' +
                 'display:none !important;' +
             '}' +
 
@@ -579,35 +588,35 @@
              * HIDE DUPLICATE DESCRIPTIONS
              */
 
-            '.full-start-new.tml-mobile-active .full-descr,' +
-            '.full-start-new.tml-mobile-active .full-start__description,' +
-            '.full-start-new.tml-mobile-active .full-start__descr,' +
-            '.full-start-new.tml-mobile-active .full-description{' +
+            '.tml-mobile-activity .full-descr,' +
+            '.tml-mobile-activity .full-start__description,' +
+            '.tml-mobile-activity .full-start__descr,' +
+            '.tml-mobile-activity .full-description{' +
                 'display:none !important;' +
             '}' +
 
             /*
-             * SMALL SCREEN ADJUSTMENTS
+             * SMALL SCREENS
              */
 
             '@media screen and (max-width:380px){' +
 
-                '.full-start-new.tml-mobile-active .full-start-new__right{' +
+                '.tml-mobile-activity .full-start-new__right{' +
                     'padding-left:1em;' +
                     'padding-right:1em;' +
                     'padding-bottom:1.5em;' +
                 '}' +
 
-                '.full-start-new.tml-mobile-active .full-start-new__title{' +
+                '.tml-mobile-activity .full-start-new__title{' +
                     'font-size:1.6em;' +
                 '}' +
 
-                '.full-start-new.tml-mobile-active .tml-cinematic-meta{' +
+                '.tml-mobile-activity .tml-cinematic-meta{' +
                     'font-size:.77em;' +
                     'gap:.3em .4em;' +
                 '}' +
 
-                '.full-start-new.tml-mobile-active .tml-cinematic-description{' +
+                '.tml-mobile-activity .tml-cinematic-description{' +
                     'font-size:.87em;' +
                     '-webkit-line-clamp:3;' +
                     'line-clamp:3;' +
@@ -619,7 +628,7 @@
     }
 
     /*
-     * GET ACTIVITY ROOT
+     * ACTIVITY ROOT
      */
 
     function getActivityRoot(ev) {
@@ -641,37 +650,27 @@
     }
 
     /*
-     * GET CARD ROOT
+     * CARD ROOT
      */
 
     function getCardRoot(ev) {
-        try {
-            return getActivityRoot(ev)
-                .find('.full-start-new')
-                .first();
-
-        } catch (e) {
-            return $();
-        }
+        return getActivityRoot(ev)
+            .find('.full-start-new')
+            .first();
     }
 
     /*
-     * GET TITLE BLOCK
+     * TITLE BLOCK
      */
 
     function getTitleBlock(ev) {
-        try {
-            return getActivityRoot(ev)
-                .find('.full-start-new__title')
-                .first();
-
-        } catch (e) {
-            return $();
-        }
+        return getActivityRoot(ev)
+            .find('.full-start-new__title')
+            .first();
     }
 
     /*
-     * STUDIO LOGO PLACEMENT
+     * STUDIO LOGO
      */
 
     function prepareStudioLogo(root, card, token) {
@@ -722,7 +721,7 @@
     }
 
     /*
-     * TAGLINE POSITION
+     * TAGLINE
      */
 
     function prepareTagline(root) {
@@ -742,7 +741,7 @@
     }
 
     /*
-     * METADATA ROW
+     * METADATA
      */
 
     function prepareMetadata(root, card) {
@@ -827,7 +826,7 @@
     }
 
     /*
-     * CLEAR CURRENT STATE
+     * CLEAR STATE
      */
 
     function clearCurrent() {
@@ -836,15 +835,11 @@
         }
 
         currentCard = null;
-        currentTitle = null;
         currentImage = null;
     }
 
     /*
-     * CREATE LOGO ELEMENT
-     *
-     * Preserve original Lampa title
-     * in case TMDB logo is unavailable.
+     * PREPARE LOGO
      */
 
     function prepareLogo(titleBlock) {
@@ -853,7 +848,6 @@
         var logo = $('<img class="tml-logo-image" alt="">');
 
         titleBlock.empty();
-
         titleBlock.append(logo);
 
         return {
@@ -863,30 +857,24 @@
     }
 
     /*
-     * RESTORE ORIGINAL TITLE
+     * RESTORE TITLE
      */
 
     function showOriginalTitle(titleBlock, original, logo) {
         if (!titleBlock || !titleBlock.length) return;
 
-        if (logo) {
-            logo.off('error load');
-        }
+        if (logo) logo.off('error load');
 
         titleBlock.empty();
-
         titleBlock.append(original);
     }
 
     /*
      * DISPLAY LOGO
-     *
-     * Smooth fade-in after successful loading.
      */
 
     function displayLogo(url, titleBlock, original, logo, token) {
         if (!url || !logo || !logo.length) return;
-
         if (token !== currentToken) return;
 
         logo.off('error load');
@@ -913,11 +901,6 @@
 
         logo.attr('src', url);
 
-        /*
-         * Handle cached images which may already
-         * have completed loading.
-         */
-
         if (
             logo[0] &&
             logo[0].complete &&
@@ -932,7 +915,7 @@
     }
 
     /*
-     * PROCESS LAMPA CARD
+     * PROCESS CARD
      */
 
     function processCard(ev) {
@@ -943,49 +926,63 @@
         if (!card || !card.id) return;
 
         var activityRoot = getActivityRoot(ev);
-
+        var root = getCardRoot(ev);
         var titleBlock = getTitleBlock(ev);
 
-        var root = getCardRoot(ev);
-
         if (!activityRoot.length) return;
-
-        if (!titleBlock.length || !root.length) return;
+        if (!root.length || !titleBlock.length) return;
 
         clearCurrent();
 
         var token = ++currentToken;
-
         var type = getCardType(card);
 
         currentCard = card;
 
-        currentTitle = titleBlock;
-
         /*
-         * ACTIVATE MOBILE LAYOUT
+         * IMPORTANT BACKGROUND FIX
+         *
+         * The background is located in the outer
+         * activity container, not in the card root.
+         *
+         * Activate its dedicated CSS scope.
          */
 
-        root.addClass('tml-mobile-active');
+        activityRoot.addClass('tml-mobile-activity');
 
         /*
-         * CINEMATIC INFORMATION
+         * Keep native Lampa background intact.
+         * Do not remove, clone or replace it.
+         */
+
+        var nativeBackground = activityRoot.find(
+            '.full-start__background'
+        ).first();
+
+        if (nativeBackground.length) {
+            nativeBackground.css({
+                display: 'block',
+                visibility: 'visible',
+                opacity: '1'
+            });
+        }
+
+        /*
+         * INFORMATION
          */
 
         prepareTagline(root);
-
         prepareMetadata(root, card);
-
         prepareDescription(root, card);
 
         /*
-         * PRODUCTION STUDIO LOGO
+         * STUDIO
          */
 
         prepareStudioLogo(root, card, token);
 
         /*
-         * TMDB MOVIE LOGO
+         * MOVIE LOGO
          */
 
         var elements = prepareLogo(titleBlock);
@@ -994,7 +991,6 @@
 
         ensureLogo(card, type, function (url) {
             if (token !== currentToken) return;
-
             if (currentCard !== card) return;
 
             if (!url) {
@@ -1026,19 +1022,17 @@
 
         if (ev.type === 'complite') {
             addCSS();
-
             processCard(ev);
         }
 
         if (ev.type === 'destroy') {
             clearCurrent();
-
             currentToken++;
         }
     });
 
     /*
-     * INITIALIZE
+     * INITIALIZATION
      */
 
     addCSS();
