@@ -1,18 +1,20 @@
+
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.0 — CINEMATIC FULLSCREEN
+     * TMDB MOVIE LOGOS 1.5.1 — CINEMATIC FIXED BACKDROP
      *
      * Lampa / Android TV
      *
-     * NEW:
-     * - Independent fullscreen TMDB backdrop
-     * - Native Lampa background hidden only on full card
-     * - Original Lampa buttons and navigation preserved
-     * - Premium logo appearance animation
-     * - Smooth studio logo appearance
-     * - Minimal bottom gradient
+     * NEW 1.5.1:
+     * - Native Lampa background completely hidden
+     * - Independent fixed fullscreen TMDB backdrop
+     * - Backdrop remains stationary while scrolling
+     * - Progressive background darkening on scroll
+     * - Smooth brightness restoration when scrolling up
+     * - Dedicated lightweight dimming layer
+     * - Scroll listeners automatically removed on destroy
      *
      * PRESERVED:
      * - TMDB logo selection: Ukrainian > English > fallback
@@ -20,21 +22,23 @@
      * - Studio logo with details fallback
      * - Ukrainian country names
      * - Metadata and description
+     * - Original Lampa buttons and navigation
+     * - Premium logo appearance animation
      *
      * No external dependencies.
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v150_ready) return;
+    if (window.tmdb_movie_logos_v151_ready) return;
 
-    window.tmdb_movie_logos_v150_ready = true;
+    window.tmdb_movie_logos_v151_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    var VERSION = '1.5.0';
-    var CSS_ID = 'tml_v150_css';
+    var VERSION = '1.5.1';
+    var CSS_ID = 'tml_v151_css';
 
     var currentCard = null;
     var currentToken = 0;
@@ -43,7 +47,17 @@
     var currentLogo = null;
     var currentBackdrop = null;
 
+    var currentDimLayer = null;
+    var currentScrollHandler = null;
+    var scrollFrame = null;
+
     var CACHE_TIMEOUT = 20000;
+
+    /*
+     * Scroll darkening settings
+     */
+    var SCROLL_DISTANCE = 700;
+    var MAX_DARKNESS = 0.48;
 
     /*
      * TMDB logo selection
@@ -213,9 +227,6 @@
 
     /*
      * Backdrop
-     *
-     * First use the image already present in the card.
-     * If unavailable, request full TMDB details.
      */
     function ensureBackdrop(card, type, callback) {
         cached(card, 'tml_backdrop', function (done) {
@@ -428,12 +439,15 @@
         css.textContent =
 
             /*
-             * Hide original Lampa background only on full card
+             * Completely hide native Lampa background
              */
-            'body.tml-cinematic-active .background{' +
+            'body.tml-cinematic-active .background,' +
+            'body.tml-cinematic-active .full-start__background,' +
+            'body.tml-cinematic-active .full-start__background-image{' +
                 'opacity:0 !important;' +
                 'visibility:hidden !important;' +
                 'pointer-events:none !important;' +
+                'display:none !important;' +
             '}' +
 
             /*
@@ -446,13 +460,16 @@
             '}' +
 
             /*
-             * Independent fullscreen backdrop
+             * Independent fixed fullscreen backdrop
              */
             '.tml-cinematic-backdrop{' +
-                'position:fixed;' +
-                'inset:0;' +
-                'width:100vw;' +
-                'height:100vh;' +
+                'position:fixed !important;' +
+                'top:0 !important;' +
+                'left:0 !important;' +
+                'right:0 !important;' +
+                'bottom:0 !important;' +
+                'width:100vw !important;' +
+                'height:100vh !important;' +
                 'z-index:0;' +
                 'overflow:hidden;' +
                 'pointer-events:none;' +
@@ -465,9 +482,13 @@
                 'opacity:1;' +
             '}' +
 
+            /*
+             * Backdrop image
+             */
             '.tml-cinematic-backdrop img{' +
                 'position:absolute;' +
-                'inset:0;' +
+                'top:0;' +
+                'left:0;' +
                 'width:100%;' +
                 'height:100%;' +
                 'object-fit:cover;' +
@@ -481,12 +502,27 @@
             '}' +
 
             /*
+             * Independent scroll darkening layer
+             */
+            '.tml-backdrop-dim{' +
+                'position:absolute;' +
+                'inset:0;' +
+                'z-index:2;' +
+                'background:#000;' +
+                'opacity:0;' +
+                'transition:opacity .18s linear;' +
+                'pointer-events:none;' +
+                'will-change:opacity;' +
+            '}' +
+
+            /*
              * Minimal cinematic bottom gradient
              */
             '.tml-cinematic-backdrop:after{' +
                 'content:"";' +
                 'position:absolute;' +
                 'inset:0;' +
+                'z-index:3;' +
                 'background:' +
                     'linear-gradient(' +
                         'to top,' +
@@ -765,20 +801,191 @@
     }
 
     /*
-     * Create independent backdrop
+     * Calculate current scroll position
+     *
+     * Supports:
+     * - Window scrolling
+     * - Document scrolling
+     * - Lampa internal scroll containers
+     * - Full card and its parent containers
+     */
+    function getScrollPosition(root) {
+        var position = 0;
+
+        if (window.pageYOffset) {
+            position = Math.max(position, window.pageYOffset);
+        }
+
+        if (document.documentElement) {
+            position = Math.max(
+                position,
+                document.documentElement.scrollTop || 0
+            );
+        }
+
+        if (document.body) {
+            position = Math.max(
+                position,
+                document.body.scrollTop || 0
+            );
+        }
+
+        var element = root && root[0];
+
+        while (element && element !== document) {
+            if (typeof element.scrollTop === 'number') {
+                position = Math.max(
+                    position,
+                    element.scrollTop || 0
+                );
+            }
+
+            element = element.parentElement;
+        }
+
+        /*
+         * Also detect movement of the card itself.
+         */
+        if (root && root.length) {
+            var rect = root[0].getBoundingClientRect();
+
+            if (rect.top < 0) {
+                position = Math.max(position, -rect.top);
+            }
+        }
+
+        return Math.max(0, position);
+    }
+
+    /*
+     * Update background darkness
+     */
+    function updateBackdropDarkness() {
+        scrollFrame = null;
+
+        if (
+            !currentRoot ||
+            !currentRoot.length ||
+            !currentDimLayer ||
+            !currentDimLayer.length
+        ) {
+            return;
+        }
+
+        var scroll = getScrollPosition(currentRoot);
+
+        var progress = Math.min(
+            1,
+            scroll / SCROLL_DISTANCE
+        );
+
+        /*
+         * Smooth ease-out curve
+         */
+        progress = progress * (2 - progress);
+
+        var darkness = MAX_DARKNESS * progress;
+
+        currentDimLayer.css(
+            'opacity',
+            darkness.toFixed(3)
+        );
+    }
+
+    /*
+     * Start lightweight scroll tracking
+     */
+    function startScrollTracking(root, token) {
+        stopScrollTracking();
+
+        if (!root || !root.length) return;
+
+        currentScrollHandler = function () {
+            if (token !== currentToken) return;
+
+            if (scrollFrame !== null) return;
+
+            scrollFrame = requestAnimationFrame(
+                updateBackdropDarkness
+            );
+        };
+
+        /*
+         * Capture scroll events from internal containers.
+         */
+        document.addEventListener(
+            'scroll',
+            currentScrollHandler,
+            true
+        );
+
+        window.addEventListener(
+            'scroll',
+            currentScrollHandler,
+            { passive: true }
+        );
+
+        /*
+         * Initial state
+         */
+        updateBackdropDarkness();
+    }
+
+    /*
+     * Stop scroll tracking
+     */
+    function stopScrollTracking() {
+        if (currentScrollHandler) {
+            document.removeEventListener(
+                'scroll',
+                currentScrollHandler,
+                true
+            );
+
+            window.removeEventListener(
+                'scroll',
+                currentScrollHandler
+            );
+
+            currentScrollHandler = null;
+        }
+
+        if (scrollFrame !== null) {
+            cancelAnimationFrame(scrollFrame);
+            scrollFrame = null;
+        }
+    }
+
+    /*
+     * Create independent fixed backdrop
      */
     function prepareBackdrop(root, card, type, token) {
         if (!root || !root.length) return;
 
         root.find('.tml-cinematic-backdrop').remove();
 
-        var backdrop = $('<div class="tml-cinematic-backdrop"></div>');
+        var backdrop = $(
+            '<div class="tml-cinematic-backdrop"></div>'
+        );
+
         var image = $('<img alt="">');
 
+        var dimLayer = $(
+            '<div class="tml-backdrop-dim"></div>'
+        );
+
         backdrop.append(image);
+        backdrop.append(dimLayer);
+
         root.prepend(backdrop);
 
         currentBackdrop = backdrop;
+        currentDimLayer = dimLayer;
+
+        /*
+         * Enable scroll darkening immediately.
+         */
+        startScrollTracking(root, token);
 
         ensureBackdrop(card, type, function (path) {
             if (token !== currentToken) return;
@@ -799,6 +1006,7 @@
 
                 requestAnimationFrame(function () {
                     if (token !== currentToken) return;
+                    if (currentCard !== card) return;
 
                     image.addClass('tml-image-visible');
                     backdrop.addClass('tml-backdrop-visible');
@@ -1018,6 +1226,11 @@
      * Clear current card
      */
     function clearCurrent() {
+        /*
+         * Remove scroll listeners first.
+         */
+        stopScrollTracking();
+
         if (currentLogo) {
             currentLogo.off('error load');
         }
@@ -1038,6 +1251,7 @@
         currentTitle = null;
         currentLogo = null;
         currentBackdrop = null;
+        currentDimLayer = null;
     }
 
     /*
@@ -1072,7 +1286,8 @@
         $('body').addClass('tml-cinematic-active');
 
         /*
-         * Independent fullscreen backdrop
+         * Independent fixed fullscreen backdrop
+         * with progressive scroll darkening.
          */
         prepareBackdrop(root, card, type, token);
 
