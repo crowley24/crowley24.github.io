@@ -3,43 +3,27 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.3 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.5 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
-     * LOGO:
-     * - TMDB logos for movies and TV series
-     * - Same logo selection as Кінотрейлери 2.3
-     * - Original cache logic
-     * - Original title fallback
-     *
-     * CINEMATIC MODE:
-     * - Standard Lampa backdrop preserved
-     * - Poster hidden
-     * - Information block positioned bottom-left
-     * - TMDB logo
-     * - Native tagline directly under logo
-     * - Metadata: year / country / rating / genres
-     * - Short description below metadata
-     * - Native Lampa buttons preserved
-     * - Reactions hidden
-     *
-     * BACKDROP SLIDESHOW:
-     * - TMDB additional backdrops
-     * - 10 seconds interval
-     * - 1.5 seconds crossfade
-     * - Original Lampa background retained underneath
-     * - Stops on card destroy
+     * CHANGES 1.4.5:
+     * - Seamless slideshow startup
+     * - First slideshow frame duplicates native backdrop
+     * - No visual jump when opening a movie card
+     * - First additional backdrop appears after 10 seconds
+     * - Smooth 1.5s crossfade
+     * - Full slideshow cleanup on card destroy
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v143_ready) return;
+    if (window.tmdb_movie_logos_v145_ready) return;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    window.tmdb_movie_logos_v143_ready = true;
+    window.tmdb_movie_logos_v145_ready = true;
 
     var currentCard = null;
     var currentTitle = null;
@@ -49,14 +33,12 @@
     var slideshowTimer = null;
     var slideshowRoot = null;
     var slideshowImages = [];
-    var slideshowIndex = 0;
     var slideshowToken = 0;
 
     var CACHE_TIMEOUT = 20000;
     var SLIDESHOW_INTERVAL = 10000;
-    var SLIDESHOW_FADE = 1500;
 
-    var CSS_ID = 'tmdb_movie_logos_v143_css';
+    var CSS_ID = 'tmdb_movie_logos_v145_css';
 
     /*
      * TMDB logo selection
@@ -105,13 +87,11 @@
             if (completed) return;
 
             completed = true;
-
             clearTimeout(timer);
 
             item[key] = value || null;
 
             var list = item[key + '_wait'] || [];
-
             item[key + '_wait'] = null;
 
             list.forEach(function (callback) {
@@ -172,13 +152,6 @@
 
     /*
      * Country names
-     *
-     * TMDB movie:
-     * production_countries[].name
-     *
-     * TMDB TV:
-     * production_countries[].name
-     * or origin_country[]
      */
     function getCountries(card) {
         var countries = [];
@@ -235,7 +208,6 @@
 
         if (rating > 0) {
             if (rating > 10) rating = 10;
-
             parts.push('★ ' + rating.toFixed(1));
         }
 
@@ -430,8 +402,6 @@
 
             /*
              * Slideshow overlay
-             *
-             * Native .full-start__background remains underneath.
              */
             '.tml-backdrop-layer{' +
                 'position:absolute !important;' +
@@ -440,14 +410,14 @@
                 'height:100% !important;' +
                 'object-fit:cover !important;' +
                 'object-position:center center !important;' +
-                'opacity:0;' +
-                'transition:opacity 1.5s ease-in-out;' +
+                'opacity:0 !important;' +
+                'transition:opacity 1.5s ease-in-out !important;' +
                 'pointer-events:none !important;' +
                 'z-index:0 !important;' +
             '}' +
 
             '.tml-backdrop-layer.tml-backdrop-visible{' +
-                'opacity:1;' +
+                'opacity:1 !important;' +
             '}';
 
         document.head.appendChild(css);
@@ -495,6 +465,27 @@
                 .render()
                 .find('.full-start-new')
                 .first();
+
+        } catch (e) {
+            return $();
+        }
+    }
+
+    /*
+     * Get outer activity root
+     */
+    function getActivityRoot(ev) {
+        try {
+            if (
+                !ev ||
+                !ev.object ||
+                !ev.object.activity ||
+                typeof ev.object.activity.render !== 'function'
+            ) {
+                return $();
+            }
+
+            return ev.object.activity.render();
 
         } catch (e) {
             return $();
@@ -594,7 +585,6 @@
 
         if (!description.length) {
             description = $('<div class="tml-cinematic-description"></div>');
-
             description.insertAfter(metadata);
         }
 
@@ -605,43 +595,54 @@
      * Stop slideshow
      */
     function stopSlideshow() {
-        clearInterval(slideshowTimer);
-        slideshowTimer = null;
+        if (slideshowTimer) {
+            clearInterval(slideshowTimer);
+            slideshowTimer = null;
+        }
 
         slideshowToken++;
 
         slideshowImages.forEach(function (image) {
-            if (image) {
-                image.onload = null;
-                image.onerror = null;
+            if (image && image.length) {
+                image.off('load error');
+                image.remove();
             }
         });
 
         slideshowImages = [];
-        slideshowIndex = 0;
         slideshowRoot = null;
     }
 
     /*
      * Start slideshow
      *
-     * Keep the native Lampa backdrop as the base layer.
-     * Additional images are placed above it.
+     * 1. First overlay duplicates native backdrop.
+     * 2. It becomes visible without changing the picture.
+     * 3. After 10 seconds, the first additional TMDB backdrop appears.
+     * 4. Further images crossfade every 10 seconds.
      */
-    function startSlideshow(root, card, type, token) {
+    function startSlideshow(activityRoot, card, type, token) {
         stopSlideshow();
 
-        var nativeBackground = root.find(
+        if (!activityRoot || !activityRoot.length) return;
+        if (!card || !card.id || !card.backdrop_path) return;
+
+        var nativeBackground = activityRoot.find(
             '.full-start__background'
         ).first();
 
         if (!nativeBackground.length) return;
 
-        if (!card.backdrop_path) return;
+        var nativeSrc =
+            nativeBackground.attr('src') ||
+            nativeBackground[0].src ||
+            '';
+
+        if (!nativeSrc) return;
 
         var slideshowId = slideshowToken;
 
-        slideshowRoot = root;
+        slideshowRoot = activityRoot;
 
         cached(card, 'tml_backdrops', function (done) {
             var lang = Lampa.Storage.field('tmdb_lang');
@@ -681,6 +682,8 @@
         }, function (paths) {
             if (token !== currentToken) return;
             if (slideshowId !== slideshowToken) return;
+            if (!slideshowRoot || !slideshowRoot.length) return;
+            if (!nativeBackground.closest('body').length) return;
             if (!paths || paths.length < 1) return;
 
             var urls = paths.map(function (path) {
@@ -688,10 +691,22 @@
             });
 
             /*
-             * Two alternating image layers
+             * Create two layers using native background geometry.
              */
-            var first = $('<img class="tml-backdrop-layer" alt="">');
-            var second = $('<img class="tml-backdrop-layer" alt="">');
+            var first = nativeBackground.clone(false);
+            var second = nativeBackground.clone(false);
+
+            first
+                .removeClass('loaded dim')
+                .removeAttr('id')
+                .removeAttr('src')
+                .addClass('tml-backdrop-layer');
+
+            second
+                .removeClass('loaded dim')
+                .removeAttr('id')
+                .removeAttr('src')
+                .addClass('tml-backdrop-layer');
 
             nativeBackground.after(first);
             first.after(second);
@@ -700,32 +715,65 @@
 
             slideshowImages = layers;
 
-            var index = 0;
             var active = 0;
+            var nextIndex = 0;
+            var loading = false;
 
+            /*
+             * First layer:
+             * use exactly the same image as the native Lampa backdrop.
+             */
+            first.on('load', function () {
+                if (token !== currentToken) return;
+                if (slideshowId !== slideshowToken) return;
+
+                requestAnimationFrame(function () {
+                    if (token !== currentToken) return;
+                    if (slideshowId !== slideshowToken) return;
+
+                    first.addClass('tml-backdrop-visible');
+                });
+            });
+
+            first.on('error', function () {
+                if (token !== currentToken) return;
+                if (slideshowId !== slideshowToken) return;
+
+                /*
+                 * If duplicate loading fails, native backdrop
+                 * remains visible underneath.
+                 */
+            });
+
+            first.attr('src', nativeSrc);
+
+            /*
+             * Load and display the next additional backdrop.
+             */
             function showNext() {
                 if (token !== currentToken) return;
                 if (slideshowId !== slideshowToken) return;
                 if (!slideshowRoot || !slideshowRoot.length) return;
+                if (loading || !urls.length) return;
 
-                index = (index + 1) % urls.length;
+                loading = true;
 
-                var nextLayer = 1 - active;
-                var image = layers[nextLayer];
+                var target = 1 - active;
+                var image = layers[target];
 
-                image.removeClass('tml-backdrop-visible');
-
-                image.off('load error');
+                image
+                    .removeClass('tml-backdrop-visible')
+                    .off('load error');
 
                 image.on('load', function () {
                     if (token !== currentToken) return;
                     if (slideshowId !== slideshowToken) return;
 
-                    /*
-                     * Keep image transition synchronized
-                     */
+                    loading = false;
+
                     requestAnimationFrame(function () {
                         if (token !== currentToken) return;
+                        if (slideshowId !== slideshowToken) return;
 
                         image.addClass('tml-backdrop-visible');
 
@@ -733,23 +781,32 @@
                             'tml-backdrop-visible'
                         );
 
-                        active = nextLayer;
+                        active = target;
                     });
                 });
 
                 image.on('error', function () {
                     if (token !== currentToken) return;
-                    index = (index + 1) % urls.length;
+                    if (slideshowId !== slideshowToken) return;
+
+                    loading = false;
+
+                    /*
+                     * Skip a failed image.
+                     */
+                    nextIndex = (nextIndex + 1) % urls.length;
                 });
 
-                image.attr('src', urls[index]);
+                image.attr('src', urls[nextIndex]);
+
+                nextIndex = (nextIndex + 1) % urls.length;
             }
 
             /*
-             * Preload first additional image
+             * IMPORTANT:
+             * Do not start the timer immediately.
+             * The original backdrop remains on screen for 10 seconds.
              */
-            showNext();
-
             slideshowTimer = setInterval(
                 showNext,
                 SLIDESHOW_INTERVAL
@@ -831,9 +888,11 @@
 
         if (!card || !card.id) return;
 
+        var activityRoot = getActivityRoot(ev);
         var titleBlock = getTitleBlock(ev);
         var root = getCardRoot(ev);
 
+        if (!activityRoot.length) return;
         if (!titleBlock.length || !root.length) return;
 
         clearCurrent();
@@ -884,7 +943,7 @@
         /*
          * TMDB backdrop slideshow
          */
-        startSlideshow(root, card, type, token);
+        startSlideshow(activityRoot, card, type, token);
     }
 
     /*
