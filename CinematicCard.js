@@ -1,213 +1,58 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.0.1
+     * TMDB MOVIE LOGOS 1.1.0
      *
-     * Lampa / Android TV / Mobile
-     *
-     * Independent plugin for standard Lampa FULL card.
+     * Lampa / Android TV
      *
      * FEATURES:
-     * - Replaces movie/TV title with TMDB logo
-     * - TMDB language priority
-     * - English fallback
-     * - Logo without language fallback
-     * - W500 image quality
-     * - Persistent cache
-     * - Smooth fade-in
-     * - Original title fallback
-     * - Activity and FULL event detection
-     * - DOM observer for dynamic rendering
-     * - No NewCard dependency
-     * - No modifications to other interface elements
+     * - Standard Lampa full card
+     * - Movies and TV series
+     * - TMDB logo search
+     * - Same logo selection as Кінотрейлери 2.3
+     * - Same TMDB request method
+     * - Same image URL generation
+     * - Same per-item request cache
+     * - Logo replaces standard title
+     * - Original title preserved if logo unavailable
+     * - No shadows / no filters
+     * - No background or metadata modifications
+     *
+     * 1.1.0:
+     * - Rebuilt using the verified full-card event
+     * - Uses ev.data.movie
+     * - Uses .full-start-new__title
+     * - Uses the exact Кінотрейлери 2.3 logo algorithm
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v101_ready) return;
+    if (window.tmdb_movie_logos_v110_ready) return;
 
-    window.tmdb_movie_logos_v101_ready = true;
-
-    var VERSION = '1.0.1';
-
-    var CACHE_KEY = 'tmdb_movie_logos_cache_v101';
-    var CACHE_LIMIT = 500;
-    var REQUEST_TIMEOUT = 15000;
+    window.tmdb_movie_logos_v110_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
-    var cache = {};
-    var pending = {};
+    if (!tmdb) return;
 
     var currentCard = null;
-    var currentRequest = 0;
+    var currentTitle = null;
+    var currentImage = null;
+    var currentToken = 0;
 
-    var observer = null;
-    var started = false;
-
-    var scanTimer = null;
-
-    // --------------------------------------------------
-    // CSS
-    // --------------------------------------------------
-
-    var css = '' +
-
-        '.tml-logo-host{' +
-            'position:relative !important;' +
-            'color:transparent !important;' +
-            'text-shadow:none !important;' +
-        '}' +
-
-        '.tml-logo-host .tml-logo-image{' +
-            'position:absolute !important;' +
-            'left:0 !important;' +
-            'top:50% !important;' +
-            'display:block !important;' +
-            'width:auto !important;' +
-            'height:auto !important;' +
-            'max-width:min(85vw,30em) !important;' +
-            'max-height:2.2em !important;' +
-            'object-fit:contain !important;' +
-            'object-position:left center !important;' +
-            'opacity:0 !important;' +
-            'transform:translateY(-46%) !important;' +
-            'transition:opacity .4s ease !important;' +
-            'pointer-events:none !important;' +
-            'filter:none !important;' +
-            'box-shadow:none !important;' +
-        '}' +
-
-        '.tml-logo-host.tml-logo-visible .tml-logo-image{' +
-            'opacity:1 !important;' +
-        '}' +
-
-        '@media screen and (max-width:768px){' +
-
-            '.tml-logo-host .tml-logo-image{' +
-                'max-width:80vw !important;' +
-                'max-height:2em !important;' +
-            '}' +
-
-        '}';
+    var CACHE_TIMEOUT = 20000;
 
     // --------------------------------------------------
-    // HELPERS
-    // --------------------------------------------------
-
-    function getLanguage() {
-        return Lampa.Storage.field('tmdb_lang') || 'en';
-    }
-
-    function getType(card) {
-        if (!card) return '';
-
-        var type =
-            card.method ||
-            card.media_type ||
-            card.type ||
-            '';
-
-        if (type === 'movie' || type === 'tv') {
-            return type;
-        }
-
-        return '';
-    }
-
-    function getId(card) {
-        return card && card.id
-            ? String(card.id)
-            : '';
-    }
-
-    function getTitle(card) {
-        if (!card) return '';
-
-        return (
-            card.title ||
-            card.name ||
-            card.original_title ||
-            card.original_name ||
-            ''
-        );
-    }
-
-    function makeKey(card) {
-        return [
-            getType(card),
-            getId(card),
-            getLanguage()
-        ].join('_');
-    }
-
-    function validCard(card) {
-        return !!(
-            card &&
-            getId(card) &&
-            getType(card)
-        );
-    }
-
-    // --------------------------------------------------
-    // CACHE
-    // --------------------------------------------------
-
-    function loadCache() {
-        try {
-            var saved = Lampa.Storage.get(CACHE_KEY, {});
-
-            if (
-                saved &&
-                typeof saved === 'object' &&
-                !Array.isArray(saved)
-            ) {
-                cache = saved;
-            }
-        } catch (e) {
-            cache = {};
-        }
-    }
-
-    function saveCache(key, value) {
-        cache[key] = value || false;
-
-        var keys = Object.keys(cache);
-
-        if (keys.length > CACHE_LIMIT) {
-            var limited = {};
-
-            keys.slice(-CACHE_LIMIT).forEach(function (k) {
-                limited[k] = cache[k];
-            });
-
-            cache = limited;
-        }
-
-        try {
-            Lampa.Storage.set(CACHE_KEY, cache);
-        } catch (e) {}
-    }
-
-    // --------------------------------------------------
-    // LOGO LANGUAGE SELECTION
+    // LOGO LANGUAGE PRIORITY
+    // Same as Кінотрейлери 2.3
     // --------------------------------------------------
 
     function pickLogo(logos) {
-        if (!logos || !logos.length) return null;
-
-        var lang = getLanguage();
-
-        var order = [];
-
-        if (lang) order.push(lang);
-
-        if (order.indexOf('en') < 0) {
-            order.push('en');
-        }
-
-        order.push(null);
+        var order = [
+            Lampa.Storage.field('tmdb_lang'),
+            'en',
+            null
+        ];
 
         for (var i = 0; i < order.length; i++) {
             var found = logos.filter(function (logo) {
@@ -221,406 +66,274 @@
     }
 
     // --------------------------------------------------
-    // LOAD LOGO
+    // SAFE CACHE
+    // Same principle as Кінотрейлери 2.3
     // --------------------------------------------------
 
-    function loadLogo(card, callback) {
-        var key = makeKey(card);
-
-        if (Object.prototype.hasOwnProperty.call(cache, key)) {
-            callback(cache[key] || null);
+    function cached(item, key, request, cb) {
+        if (item[key] !== undefined) {
+            cb(item[key]);
             return;
         }
 
-        if (pending[key]) {
-            pending[key].push(callback);
+        if (item[key + '_wait']) {
+            item[key + '_wait'].push(cb);
             return;
         }
 
-        pending[key] = [callback];
+        item[key + '_wait'] = [cb];
 
         var completed = false;
 
         var timer = setTimeout(function () {
             finish(null);
-        }, REQUEST_TIMEOUT);
+        }, CACHE_TIMEOUT);
 
-        function finish(url) {
+        function finish(value) {
             if (completed) return;
 
             completed = true;
 
             clearTimeout(timer);
 
-            saveCache(key, url);
+            item[key] = value || null;
 
-            var callbacks = pending[key] || [];
+            var list = item[key + '_wait'] || [];
 
-            delete pending[key];
+            item[key + '_wait'] = null;
 
-            callbacks.forEach(function (fn) {
+            list.forEach(function (callback) {
                 try {
-                    fn(url || null);
+                    callback(item[key]);
                 } catch (e) {}
             });
         }
 
         try {
-            var type = getType(card);
-            var id = getId(card);
-            var lang = getLanguage();
-
-            tmdb.get(
-                type + '/' + id + '/images',
-
-                {
-                    filter: {
-                        include_image_language: lang + ',en,null'
-                    }
-                },
-
-                function (json) {
-                    var logo = pickLogo(
-                        json && json.logos
-                            ? json.logos
-                            : []
-                    );
-
-                    if (!logo || !logo.file_path) {
-                        finish(null);
-                        return;
-                    }
-
-                    var url = Lampa.Api.img(
-                        logo.file_path,
-                        'w500'
-                    );
-
-                    finish(url);
-                },
-
-                function () {
-                    finish(null);
-                }
-            );
+            request(finish);
         } catch (e) {
             finish(null);
         }
     }
 
     // --------------------------------------------------
-    // FIND STANDARD FULL TITLE
+    // LOGO CACHE
+    // Exact request logic from Кінотрейлери 2.3
     // --------------------------------------------------
 
-    function findTitle() {
-        var selectors = [
-            '.full-start__title',
-            '.full-start__name',
-            '.full-start__title-text',
-            '.full-start h1',
-            '.full-start h2'
-        ];
+    function ensureLogo(item, type, cb) {
+        cached(item, 'tfeed_logo', function (done) {
+            var lang = Lampa.Storage.field('tmdb_lang');
 
-        for (var i = 0; i < selectors.length; i++) {
-            var elements = document.querySelectorAll(selectors[i]);
+            var langs = (lang || 'en') + ',en,null';
 
-            for (var j = 0; j < elements.length; j++) {
-                var el = elements[j];
+            tmdb.get(
+                type + '/' + item.id + '/images',
 
-                if (!el || !el.isConnected) continue;
+                {
+                    filter: {
+                        include_image_language: langs
+                    }
+                },
 
-                if (
-                    el.closest('.full-start') ||
-                    el.closest('.full')
-                ) {
-                    return $(el);
+                function (json) {
+                    var logo = json.logos && json.logos.length
+                        ? pickLogo(json.logos)
+                        : null;
+
+                    done(
+                        logo
+                            ? Lampa.Api.img(logo.file_path, 'w500')
+                            : null
+                    );
+                },
+
+                function () {
+                    done(null);
                 }
-            }
-        }
-
-        return $();
+            );
+        }, cb);
     }
 
     // --------------------------------------------------
-    // REMOVE LOGO
+    // CARD TYPE
+    // Same detection as the working plugin
+    // --------------------------------------------------
+
+    function getCardType(card) {
+        return card.name ? 'tv' : 'movie';
+    }
+
+    // --------------------------------------------------
+    // RESTORE ORIGINAL TITLE
     // --------------------------------------------------
 
     function restoreTitle() {
-        var title = findTitle();
+        if (currentImage) {
+            currentImage.onload = null;
+            currentImage.onerror = null;
+        }
 
-        if (!title.length) return;
+        currentImage = null;
+        currentTitle = null;
+        currentCard = null;
 
-        title.removeClass(
-            'tml-logo-host tml-logo-visible'
-        );
+        currentToken++;
+    }
 
-        title.find('.tml-logo-image').remove();
+    // --------------------------------------------------
+    // FIND TITLE BLOCK
+    // Standard Lampa full card
+    // --------------------------------------------------
 
-        title.removeAttr('data-tml-key');
+    function getTitleBlock(ev) {
+        try {
+            if (
+                !ev ||
+                !ev.object ||
+                !ev.object.activity ||
+                typeof ev.object.activity.render !== 'function'
+            ) {
+                return $();
+            }
+
+            return ev.object.activity
+                .render()
+                .find('.full-start-new__title')
+                .first();
+
+        } catch (e) {
+            return $();
+        }
     }
 
     // --------------------------------------------------
     // DISPLAY LOGO
+    // Same image presentation approach as Кінотрейлери
     // --------------------------------------------------
 
-    function displayLogo(card, url, requestId) {
-        if (requestId !== currentRequest) return;
-        if (currentCard !== card) return;
+    function displayLogo(url, titleBlock, token) {
+        if (!url || !titleBlock || !titleBlock.length) return;
 
-        var title = findTitle();
+        if (token !== currentToken) return;
 
-        if (!title.length) return;
+        var img = new Image();
 
-        if (!url) {
-            restoreTitle();
-            return;
-        }
+        img.style.display = 'block';
+        img.style.width = '7em';
+        img.style.height = 'auto';
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '8em';
+        img.style.objectFit = 'contain';
+        img.style.objectPosition = 'left center';
+        img.style.margin = '0';
+        img.style.padding = '0';
+        img.style.border = '0';
+        img.style.boxShadow = 'none';
+        img.style.filter = 'none';
 
-        var key = makeKey(card);
+        currentImage = img;
 
-        if (
-            title.attr('data-tml-key') === key &&
-            title.find('.tml-logo-image').length
-        ) {
-            return;
-        }
+        img.onload = function () {
+            if (token !== currentToken) return;
 
-        title.find('.tml-logo-image').remove();
+            if (!currentTitle || !currentTitle.length) return;
 
-        title.removeClass('tml-logo-visible');
+            if (!currentTitle.closest('.full-start-new').length) return;
 
-        title.addClass('tml-logo-host');
+            // Replace only the title.
+            // All other card elements remain untouched.
 
-        title.attr('data-tml-key', key);
+            currentTitle.empty().append(img);
+        };
 
-        var image = $('<img>')
-            .addClass('tml-logo-image')
-            .attr('alt', getTitle(card))
-            .attr('draggable', 'false');
+        img.onerror = function () {
+            if (token !== currentToken) return;
 
-        image.on('load', function () {
-            if (requestId !== currentRequest) return;
-            if (currentCard !== card) return;
+            currentImage = null;
 
-            if (!title.length || !title[0].isConnected) return;
+            // Restore the original text if the logo fails.
+            if (currentTitle && currentTitle.length) {
+                currentTitle.text(currentCardTitle);
+            }
+        };
 
-            title.addClass('tml-logo-visible');
-        });
-
-        image.on('error', function () {
-            if (requestId !== currentRequest) return;
-
-            title.removeClass(
-                'tml-logo-host tml-logo-visible'
-            );
-
-            image.remove();
-        });
-
-        title.append(image);
-
-        image.attr('src', url);
+        img.src = url;
     }
 
     // --------------------------------------------------
-    // PROCESS CARD
+    // CURRENT TITLE
     // --------------------------------------------------
 
-    function processCard(card) {
-        if (!validCard(card)) return;
+    var currentCardTitle = '';
 
-        var title = findTitle();
+    // --------------------------------------------------
+    // PROCESS FULL CARD
+    // --------------------------------------------------
 
-        if (!title.length) return;
+    function processCard(ev) {
+        if (!ev || ev.type !== 'complite') return;
 
-        var key = makeKey(card);
+        var card = ev.data && ev.data.movie;
 
-        if (
-            currentCard === card &&
-            title.attr('data-tml-key') === key &&
-            title.find('.tml-logo-image').length
-        ) {
-            return;
-        }
+        if (!card || !card.id) return;
+
+        var titleBlock = getTitleBlock(ev);
+
+        if (!titleBlock.length) return;
+
+        var type = getCardType(card);
+
+        var token = ++currentToken;
 
         currentCard = card;
+        currentTitle = titleBlock;
+        currentImage = null;
 
-        var requestId = ++currentRequest;
+        currentCardTitle = titleBlock.text().trim();
 
-        restoreTitle();
+        if (!currentCardTitle) {
+            currentCardTitle =
+                card.title ||
+                card.name ||
+                card.original_title ||
+                card.original_name ||
+                '';
+        }
 
-        loadLogo(card, function (url) {
-            displayLogo(card, url, requestId);
+        // Keep the original title visible while the logo loads.
+
+        ensureLogo(card, type, function (url) {
+            if (token !== currentToken) return;
+
+            if (currentCard !== card) return;
+
+            if (!url) return;
+
+            if (!currentTitle || !currentTitle.length) return;
+
+            // Preload the image and replace the title
+            // only after successful loading.
+
+            displayLogo(url, currentTitle, token);
         });
     }
 
     // --------------------------------------------------
-    // EXTRACT CARD
+    // FULL CARD LISTENER
+    // Same event and lifecycle as the working plugin
     // --------------------------------------------------
 
-    function extractCard(object) {
-        if (!object) return null;
+    Lampa.Listener.follow('full', function (ev) {
+        if (!ev) return;
 
-        var candidates = [
-            object.card,
-            object.movie,
-            object.data,
-            object.activity && object.activity.card,
-            object.activity && object.activity.object,
-            object.object,
-            object
-        ];
-
-        for (var i = 0; i < candidates.length; i++) {
-            var candidate = candidates[i];
-
-            if (validCard(candidate)) {
-                return candidate;
-            }
+        if (ev.type === 'complite') {
+            processCard(ev);
         }
 
-        return null;
-    }
-
-    // --------------------------------------------------
-    // ACTIVITY EVENT
-    // --------------------------------------------------
-
-    function onActivity(event) {
-        if (!event || event.component !== 'full') return;
-
-        if (
-            event.type === 'init' ||
-            event.type === 'create' ||
-            event.type === 'start'
-        ) {
-            var card = extractCard(event.object);
-
-            if (card) {
-                currentCard = card;
-
-                currentRequest++;
-
-                setTimeout(function () {
-                    processCard(card);
-                }, 150);
-            }
+        if (ev.type === 'destroy') {
+            restoreTitle();
         }
-
-        if (event.type === 'destroy') {
-            currentRequest++;
-
-            currentCard = null;
-
-            clearTimeout(scanTimer);
-        }
-    }
-
-    // --------------------------------------------------
-    // FULL EVENT
-    // --------------------------------------------------
-
-    function onFull(event) {
-        if (!event) return;
-
-        var card = extractCard(event.object);
-
-        if (!card) {
-            card = extractCard(event);
-        }
-
-        if (card) {
-            currentCard = card;
-
-            var requestId = ++currentRequest;
-
-            setTimeout(function () {
-                if (requestId !== currentRequest) return;
-
-                processCard(card);
-            }, 100);
-        }
-    }
-
-    // --------------------------------------------------
-    // DOM OBSERVER
-    // --------------------------------------------------
-
-    function scheduleScan() {
-        clearTimeout(scanTimer);
-
-        scanTimer = setTimeout(function () {
-            if (!currentCard) return;
-
-            var title = findTitle();
-
-            if (!title.length) return;
-
-            var key = makeKey(currentCard);
-
-            if (
-                title.attr('data-tml-key') !== key ||
-                !title.find('.tml-logo-image').length
-            ) {
-                processCard(currentCard);
-            }
-        }, 100);
-    }
-
-    function startObserver() {
-        if (observer || !document.body) return;
-
-        observer = new MutationObserver(function () {
-            if (!currentCard) return;
-
-            scheduleScan();
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    // --------------------------------------------------
-    // INITIALIZATION
-    // --------------------------------------------------
-
-    function start() {
-        if (started) return;
-
-        started = true;
-
-        loadCache();
-
-        var style = document.createElement('style');
-
-        style.id = 'tmdb-movie-logos-v101-style';
-
-        style.textContent = css;
-
-        document.head.appendChild(style);
-
-        if (Lampa.Listener && Lampa.Listener.follow) {
-            Lampa.Listener.follow('activity', onActivity);
-            Lampa.Listener.follow('full', onFull);
-        }
-
-        startObserver();
-    }
-
-    // --------------------------------------------------
-    // APP READY
-    // --------------------------------------------------
-
-    if (window.appready) {
-        start();
-    } else if (Lampa.Listener && Lampa.Listener.follow) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                start();
-            }
-        });
-    }
+    });
 
 })();
