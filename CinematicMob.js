@@ -3,29 +3,17 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.2
+     * @version 3.1.3
      * @author Crowley24
      * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.2 CHANGES:
-     * - Removed duplicate year/country above movie logo
-     * - Preserved year/country in metadata row
-     * - Minimal transparent metadata design
-     * - Removed metadata glass panel, background and border
-     * - Thin elegant metadata separators
-     * - Minimal transparent buttons
-     * - Removed button backgrounds, borders and heavy shadows
-     * - Subtle button press animation
-     * - Improved logo shadows and glow
-     * - Refined tagline typography
-     * - Improved poster gradients
-     * - Improved animations
-     * - Age rating completely hidden
-     * - No custom badges or custom ratings
-     * - Native Lampa ratings preserved
-     * - TMDB cache and async request protection
-     * - Safe slideshow timer management
+     * 3.1.3 CHANGES:
+     * - Removed custom movie logo appearance animation
+     * - Removed logo opacity/transform transition
+     * - Removed logo requestAnimationFrame animation
+     * - Preserved Кінотрейлери TMDB logo loading logic
+     * - Preserved all other interface animations and styling
      *
      * LOGO SYSTEM:
      * - Same TMDB logo loading logic as Кінотрейлери
@@ -34,11 +22,11 @@
      * - w500 image quality
      * - Logo cache and request deduplication
      * - 20-second request timeout
-     * - Smooth logo appearance
+     * - No additional MOB_INTERFACE logo animation
      */
 
-    if (window.MOB_INTERFACE_V312_READY) return;
-    window.MOB_INTERFACE_V312_READY = true;
+    if (window.MOB_INTERFACE_V313_READY) return;
+    window.MOB_INTERFACE_V313_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -250,8 +238,9 @@
     /*
      * MOVIE LOGO DISPLAY
      *
-     * Keeps native title as fallback.
-     * Logo is displayed only after successful image loading.
+     * No custom logo appearance animation.
+     * Native title remains available until
+     * the logo image has loaded successfully.
      */
 
     function displayMovieLogo(movie, $render, renderToken) {
@@ -301,12 +290,6 @@
 
                 if (!logoUrl) return;
 
-                var $currentTitle = $render.find(
-                    '.full-start-new__title'
-                ).first();
-
-                if (!$currentTitle.length) return;
-
                 /*
                  * PRELOAD LOGO
                  */
@@ -345,21 +328,13 @@
                     /*
                      * Replace native title only
                      * after successful image loading.
+                     *
+                     * No opacity animation.
+                     * No transform animation.
+                     * No requestAnimationFrame.
                      */
 
                     $finalTitle.empty().append($logo);
-
-                    requestAnimationFrame(function () {
-                        if (
-                            renderToken !== activeRenderToken ||
-                            !$render[0] ||
-                            !document.body.contains($render[0])
-                        ) {
-                            return;
-                        }
-
-                        $logo.addClass('is-visible');
-                    });
                 };
 
                 image.onerror = function () {
@@ -856,21 +831,6 @@
         css += 'filter:drop-shadow(0 5px 18px rgba(0,0,0,.95)) drop-shadow(0 0 12px rgba(255,255,255,.08));';
         css += 'margin:0!important;';
         css += 'transition:filter .4s ease,transform .4s ease;';
-        css += '}';
-
-        /*
-         * SMOOTH TMDB LOGO APPEARANCE
-         */
-
-        css += '.full-start-new .full-start-new__title img.mi312-movie-logo{';
-        css += 'opacity:0;';
-        css += 'transform:translateY(5px) scale(.985);';
-        css += 'transition:opacity .45s ease,transform .45s cubic-bezier(.16,1,.3,1),filter .4s ease;';
-        css += '}';
-
-        css += '.full-start-new .full-start-new__title img.mi312-movie-logo.is-visible{';
-        css += 'opacity:1;';
-        css += 'transform:translateY(0) scale(1);';
         css += '}';
 
         /*
@@ -1616,6 +1576,7 @@
              * MOVIE LOGO
              *
              * Separate loader — same logic as Кінотрейлери.
+             * No additional logo animation.
              */
 
             displayMovieLogo(
@@ -1826,7 +1787,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.2 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.3 Minimal Cinematic Premium initialized'
         );
     }
 
