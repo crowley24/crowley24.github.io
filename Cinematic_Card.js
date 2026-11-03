@@ -1,18 +1,17 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.5 — INSTANT BACKDROP CLEANUP
+     * TMDB MOVIE LOGOS 1.5.6 — CONTROLLER-BASED BACKDROP CLEANUP
      *
      * Lampa / Android TV
      *
-     * FIXES 1.5.5:
-     * - Instant backdrop removal when card closes
-     * - MutationObserver checks card presence immediately
-     * - Removed requestAnimationFrame delay from observer cleanup
+     * FIXES 1.5.6:
+     * - Instant backdrop cleanup on Lampa controller switch to content
+     * - Uses Lampa.Controller.listener.toggle event
+     * - Keeps full destroy cleanup as fallback
+     * - Keeps MutationObserver as fallback
      * - Synchronous DOM backdrop removal
-     * - Immediate body class cleanup
      * - Invalidates pending asynchronous callbacks on cleanup
      *
      * PRESERVED:
@@ -27,16 +26,16 @@
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v155_ready) return;
+    if (window.tmdb_movie_logos_v156_ready) return;
 
-    window.tmdb_movie_logos_v155_ready = true;
+    window.tmdb_movie_logos_v156_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    var VERSION = '1.5.5';
-    var CSS_ID = 'tml_v155_css';
+    var VERSION = '1.5.6';
+    var CSS_ID = 'tml_v156_css';
 
     var currentCard = null;
     var currentToken = 0;
@@ -1372,6 +1371,36 @@
     }
 
     /*
+     * Lampa controller navigation listener.
+     *
+     * When the controller switches back to "content",
+     * the full card is no longer the active screen.
+     *
+     * This is the primary instant-cleanup trigger.
+     */
+    function bindControllerListener() {
+        if (
+            !Lampa.Controller ||
+            !Lampa.Controller.listener ||
+            typeof Lampa.Controller.listener.follow !== 'function'
+        ) {
+            return;
+        }
+
+        Lampa.Controller.listener.follow('toggle', function (ev) {
+            if (!ev || ev.name !== 'content') return;
+
+            /*
+             * Do not touch the background if this plugin
+             * does not currently own an active movie card.
+             */
+            if (!currentCard && !currentBackdrop) return;
+
+            clearCurrent();
+        });
+    }
+
+    /*
      * Lampa full card events.
      */
     Lampa.Listener.follow('full', function (ev) {
@@ -1391,5 +1420,10 @@
      * Initialize.
      */
     addCSS();
+
+    /*
+     * Bind controller listener after plugin initialization.
+     */
+    bindControllerListener();
 
 })();
