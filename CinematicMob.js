@@ -1,37 +1,39 @@
-
 (function () {
     'use strict';
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.5
+     * @version 3.2.0
      * @author Crowley24
-     * @description Minimal Cinematic Premium Mobile Interface
+     * @description Cinematic Premium Evolution
      * @platforms Lampa | Mobile
      *
-     * 3.1.5 CHANGES:
-     * - Restored native Lampa background
-     * - Removed custom TMDB backdrop loading
-     * - Removed poster slideshow
-     * - Removed custom poster height and background styling
-     * - Removed Ken Burns poster animation
-     * - Removed slideshow settings
-     * - Removed all custom backdrop manipulation
-     * - Preserved TMDB logo loading and display
-     * - Preserved studio logos
-     * - Preserved metadata and native ratings
-     * - Preserved interface animations
-     * - Preserved buttons and mobile layout
+     * 3.2.0 CHANGES:
+     * - Cinematic staggered entrance animations
+     * - Lightweight opacity + transform animations
+     * - Removed expensive blur animations
+     * - Refined metadata typography and separators
+     * - Premium studio logo presentation
+     * - Improved movie logo responsive sizing
+     * - Refined button press feedback
+     * - Optimized mobile WebView animations
+     * - Added TMDB logo image quality setting
+     * - Preserved native Lampa background
+     * - Removed blur_poster modification
+     * - Preserved TMDB logo loading and caching
+     * - Preserved studio logos and metadata
+     * - Preserved native Lampa ratings and buttons
      */
 
-    if (window.MOB_INTERFACE_V315_READY) return;
-    window.MOB_INTERFACE_V315_READY = true;
+    if (window.MOB_INTERFACE_V320_READY) return;
+    window.MOB_INTERFACE_V320_READY = true;
 
     var detailsCache = {};
     var logoCache = {};
     var logoRequests = {};
     var logoImageCache = {};
     var logoImageRequests = {};
+
     var currentActiveId = null;
     var activeRenderToken = 0;
     var started = false;
@@ -43,10 +45,10 @@
     var settings_list = [
         { id: 'mobile_interface_ui_anim', default: true },
         { id: 'mobile_interface_ui_anim_effect', default: 'cinematic' },
-        { id: 'mobile_interface_logo_size_v2', default: '125' },
+        { id: 'mobile_interface_logo_size_v2', default: '150' },
         { id: 'mobile_interface_logo_quality', default: 'w500' },
         { id: 'mobile_interface_show_tagline', default: true },
-        { id: 'mobile_interface_blocks_gap', default: '8px' },
+        { id: 'mobile_interface_blocks_gap', default: '10px' },
         { id: 'mobile_interface_ratings_size', default: '0.45em' },
         { id: 'mobile_interface_studios', default: true }
     ];
@@ -58,8 +60,45 @@
     });
 
     // --------------------------------------------------
+    // HELPERS
+    // --------------------------------------------------
+
+    function isElementCurrent($render, renderToken) {
+        return (
+            renderToken === activeRenderToken &&
+            $render &&
+            $render[0] &&
+            document.body.contains($render[0])
+        );
+    }
+
+    function trimCache(cache, max) {
+        var keys = Object.keys(cache);
+
+        if (keys.length > max) {
+            delete cache[keys[0]];
+        }
+    }
+
+    function getLogoQuality() {
+        var quality = Lampa.Storage.get(
+            'mobile_interface_logo_quality',
+            'w500'
+        );
+
+        var allowed = [
+            'original',
+            'w300',
+            'w500'
+        ];
+
+        return allowed.indexOf(quality) !== -1
+            ? quality
+            : 'w500';
+    }
+
+    // --------------------------------------------------
     // TMDB LOGO LANGUAGE SELECTION
-    // Same priority as Кінотрейлери 2.3
     // --------------------------------------------------
 
     function pickMovieLogo(logos, lang) {
@@ -84,7 +123,6 @@
 
     // --------------------------------------------------
     // LOGO IMAGE PRELOAD
-    // Shared image cache and request deduplication
     // --------------------------------------------------
 
     function preloadMovieLogo(url, callback) {
@@ -130,12 +168,7 @@
 
             if (shouldCache) {
                 logoImageCache[url] = result;
-
-                var keys = Object.keys(logoImageCache);
-
-                if (keys.length > 100) {
-                    delete logoImageCache[keys[0]];
-                }
+                trimCache(logoImageCache, 100);
             }
 
             waiters.forEach(function (waiter) {
@@ -162,7 +195,6 @@
 
     // --------------------------------------------------
     // TMDB LOGO REQUEST
-    // Same request logic as Кінотрейлери 2.3
     // --------------------------------------------------
 
     function ensureMovieLogo(movie, type, callback) {
@@ -185,8 +217,6 @@
 
         var cacheKey = type + ':' + movie.id + ':' + lang;
 
-        // URL CACHE
-
         if (
             Object.prototype.hasOwnProperty.call(
                 logoCache,
@@ -196,8 +226,6 @@
             callback(logoCache[cacheKey]);
             return;
         }
-
-        // REQUEST DEDUPLICATION
 
         if (logoRequests[cacheKey]) {
             logoRequests[cacheKey].waiters.push(callback);
@@ -212,8 +240,6 @@
 
         logoRequests[cacheKey] = request;
 
-        // FINISH REQUEST
-
         function finish(url, shouldCache) {
             if (request.finished) return;
 
@@ -226,12 +252,7 @@
 
             if (shouldCache) {
                 logoCache[cacheKey] = url || null;
-
-                var keys = Object.keys(logoCache);
-
-                if (keys.length > 250) {
-                    delete logoCache[keys[0]];
-                }
+                trimCache(logoCache, 250);
             }
 
             var waiters = request.waiters.slice();
@@ -247,13 +268,9 @@
             });
         }
 
-        // REQUEST TIMEOUT
-
         request.timer = setTimeout(function () {
             finish(null, false);
         }, 20000);
-
-        // TMDB IMAGES ENDPOINT
 
         try {
             tmdb.get(
@@ -287,7 +304,7 @@
 
                     var logoUrl = Lampa.Api.img(
                         logo.file_path,
-                        'w500'
+                        getLogoQuality()
                     );
 
                     finish(logoUrl, true);
@@ -337,25 +354,15 @@
 
         var nativeTitle = $title.contents().detach();
 
-        // HIDE TITLE IMMEDIATELY
-
         $title
             .empty()
-            .removeClass('mi314-logo-ready')
-            .addClass('mi314-logo-pending');
+            .removeClass('mi320-logo-ready')
+            .addClass('mi320-logo-pending');
 
         var type = getMovieType(movie);
 
-        function isCurrent() {
-            return (
-                renderToken === activeRenderToken &&
-                $render[0] &&
-                document.body.contains($render[0])
-            );
-        }
-
         function restoreNativeTitle() {
-            if (!isCurrent()) return;
+            if (!isElementCurrent($render, renderToken)) return;
 
             var $finalTitle = $render.find(
                 '.full-start-new__title'
@@ -364,8 +371,8 @@
             if (!$finalTitle.length) return;
 
             $finalTitle
-                .removeClass('mi314-logo-pending')
-                .removeClass('mi314-logo-ready')
+                .removeClass('mi320-logo-pending')
+                .removeClass('mi320-logo-ready')
                 .empty()
                 .append(nativeTitle);
         }
@@ -374,23 +381,17 @@
             movie,
             type,
             function (logoUrl) {
-
-                if (!isCurrent()) return;
-
-                // NO LOGO: RESTORE NATIVE TITLE
+                if (!isElementCurrent($render, renderToken)) return;
 
                 if (!logoUrl) {
                     restoreNativeTitle();
                     return;
                 }
 
-                // PRELOAD ACTUAL IMAGE
-
                 preloadMovieLogo(
                     logoUrl,
                     function (image) {
-
-                        if (!isCurrent()) return;
+                        if (!isElementCurrent($render, renderToken)) return;
 
                         if (!image) {
                             restoreNativeTitle();
@@ -403,12 +404,10 @@
 
                         if (!$finalTitle.length) return;
 
-                        // CREATE DISPLAY IMAGE
-
                         var $logo = $(image.cloneNode(false));
 
                         $logo
-                            .addClass('mi314-movie-logo')
+                            .addClass('mi320-movie-logo')
                             .attr(
                                 'alt',
                                 movie.title ||
@@ -418,12 +417,10 @@
                                 ''
                             );
 
-                        // SHOW READY LOGO
-
                         $finalTitle
                             .empty()
-                            .removeClass('mi314-logo-pending')
-                            .addClass('mi314-logo-ready')
+                            .removeClass('mi320-logo-pending')
+                            .addClass('mi320-logo-ready')
                             .append($logo);
                     }
                 );
@@ -505,13 +502,17 @@
     function hideDuplicateHeaderMetadata($render) {
         if (!$render || !$render.length) return;
 
-        var $right = $render.find('.full-start-new__right').first();
+        var $right = $render.find(
+            '.full-start-new__right'
+        ).first();
 
         if (!$right.length) return;
 
         var root = $right[0];
 
-        var title = $right.find('.full-start-new__title').first()[0];
+        var title = $right.find(
+            '.full-start-new__title'
+        ).first()[0];
 
         if (!title) return;
 
@@ -534,11 +535,17 @@
         function isProtected(element) {
             if (!element || element === root) return true;
 
-            if (element.matches && element.matches(protectedSelector)) {
+            if (
+                element.matches &&
+                element.matches(protectedSelector)
+            ) {
                 return true;
             }
 
-            if (element.querySelector && element.querySelector(protectedSelector)) {
+            if (
+                element.querySelector &&
+                element.querySelector(protectedSelector)
+            ) {
                 return true;
             }
 
@@ -583,7 +590,6 @@
             if (!isYearCountryLine(element)) continue;
 
             var position = element.compareDocumentPosition(title);
-
             var beforeTitle = !!(position & 4);
 
             if (!beforeTitle) continue;
@@ -601,7 +607,6 @@
                 var parent = current.parentElement;
 
                 if (!parent || parent === root) break;
-
                 if (isProtected(parent)) break;
 
                 var parentText = String(parent.textContent || '')
@@ -629,47 +634,16 @@
     }
 
     // --------------------------------------------------
-    // STYLES
+    // ANIMATION CONFIGURATION
     // --------------------------------------------------
 
-    function applyStyles() {
-        var style = document.getElementById('mobile-interface-styles');
-
-        if (!style) {
-            style = document.createElement('style');
-            style.id = 'mobile-interface-styles';
-            document.head.appendChild(style);
-        }
-
-        var isUIAnim = Lampa.Storage.get(
-            'mobile_interface_ui_anim'
-        );
-
-        var animEffect = Lampa.Storage.get(
+    function getAnimationSettings() {
+        var effect = Lampa.Storage.get(
             'mobile_interface_ui_anim_effect',
             'cinematic'
         );
 
-        var lHeight = Lampa.Storage.get(
-            'mobile_interface_logo_size_v2',
-            '125'
-        );
-
-        var showTagline = Lampa.Storage.get(
-            'mobile_interface_show_tagline'
-        );
-
-        var blocksGap = Lampa.Storage.get(
-            'mobile_interface_blocks_gap',
-            '8px'
-        );
-
-        var rSize = Lampa.Storage.get(
-            'mobile_interface_ratings_size',
-            '0.45em'
-        );
-
-        var animNames = [
+        var allowed = [
             'fluid',
             'cyber',
             'cinematic',
@@ -677,48 +651,109 @@
             'minimal'
         ];
 
-        if (animNames.indexOf(animEffect) === -1) {
-            animEffect = 'cinematic';
+        if (allowed.indexOf(effect) === -1) {
+            effect = 'cinematic';
         }
 
-        var animTiming = animEffect === 'elastic'
-            ? 'cubic-bezier(0.34,1.56,0.64,1)'
-            : 'cubic-bezier(0.16,1,0.3,1)';
+        return {
+            enabled: !!Lampa.Storage.get(
+                'mobile_interface_ui_anim',
+                true
+            ),
+            effect: effect
+        };
+    }
 
-        var enter = isUIAnim
-            ? 'animation:anim_' + animEffect +
-              ' .8s ' + animTiming + ' both;'
+    // --------------------------------------------------
+    // STYLES
+    // --------------------------------------------------
+
+    function applyStyles() {
+        var style = document.getElementById(
+            'mobile-interface-styles'
+        );
+
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'mobile-interface-styles';
+            document.head.appendChild(style);
+        }
+
+        var animation = getAnimationSettings();
+
+        var lHeight = parseInt(
+            Lampa.Storage.get(
+                'mobile_interface_logo_size_v2',
+                '150'
+            ),
+            10
+        );
+
+        if (!lHeight || lHeight < 80 || lHeight > 260) {
+            lHeight = 150;
+        }
+
+        var showTagline = Lampa.Storage.get(
+            'mobile_interface_show_tagline',
+            true
+        );
+
+        var blocksGap = Lampa.Storage.get(
+            'mobile_interface_blocks_gap',
+            '10px'
+        );
+
+        var rSize = Lampa.Storage.get(
+            'mobile_interface_ratings_size',
+            '0.45em'
+        );
+
+        var effect = animation.effect;
+
+        var timing = effect === 'elastic'
+            ? 'cubic-bezier(.22,1.35,.45,1)'
+            : 'cubic-bezier(.16,1,.3,1)';
+
+        var enter = animation.enabled
+            ? 'animation:mi320_' + effect + ' .68s ' +
+              timing + ' both;'
             : '';
 
         var css = '';
 
-        // ANIMATIONS
+        // --------------------------------------------------
+        // LIGHTWEIGHT ANIMATIONS
+        // --------------------------------------------------
 
-        css += '@keyframes anim_fluid{';
-        css += '0%{opacity:0;transform:translate3d(0,22px,0) scale(.97);filter:blur(7px)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
+        css += '@keyframes mi320_cinematic{';
+        css += '0%{opacity:0;transform:translate3d(0,14px,0) scale(.985)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
         css += '}';
 
-        css += '@keyframes anim_cyber{';
-        css += '0%{opacity:0;transform:translate3d(-24px,0,0);filter:brightness(1.4)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0);filter:brightness(1)}';
+        css += '@keyframes mi320_fluid{';
+        css += '0%{opacity:0;transform:translate3d(0,18px,0) scale(.98)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
         css += '}';
 
-        css += '@keyframes anim_cinematic{';
-        css += '0%{opacity:0;transform:translate3d(0,18px,0) scale(1.025);filter:blur(6px)}';
-        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
+        css += '@keyframes mi320_cyber{';
+        css += '0%{opacity:0;transform:translate3d(-12px,0,0)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0)}';
         css += '}';
 
-        css += '@keyframes anim_elastic{';
-        css += '0%{opacity:0;transform:scale(.88)}';
-        css += '75%{opacity:1;transform:scale(1.025)}';
-        css += '100%{opacity:1;transform:scale(1)}';
+        css += '@keyframes mi320_elastic{';
+        css += '0%{opacity:0;transform:translate3d(0,10px,0) scale(.96)}';
+        css += '72%{opacity:1;transform:translate3d(0,0,0) scale(1.012)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1)}';
         css += '}';
 
-        css += '@keyframes anim_minimal{';
-        css += '0%{opacity:0;transform:translateY(9px)}';
-        css += '100%{opacity:1;transform:translateY(0)}';
+        css += '@keyframes mi320_minimal{';
+        css += '0%{opacity:0;transform:translate3d(0,7px,0)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0)}';
         css += '}';
+
+        // --------------------------------------------------
+        // MOBILE
+        // --------------------------------------------------
 
         css += '@media screen and (max-width:480px){';
 
@@ -729,6 +764,8 @@
         css += 'isolation:isolate;';
         css += 'background:transparent!important;';
         css += '}';
+
+        // HIDE REACTIONS
 
         css += '.full-start-new .full-start__reactions,';
         css += '.full-start-new [class*="reactions"]{';
@@ -747,7 +784,7 @@
         css += 'overflow:hidden!important;';
         css += '}';
 
-        // AGE RATING
+        // HIDE AGE / STATUS / DETAILS
 
         css += '.full-start-new .full-start__age,';
         css += '.full-start-new .full-start-new__age,';
@@ -758,26 +795,21 @@
         css += '}';
 
         css += '.full-start-new .full-start__status,';
-        css += '.full-start-new .full-start-new__status{';
-        css += 'display:none!important;';
-        css += '}';
-
+        css += '.full-start-new .full-start-new__status,';
         css += '.full-start-new .full-start-new__details,';
         css += '.full-start-new .full-start__info{';
         css += 'display:none!important;';
         css += '}';
 
         /*
-         * BACKGROUND
+         * NATIVE LAMPA BACKGROUND
          *
-         * Не перевизначаємо:
-         * - .full-start-new__poster
-         * - розміри постера
-         * - фонове зображення
+         * Не змінюємо:
+         * - poster
+         * - backdrop
+         * - висоту фонового зображення
          * - маску та градієнт
-         * - анімацію фонового зображення
-         *
-         * Фоном повністю керує стандартна Lampa.
+         * - фонові анімації
          */
 
         // MAIN CONTENT
@@ -789,11 +821,14 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:0 14px!important;';
+        css += 'padding:0 16px!important;';
         css += 'background:none!important;';
+        css += 'box-sizing:border-box!important;';
         css += '}';
 
+        // --------------------------------------------------
         // STUDIO LOGO
+        // --------------------------------------------------
 
         css += '.full-start-new .studio-header-brand{';
         css += enter;
@@ -803,90 +838,98 @@
         css += 'display:flex;';
         css += 'justify-content:center;';
         css += 'align-items:center;';
-        css += 'margin:0 0 2px!important;';
-        css += 'min-height:20px;';
+        css += 'margin:0 0 3px!important;';
+        css += 'min-height:19px;';
+        css += 'opacity:.92;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img{';
-        css += 'height:20px!important;';
-        css += 'width:auto;';
-        css += 'max-width:120px;';
+        css += 'display:block;';
+        css += 'height:18px!important;';
+        css += 'width:auto!important;';
+        css += 'max-width:112px!important;';
         css += 'object-fit:contain;';
-        css += 'opacity:.94;';
-        css += 'filter:drop-shadow(0 2px 8px rgba(0,0,0,.95));';
-        css += 'transition:opacity .3s ease,filter .3s ease;';
+        css += 'opacity:.88;';
+        css += 'filter:drop-shadow(0 2px 7px rgba(0,0,0,.8));';
+        css += 'transition:opacity .28s ease,filter .28s ease;';
         css += '}';
 
         css += '.full-start-new .studio-header-brand img.is-dark-logo{';
-        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,.8))!important;';
+        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,.7))!important;';
         css += '}';
 
+        // --------------------------------------------------
         // MOVIE LOGO
+        // --------------------------------------------------
 
         css += '.full-start-new .full-start-new__title{';
         css += 'animation:none!important;';
-        css += 'animation-delay:0s!important;';
         css += 'order:2;';
         css += 'width:100%!important;';
-        css += 'min-height:60px;';
+        css += 'min-height:64px;';
         css += 'display:flex!important;';
         css += 'justify-content:center!important;';
         css += 'align-items:center!important;';
         css += 'margin:0!important;';
+        css += 'padding:0!important;';
         css += 'overflow:visible!important;';
         css += 'opacity:1!important;';
         css += 'transform:none!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi314-logo-pending{';
+        css += '.full-start-new .full-start-new__title.mi320-logo-pending{';
         css += 'display:none!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi314-logo-ready{';
+        css += '.full-start-new .full-start-new__title.mi320-logo-ready{';
         css += 'display:flex!important;';
         css += 'visibility:visible!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title img.mi314-movie-logo{';
+        css += '.full-start-new .full-start-new__title img.mi320-movie-logo{';
         css += 'display:block!important;';
         css += 'height:auto!important;';
         css += 'max-height:' + lHeight + 'px!important;';
         css += 'width:auto!important;';
-        css += 'max-width:90vw!important;';
+        css += 'max-width:min(88vw,440px)!important;';
         css += 'object-fit:contain!important;';
-        css += 'filter:drop-shadow(0 5px 18px rgba(0,0,0,.95)) drop-shadow(0 0 12px rgba(255,255,255,.08));';
-        css += 'margin:0!important;';
+        css += 'filter:drop-shadow(0 4px 14px rgba(0,0,0,.88));';
+        css += 'margin:0 auto!important;';
         css += 'opacity:1!important;';
         css += 'transform:none!important;';
         css += 'transition:none!important;';
         css += 'animation:none!important;';
         css += '}';
 
+        // --------------------------------------------------
         // TAGLINE
+        // --------------------------------------------------
 
         css += '.full-start-new .full-start-new__tagline{';
         css += enter;
-        css += 'animation-delay:.17s;';
+        css += 'animation-delay:.14s;';
         css += 'order:3;';
         css += 'display:' + (showTagline ? 'block' : 'none') + '!important;';
-        css += 'max-width:90%;';
-        css += 'margin:1px 0 2px!important;';
+        css += 'max-width:88%;';
+        css += 'margin:2px 0 3px!important;';
         css += 'text-align:center!important;';
         css += 'font-family:Georgia,serif!important;';
-        css += 'font-size:.91em!important;';
+        css += 'font-size:clamp(12px,3.1vw,14px)!important;';
         css += 'line-height:1.5!important;';
         css += 'font-style:italic!important;';
         css += 'font-weight:400!important;';
-        css += 'letter-spacing:.025em;';
-        css += 'color:rgba(255,255,255,.82)!important;';
-        css += 'text-shadow:0 2px 12px rgba(0,0,0,.95);';
+        css += 'letter-spacing:.035em;';
+        css += 'color:rgba(255,255,255,.84)!important;';
+        css += 'text-shadow:0 2px 12px rgba(0,0,0,.9);';
         css += '}';
 
-        // MINIMAL TRANSPARENT METADATA
+        // --------------------------------------------------
+        // METADATA ROW
+        // --------------------------------------------------
 
         css += '.full-start-new .plugin-meta-row{';
         css += enter;
-        css += 'animation-delay:.23s;';
+        css += 'animation-delay:.22s;';
         css += 'order:4;';
         css += 'width:100%;';
         css += 'max-width:100%;';
@@ -894,9 +937,9 @@
         css += 'justify-content:center;';
         css += 'align-items:center;';
         css += 'flex-wrap:wrap;';
-        css += 'gap:7px 9px;';
-        css += 'margin:4px 0 0!important;';
-        css += 'padding:3px 0;';
+        css += 'gap:6px 9px;';
+        css += 'margin:5px 0 0!important;';
+        css += 'padding:4px 0;';
         css += 'box-sizing:border-box;';
         css += 'border:none!important;';
         css += 'border-radius:0!important;';
@@ -905,10 +948,10 @@
         css += 'backdrop-filter:none!important;';
         css += '-webkit-backdrop-filter:none!important;';
         css += 'font-family:Inter,-apple-system,system-ui,sans-serif;';
-        css += 'font-size:calc(' + rSize + ' * 2.25);';
-        css += 'line-height:1.5;';
-        css += 'color:rgba(255,255,255,.91);';
-        css += 'text-shadow:0 1px 5px rgba(0,0,0,.9);';
+        css += 'font-size:calc(' + rSize + ' * 2.2);';
+        css += 'line-height:1.45;';
+        css += 'color:rgba(255,255,255,.93);';
+        css += 'text-shadow:0 1px 6px rgba(0,0,0,.95);';
         css += '}';
 
         css += '.full-start-new .plugin-meta-row .info-text-item{';
@@ -916,27 +959,27 @@
         css += 'font-weight:500;';
         css += 'white-space:normal;';
         css += 'text-align:center;';
-        css += 'letter-spacing:.025em;';
-        css += 'opacity:.94;';
+        css += 'letter-spacing:.035em;';
+        css += 'opacity:.91;';
         css += '}';
 
-        // THIN METADATA SEPARATORS
+        // METADATA SEPARATORS
 
         css += '.full-start-new .plugin-meta-row .info-separator{';
         css += 'display:inline-block;';
         css += 'width:1px;';
-        css += 'height:11px;';
+        css += 'height:10px;';
         css += 'min-width:1px;';
         css += 'font-size:0;';
         css += 'line-height:0;';
         css += 'color:transparent;';
-        css += 'background:rgba(255,255,255,.38);';
+        css += 'background:rgba(255,255,255,.32);';
         css += 'margin:0 1px;';
-        css += 'opacity:.8;';
+        css += 'opacity:.85;';
         css += 'vertical-align:middle;';
         css += '}';
 
-        // NATIVE LAMPA RATINGS
+        // NATIVE RATINGS
 
         css += '.full-start-new .plugin-meta-row .full-start__rates{';
         css += 'display:inline-flex!important;';
@@ -960,34 +1003,36 @@
         css += 'white-space:nowrap!important;';
         css += '}';
 
-        // MINIMAL BUTTON CONTAINER
+        // --------------------------------------------------
+        // BUTTON CONTAINER
+        // --------------------------------------------------
 
         css += '.full-start-new .full-start-new__buttons{';
         css += enter;
-        css += 'animation-delay:.31s;';
+        css += 'animation-delay:.30s;';
         css += 'order:6;';
         css += 'display:flex!important;';
         css += 'justify-content:space-around!important;';
         css += 'align-items:center!important;';
-        css += 'gap:7px;';
+        css += 'gap:6px;';
         css += 'width:100%!important;';
         css += 'max-width:100%!important;';
-        css += 'padding:3px 0 0!important;';
+        css += 'padding:5px 0 0!important;';
         css += 'box-sizing:border-box!important;';
-        css += 'margin:7px 0 0!important;';
+        css += 'margin:8px 0 0!important;';
         css += 'background:transparent!important;';
         css += 'border:none!important;';
         css += 'box-shadow:none!important;';
         css += '}';
 
-        // TRANSPARENT BUTTONS
+        // BUTTONS
 
         css += '.full-start-new .full-start__button{';
         css += 'position:relative;';
         css += 'overflow:hidden;';
         css += 'background:transparent!important;';
         css += 'border:1px solid transparent!important;';
-        css += 'border-radius:12px!important;';
+        css += 'border-radius:13px!important;';
         css += 'box-shadow:none!important;';
         css += 'display:flex!important;';
         css += 'flex-direction:column!important;';
@@ -995,27 +1040,18 @@
         css += 'justify-content:center!important;';
         css += 'flex:1 1 0!important;';
         css += 'min-width:0!important;';
-        css += 'min-height:54px;';
-        css += 'padding:8px 2px!important;';
-        css += 'transition:transform .22s cubic-bezier(.16,1,.3,1),background .22s ease,color .22s ease,opacity .22s ease;';
-        css += 'opacity:.9;';
+        css += 'min-height:56px;';
+        css += 'padding:8px 3px!important;';
+        css += 'opacity:.88;';
+        css += 'transform:translateZ(0);';
+        css += 'transition:transform .24s cubic-bezier(.2,.8,.2,1),background .24s ease,opacity .24s ease;';
+        css += 'will-change:transform;';
         css += '}';
 
-        // REMOVE BUTTON DECORATIVE GLASS
-
-        css += '.full-start-new .full-start__button:before{';
+        css += '.full-start-new .full-start__button:before,';
+        css += '.full-start-new .full-start__button:after{';
         css += 'display:none!important;';
         css += 'content:none!important;';
-        css += '}';
-
-        // SUBTLE PRESS EFFECT
-
-        css += '.full-start-new .full-start__button:active{';
-        css += 'transform:scale(.94);';
-        css += 'background:rgba(255,255,255,.075)!important;';
-        css += 'border-color:transparent!important;';
-        css += 'box-shadow:none!important;';
-        css += 'opacity:1;';
         css += '}';
 
         // BUTTON ICONS
@@ -1026,10 +1062,10 @@
         css += 'z-index:1;';
         css += 'width:22px!important;';
         css += 'height:22px!important;';
-        css += 'margin:0 0 5px!important;';
+        css += 'margin:0 0 6px!important;';
         css += 'fill:#fff!important;';
         css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
-        css += 'transition:transform .22s ease,filter .22s ease;';
+        css += 'transition:transform .24s cubic-bezier(.2,.8,.2,1),opacity .2s ease;';
         css += '}';
 
         // BUTTON LABELS
@@ -1038,34 +1074,76 @@
         css += 'position:relative;';
         css += 'z-index:1;';
         css += 'font-size:8px!important;';
-        css += 'line-height:1.2!important;';
+        css += 'line-height:1.25!important;';
         css += 'text-transform:uppercase!important;';
-        css += 'opacity:.8!important;';
+        css += 'opacity:.78!important;';
         css += 'font-weight:650;';
-        css += 'letter-spacing:.065em;';
-        css += 'text-shadow:0 1px 5px rgba(0,0,0,.8);';
-        css += 'transition:opacity .22s ease;';
+        css += 'letter-spacing:.075em;';
+        css += 'text-shadow:0 1px 5px rgba(0,0,0,.85);';
+        css += 'transition:opacity .2s ease;';
+        css += '}';
+
+        // PRESS FEEDBACK
+
+        css += '.full-start-new .full-start__button:active{';
+        css += 'transform:scale(.93)!important;';
+        css += 'background:rgba(255,255,255,.09)!important;';
+        css += 'border-color:rgba(255,255,255,.08)!important;';
+        css += 'box-shadow:0 2px 12px rgba(0,0,0,.12)!important;';
+        css += 'opacity:1;';
         css += '}';
 
         css += '.full-start-new .full-start__button:active svg,';
         css += '.full-start-new .full-start__button:active img{';
-        css += 'transform:scale(.92);';
+        css += 'transform:scale(.9);';
+        css += 'opacity:1;';
         css += '}';
 
         css += '.full-start-new .full-start__button:active span{';
         css += 'opacity:1!important;';
         css += '}';
 
+        // --------------------------------------------------
+        // RESPONSIVE TUNING
+        // --------------------------------------------------
+
+        css += '@media screen and (max-width:360px){';
+
+        css += '.full-start-new .full-start-new__right{';
+        css += 'padding-left:12px!important;';
+        css += 'padding-right:12px!important;';
         css += '}';
 
+        css += '.full-start-new .plugin-meta-row{';
+        css += 'gap:5px 7px;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button{';
+        css += 'min-height:52px;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button svg,';
+        css += '.full-start-new .full-start__button img{';
+        css += 'width:20px!important;';
+        css += 'height:20px!important;';
+        css += '}';
+
+        css += '}';
+
+        css += '}';
+
+        // --------------------------------------------------
         // REDUCED MOTION
+        // --------------------------------------------------
 
         css += '@media (prefers-reduced-motion:reduce){';
+
         css += '.full-start-new *{';
         css += 'animation-duration:.01ms!important;';
         css += 'animation-iteration-count:1!important;';
         css += 'transition-duration:.01ms!important;';
         css += '}';
+
         css += '}';
 
         style.textContent = css;
@@ -1215,15 +1293,7 @@
         $render,
         renderToken
     ) {
-        if (
-            renderToken !== activeRenderToken ||
-            !$render[0] ||
-            !document.body.contains($render[0])
-        ) {
-            return;
-        }
-
-        // STUDIO LOGO
+        if (!isElementCurrent($render, renderToken)) return;
 
         if (Lampa.Storage.get('mobile_interface_studios')) {
             $render.find('.studio-header-brand').remove();
@@ -1241,11 +1311,9 @@
                 data.production_companies &&
                 data.production_companies.length > 0
             ) {
-                studio = data.production_companies.find(
-                    function (c) {
-                        return c.logo_path;
-                    }
-                );
+                studio = data.production_companies.find(function (c) {
+                    return c.logo_path;
+                });
             }
 
             if (studio && studio.logo_path) {
@@ -1268,13 +1336,7 @@
                 });
 
                 isImageDark(studioLogoUrl, function (isDark) {
-                    if (
-                        renderToken !== activeRenderToken ||
-                        !$render[0] ||
-                        !document.body.contains($render[0])
-                    ) {
-                        return;
-                    }
+                    if (!isElementCurrent($render, renderToken)) return;
 
                     if (isDark) {
                         $img.addClass('is-dark-logo');
@@ -1285,8 +1347,6 @@
                     .before($brand);
             }
         }
-
-        // DUPLICATE METADATA RECHECK
 
         hideDuplicateHeaderMetadata($render);
     }
@@ -1336,12 +1396,7 @@
                 }
 
                 detailsCache[cacheKey] = data;
-
-                var cacheKeys = Object.keys(detailsCache);
-
-                if (cacheKeys.length > 100) {
-                    delete detailsCache[cacheKeys[0]];
-                }
+                trimCache(detailsCache, 100);
 
                 applyMovieDetailsData(
                     data,
@@ -1400,10 +1455,6 @@
                 return;
             }
 
-            if (window.lampa_settings) {
-                window.lampa_settings.blur_poster = false;
-            }
-
             // METADATA
 
             renderMeta(
@@ -1411,7 +1462,7 @@
                 e
             );
 
-            // HIDE DUPLICATE YEAR/COUNTRY
+            // HIDE DUPLICATE YEAR / COUNTRY
 
             hideDuplicateHeaderMetadata($render);
 
@@ -1488,12 +1539,34 @@
                     '180': 'Стандартний',
                     '210': 'Великий'
                 },
-                default: '125'
+                default: '150'
             },
             field: {
                 name: 'Висота логотипу тайтлу'
             },
             onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_logo_quality',
+                type: 'select',
+                values: {
+                    w300: 'Економна',
+                    w500: 'Висока',
+                    original: 'Оригінальна'
+                },
+                default: 'w500'
+            },
+            field: {
+                name: 'Якість логотипу TMDB'
+            },
+            onChange: function () {
+                // Новий логотип буде завантажено при наступному відкритті картки.
+                logoCache = {};
+                logoImageCache = {};
+            }
         });
 
         Lampa.SettingsApi.addParam({
@@ -1516,11 +1589,11 @@
                 type: 'select',
                 values: {
                     '8px': 'Компактний',
-                    '12px': 'Стандартний',
-                    '18px': 'Просторий',
-                    '24px': 'Панорамний'
+                    '10px': 'Стандартний',
+                    '16px': 'Просторий',
+                    '22px': 'Панорамний'
                 },
-                default: '8px'
+                default: '10px'
             },
             field: {
                 name: 'Відступи між блоками'
@@ -1575,7 +1648,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.5 Native Lampa Background initialized'
+            '[MOB_INTERFACE] 3.2.0 Cinematic Premium Evolution initialized'
         );
     }
 
