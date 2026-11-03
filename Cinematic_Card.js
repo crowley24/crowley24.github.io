@@ -2,40 +2,31 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.4 — BRIGHT & VIVID
+     * TMDB MOVIE LOGOS 1.4.5 — PURE ORIGINAL BACKDROP
      *
      * Lampa / Android TV
      *
-     * CHANGES 1.4.4:
-     * - Removed backdrop darkening overlays
-     * - Removed backdrop gradients
-     * - Removed backdrop filters
-     * - Preserved original Lampa backdrop image
-     * - Bright and vivid original image colors
+     * CHANGES 1.4.5:
+     * - Preserve native Lampa backdrop rendering
+     * - Remove custom backdrop filters
+     * - Remove custom backdrop gradients and overlays
+     * - Preserve original image opacity
+     * - No brightness / contrast / saturation manipulation
+     * - Keep premium logo animations only
+     * - No metadata animation
      *
      * BASE:
-     * - TMDB MOVIE LOGOS 1.4.3
-     *
-     * PRESERVED:
-     * - TMDB logo selection
-     * - Original cache logic
-     * - Ukrainian country names
-     * - Production studio logo
-     * - Lower information block positioning
-     * - Native Lampa buttons
-     * - Cinematic metadata
-     * - Cinematic description
-     * - Original title fallback
+     * - TMDB MOVIE LOGOS 1.4.4
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v144_ready) return;
-
-    window.tmdb_movie_logos_v144_ready = true;
+    if (window.tmdb_movie_logos_v145_ready) return;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
+
+    window.tmdb_movie_logos_v145_ready = true;
 
     var currentCard = null;
     var currentTitle = null;
@@ -44,11 +35,10 @@
     var currentToken = 0;
 
     var CACHE_TIMEOUT = 20000;
-    var CSS_ID = 'tmdb_movie_logos_v144_css';
+    var CSS_ID = 'tmdb_movie_logos_v145_css';
 
     /*
      * TMDB logo selection
-     * Same algorithm as Кінотрейлери 2.3
      */
     function pickLogo(logos) {
         var order = [
@@ -70,7 +60,6 @@
 
     /*
      * Cache
-     * Original request coalescing and timeout logic
      */
     function cached(item, key, request, cb) {
         if (item[key] !== undefined) {
@@ -95,7 +84,6 @@
             if (completed) return;
 
             completed = true;
-
             clearTimeout(timer);
 
             item[key] = value || null;
@@ -174,10 +162,7 @@
     }
 
     /*
-     * TMDB production studio logo request
-     *
-     * 1. Try data already available in the card.
-     * 2. If no logo is found, request full movie/TV details.
+     * Studio logo request
      */
     function ensureStudioLogo(item, type, cb) {
         cached(item, 'tml_studio_logo', function (done) {
@@ -292,9 +277,7 @@
 
         code = String(code).toUpperCase();
 
-        if (countries[code]) {
-            return countries[code];
-        }
+        if (countries[code]) return countries[code];
 
         try {
             if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
@@ -355,9 +338,7 @@
     }
 
     /*
-     * Metadata builder
-     *
-     * Year · Country · ★ Rating · Genres
+     * Metadata
      */
     function buildMetadata(card) {
         var parts = [];
@@ -370,9 +351,7 @@
 
         var year = release ? release.slice(0, 4) : '';
 
-        if (year) {
-            parts.push(year);
-        }
+        if (year) parts.push(year);
 
         var countries = getCountries(card);
 
@@ -384,7 +363,6 @@
 
         if (rating > 0) {
             if (rating > 10) rating = 10;
-
             parts.push('★ ' + rating.toFixed(1));
         }
 
@@ -409,50 +387,44 @@
         if (document.getElementById(CSS_ID)) return;
 
         var css = document.createElement('style');
-
         css.id = CSS_ID;
 
         css.textContent =
 
             /*
-             * BRIGHT & VIVID BACKDROP
+             * PURE ORIGINAL BACKDROP
              *
-             * Keep original Lampa background image.
-             * Remove additional darkening and filters.
+             * Do not modify native Lampa background.
+             * No forced opacity, filter or blend mode.
+             * No custom pseudo-element overlays.
              */
 
             '.full-start-new__background{' +
-                'opacity:1 !important;' +
                 'filter:none !important;' +
                 '-webkit-filter:none !important;' +
-                'background-color:transparent !important;' +
                 'background-blend-mode:normal !important;' +
-            '}' +
-
-            '.full-start-new__background:before,' +
-            '.full-start-new__background:after{' +
-                'background:none !important;' +
-                'background-image:none !important;' +
-                'opacity:0 !important;' +
-                'filter:none !important;' +
-                '-webkit-filter:none !important;' +
-                'box-shadow:none !important;' +
             '}' +
 
             '.full-start-new__background img,' +
             '.full-start-new__background video{' +
-                'opacity:1 !important;' +
                 'filter:none !important;' +
                 '-webkit-filter:none !important;' +
-                'brightness:1 !important;' +
-                'saturate:1 !important;' +
+                'mix-blend-mode:normal !important;' +
+            '}' +
+
+            '.full-start-new__background:before,' +
+            '.full-start-new__background:after{' +
+                'content:none !important;' +
+                'background:none !important;' +
+                'box-shadow:none !important;' +
+                'filter:none !important;' +
+                '-webkit-filter:none !important;' +
             '}' +
 
             '.full-start-new__background-overlay,' +
             '.full-start-new__overlay{' +
                 'background:none !important;' +
                 'background-image:none !important;' +
-                'opacity:0 !important;' +
                 'filter:none !important;' +
                 '-webkit-filter:none !important;' +
             '}' +
@@ -519,7 +491,7 @@
                 'box-sizing:border-box;' +
                 'opacity:0;' +
                 'transform:translateY(3px);' +
-                'transition:opacity .4s ease, transform .4s ease;' +
+                'transition:opacity .45s ease, transform .45s cubic-bezier(.22,.61,.36,1);' +
             '}' +
 
             '.tml-studio-logo.tml-studio-visible{' +
@@ -543,7 +515,7 @@
             '}' +
 
             /*
-             * Logo / title
+             * Movie logo / title
              */
             '.full-start-new__title{' +
                 'display:flex;' +
@@ -570,13 +542,22 @@
                 'border:0;' +
                 'box-shadow:none;' +
                 'filter:none;' +
+                'opacity:0;' +
+                'transform:translateY(5px) scale(.985);' +
+                'transform-origin:left center;' +
+                'transition:opacity .55s ease, transform .65s cubic-bezier(.2,.7,.2,1);' +
+            '}' +
+
+            '.full-start-new__title .tml-logo-image.tml-logo-visible{' +
+                'display:block;' +
+                'opacity:1;' +
+                'transform:translateY(0) scale(1);' +
             '}' +
 
             /*
              * Tagline
              */
             '.full-start-new__tagline{' +
-                'display:block;' +
                 'width:100%;' +
                 'max-width:100%;' +
                 'margin:0 0 .8em 0;' +
@@ -600,7 +581,7 @@
             '}' +
 
             /*
-             * Metadata row
+             * Metadata row — no animation
              */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
@@ -619,6 +600,8 @@
                 'line-height:1.4;' +
                 'color:rgba(255,255,255,.88);' +
                 'box-sizing:border-box;' +
+                'transition:none !important;' +
+                'animation:none !important;' +
             '}' +
 
             '.tml-cinematic-meta-item{' +
@@ -640,7 +623,7 @@
             '}' +
 
             /*
-             * Hide original rating and details rows
+             * Hide original rating and details
              */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
@@ -679,7 +662,7 @@
             '}' +
 
             /*
-             * Hide reactions and separate details
+             * Hide reactions and duplicate descriptions
              */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
@@ -772,6 +755,7 @@
 
             image.on('error', function () {
                 container.remove();
+
                 if (currentStudio === container) {
                     currentStudio = null;
                 }
@@ -866,7 +850,7 @@
     }
 
     /*
-     * Prepare cinematic description
+     * Prepare description
      */
     function prepareDescription(root, card) {
         if (!root || !root.length) return;
@@ -888,7 +872,6 @@
 
         if (!description.length) {
             description = $('<div class="tml-cinematic-description"></div>');
-
             description.insertAfter(metadata);
         }
 
@@ -900,7 +883,7 @@
      */
     function clearCurrent() {
         if (currentImage) {
-            currentImage.off('error');
+            currentImage.off('error load');
         }
 
         if (currentStudio) {
@@ -914,7 +897,7 @@
     }
 
     /*
-     * Create logo element and preserve original title
+     * Prepare logo element
      */
     function prepareLogo(titleBlock) {
         var original = titleBlock.contents().clone(true, true);
@@ -937,7 +920,7 @@
         if (!titleBlock || !titleBlock.length) return;
 
         if (logo) {
-            logo.off('error');
+            logo.off('error load');
         }
 
         titleBlock.empty();
@@ -951,7 +934,7 @@
         if (!url || !logo || !logo.length) return;
         if (token !== currentToken) return;
 
-        logo.off('error');
+        logo.off('error load');
 
         logo.on('error', function () {
             if (token !== currentToken) return;
@@ -959,7 +942,17 @@
             showOriginalTitle(titleBlock, original, logo);
         });
 
-        logo.attr('src', url).show();
+        logo.on('load', function () {
+            if (token !== currentToken) return;
+
+            requestAnimationFrame(function () {
+                if (token !== currentToken) return;
+
+                logo.addClass('tml-logo-visible');
+            });
+        });
+
+        logo.attr('src', url);
     }
 
     /*
@@ -985,21 +978,12 @@
         currentCard = card;
         currentTitle = titleBlock;
 
-        /*
-         * Position tagline and build information
-         */
         prepareTagline(root);
         prepareMetadata(root, card);
         prepareDescription(root, card);
 
-        /*
-         * Studio logo above movie logo
-         */
         prepareStudioLogo(root, card, type, token);
 
-        /*
-         * TMDB movie logo
-         */
         var elements = prepareLogo(titleBlock);
 
         currentImage = elements.logo;
