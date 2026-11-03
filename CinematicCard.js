@@ -3,7 +3,7 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.2 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.3 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
@@ -18,33 +18,48 @@
      * - Poster hidden
      * - Information block positioned bottom-left
      * - TMDB logo
-     * - Small italic tagline directly under logo
-     * - Single metadata row: year / rating / genres
+     * - Native tagline directly under logo
+     * - Metadata: year / country / rating / genres
      * - Short description below metadata
      * - Native Lampa buttons preserved
      * - Reactions hidden
+     *
+     * BACKDROP SLIDESHOW:
+     * - TMDB additional backdrops
+     * - 10 seconds interval
+     * - 1.5 seconds crossfade
+     * - Original Lampa background retained underneath
+     * - Stops on card destroy
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v142_ready) return;
-
-    window.tmdb_movie_logos_v142_ready = true;
+    if (window.tmdb_movie_logos_v143_ready) return;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
+
+    window.tmdb_movie_logos_v143_ready = true;
 
     var currentCard = null;
     var currentTitle = null;
     var currentImage = null;
     var currentToken = 0;
 
+    var slideshowTimer = null;
+    var slideshowRoot = null;
+    var slideshowImages = [];
+    var slideshowIndex = 0;
+    var slideshowToken = 0;
+
     var CACHE_TIMEOUT = 20000;
-    var CSS_ID = 'tmdb_movie_logos_v142_css';
+    var SLIDESHOW_INTERVAL = 10000;
+    var SLIDESHOW_FADE = 1500;
+
+    var CSS_ID = 'tmdb_movie_logos_v143_css';
 
     /*
      * TMDB logo selection
-     * Same algorithm as Кінотрейлери 2.3
      */
     function pickLogo(logos) {
         var order = [
@@ -66,7 +81,6 @@
 
     /*
      * Cache
-     * Original request coalescing and timeout logic
      */
     function cached(item, key, request, cb) {
         if (item[key] !== undefined) {
@@ -157,9 +171,44 @@
     }
 
     /*
+     * Country names
+     *
+     * TMDB movie:
+     * production_countries[].name
+     *
+     * TMDB TV:
+     * production_countries[].name
+     * or origin_country[]
+     */
+    function getCountries(card) {
+        var countries = [];
+
+        if (
+            card.production_countries &&
+            card.production_countries.length
+        ) {
+            countries = card.production_countries
+                .map(function (country) {
+                    return country.name || '';
+                })
+                .filter(Boolean);
+        }
+
+        if (
+            !countries.length &&
+            card.origin_country &&
+            card.origin_country.length
+        ) {
+            countries = card.origin_country.slice(0, 2);
+        }
+
+        return countries.slice(0, 2);
+    }
+
+    /*
      * Metadata builder
      *
-     * Year · ★ Rating · Genres
+     * Year · Country · Rating · Genres
      */
     function buildMetadata(card) {
         var parts = [];
@@ -174,6 +223,12 @@
 
         if (year) {
             parts.push(year);
+        }
+
+        var countries = getCountries(card);
+
+        if (countries.length) {
+            parts.push(countries.join(', '));
         }
 
         var rating = parseFloat(card.vote_average || 0);
@@ -200,8 +255,6 @@
 
     /*
      * CSS
-     * Default Lampa backdrop remains untouched.
-     * Native buttons are not recreated.
      */
     function addCSS() {
         if (document.getElementById(CSS_ID)) return;
@@ -212,9 +265,6 @@
 
         css.textContent =
 
-            /*
-             * Cinematic card positioning
-             */
             '.full-start-new{' +
                 'position:relative;' +
             '}' +
@@ -226,16 +276,10 @@
                 'height:auto;' +
             '}' +
 
-            /*
-             * Hide poster
-             */
             '.full-start-new__left{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Information block
-             */
             '.full-start-new__right{' +
                 'position:absolute !important;' +
                 'left:0 !important;' +
@@ -251,16 +295,10 @@
                 'z-index:2;' +
             '}' +
 
-            /*
-             * Remove year/country header above logo
-             */
             '.full-start-new__head{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Logo / title
-             */
             '.full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
@@ -288,9 +326,6 @@
                 'filter:none;' +
             '}' +
 
-            /*
-             * Tagline directly under logo
-             */
             '.full-start-new__tagline{' +
                 'display:block;' +
                 'width:100%;' +
@@ -315,9 +350,6 @@
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Metadata row
-             */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -355,17 +387,11 @@
                 'text-overflow:ellipsis;' +
             '}' +
 
-            /*
-             * Hide original rating and details rows
-             */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Description
-             */
             '.tml-cinematic-description{' +
                 'display:-webkit-box;' +
                 'width:100%;' +
@@ -381,9 +407,6 @@
                 'line-clamp:3;' +
             '}' +
 
-            /*
-             * Native Lampa buttons
-             */
             '.full-start-new__buttons{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -394,21 +417,37 @@
                 'padding:0;' +
             '}' +
 
-            /*
-             * Hide reactions
-             */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Hide separate detail description
-             */
             '.full-descr,' +
             '.full-start__description,' +
             '.full-start__descr,' +
             '.full-description{' +
                 'display:none !important;' +
+            '}' +
+
+            /*
+             * Slideshow overlay
+             *
+             * Native .full-start__background remains underneath.
+             */
+            '.tml-backdrop-layer{' +
+                'position:absolute !important;' +
+                'inset:0 !important;' +
+                'width:100% !important;' +
+                'height:100% !important;' +
+                'object-fit:cover !important;' +
+                'object-position:center center !important;' +
+                'opacity:0;' +
+                'transition:opacity 1.5s ease-in-out;' +
+                'pointer-events:none !important;' +
+                'z-index:0 !important;' +
+            '}' +
+
+            '.tml-backdrop-layer.tml-backdrop-visible{' +
+                'opacity:1;' +
             '}';
 
         document.head.appendChild(css);
@@ -463,10 +502,7 @@
     }
 
     /*
-     * Prepare tagline position
-     *
-     * Move existing native tagline directly
-     * after the title/logo.
+     * Tagline position
      */
     function prepareTagline(root) {
         if (!root || !root.length) return;
@@ -485,7 +521,7 @@
     }
 
     /*
-     * Prepare metadata row
+     * Metadata row
      */
     function prepareMetadata(root, card) {
         if (!root || !root.length) return;
@@ -536,7 +572,7 @@
     }
 
     /*
-     * Prepare cinematic description
+     * Description
      */
     function prepareDescription(root, card) {
         if (!root || !root.length) return;
@@ -566,9 +602,167 @@
     }
 
     /*
-     * Clear previous card state
+     * Stop slideshow
+     */
+    function stopSlideshow() {
+        clearInterval(slideshowTimer);
+        slideshowTimer = null;
+
+        slideshowToken++;
+
+        slideshowImages.forEach(function (image) {
+            if (image) {
+                image.onload = null;
+                image.onerror = null;
+            }
+        });
+
+        slideshowImages = [];
+        slideshowIndex = 0;
+        slideshowRoot = null;
+    }
+
+    /*
+     * Start slideshow
+     *
+     * Keep the native Lampa backdrop as the base layer.
+     * Additional images are placed above it.
+     */
+    function startSlideshow(root, card, type, token) {
+        stopSlideshow();
+
+        var nativeBackground = root.find(
+            '.full-start__background'
+        ).first();
+
+        if (!nativeBackground.length) return;
+
+        if (!card.backdrop_path) return;
+
+        var slideshowId = slideshowToken;
+
+        slideshowRoot = root;
+
+        cached(card, 'tml_backdrops', function (done) {
+            var lang = Lampa.Storage.field('tmdb_lang');
+            var langs = (lang || 'en') + ',en,null';
+
+            tmdb.get(
+                type + '/' + card.id + '/images',
+                {
+                    filter: {
+                        include_image_language: langs
+                    }
+                },
+                function (json) {
+                    var backdrops = json && json.backdrops
+                        ? json.backdrops
+                        : [];
+
+                    var paths = [];
+                    var original = card.backdrop_path;
+
+                    backdrops.forEach(function (item) {
+                        if (
+                            item.file_path &&
+                            item.file_path !== original &&
+                            paths.indexOf(item.file_path) === -1
+                        ) {
+                            paths.push(item.file_path);
+                        }
+                    });
+
+                    done(paths);
+                },
+                function () {
+                    done([]);
+                }
+            );
+        }, function (paths) {
+            if (token !== currentToken) return;
+            if (slideshowId !== slideshowToken) return;
+            if (!paths || paths.length < 1) return;
+
+            var urls = paths.map(function (path) {
+                return Lampa.Api.img(path, 'w1280');
+            });
+
+            /*
+             * Two alternating image layers
+             */
+            var first = $('<img class="tml-backdrop-layer" alt="">');
+            var second = $('<img class="tml-backdrop-layer" alt="">');
+
+            nativeBackground.after(first);
+            first.after(second);
+
+            var layers = [first, second];
+
+            slideshowImages = layers;
+
+            var index = 0;
+            var active = 0;
+
+            function showNext() {
+                if (token !== currentToken) return;
+                if (slideshowId !== slideshowToken) return;
+                if (!slideshowRoot || !slideshowRoot.length) return;
+
+                index = (index + 1) % urls.length;
+
+                var nextLayer = 1 - active;
+                var image = layers[nextLayer];
+
+                image.removeClass('tml-backdrop-visible');
+
+                image.off('load error');
+
+                image.on('load', function () {
+                    if (token !== currentToken) return;
+                    if (slideshowId !== slideshowToken) return;
+
+                    /*
+                     * Keep image transition synchronized
+                     */
+                    requestAnimationFrame(function () {
+                        if (token !== currentToken) return;
+
+                        image.addClass('tml-backdrop-visible');
+
+                        layers[active].removeClass(
+                            'tml-backdrop-visible'
+                        );
+
+                        active = nextLayer;
+                    });
+                });
+
+                image.on('error', function () {
+                    if (token !== currentToken) return;
+                    index = (index + 1) % urls.length;
+                });
+
+                image.attr('src', urls[index]);
+            }
+
+            /*
+             * Preload first additional image
+             */
+            showNext();
+
+            slideshowTimer = setInterval(
+                showNext,
+                SLIDESHOW_INTERVAL
+            );
+        });
+    }
+
+    /*
+     * Clear current card state
      */
     function clearCurrent() {
+        stopSlideshow();
+
         if (currentImage) {
             currentImage.off('error');
         }
@@ -651,7 +845,7 @@
         currentTitle = titleBlock;
 
         /*
-         * Position tagline and build information
+         * Cinematic information
          */
         prepareTagline(root);
         prepareMetadata(root, card);
@@ -686,6 +880,11 @@
                 token
             );
         });
+
+        /*
+         * TMDB backdrop slideshow
+         */
+        startSlideshow(root, card, type, token);
     }
 
     /*
