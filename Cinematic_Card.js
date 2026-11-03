@@ -4,17 +4,16 @@
 
     /*
      * @name NEWCARD
-     * @version 3.2
+     * @version 3.3
      * @author Crowley24
      * @description Modern TV interface with native Lampa ratings
      * @platforms Lampa | Android TV
      *
-     * 3.2 CHANGES:
-     * - Removed all custom ratings (TMDB / CUB)
-     * - Removed all quality badges and quality parser
-     * - Native Lampa rating moved into metadata row
-     * - Description placed directly below metadata
-     * - Removed duplicate native description from details
+     * 3.3 CHANGES:
+     * - Description is now always enabled
+     * - Removed description toggle from settings
+     * - Hidden original Lampa description completely
+     * - Native Lampa rating correctly placed inside metadata row
      * - Preserved background, slideshow, logos, studios and buttons
      */
 
@@ -26,6 +25,7 @@
     let currentInterval = null;
     let logoRequestId = 0;
     let logoRequests = {};
+    let debounceTimer;
 
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
@@ -38,11 +38,8 @@
         'settings_cas_animation_style': 'Стиль анімації появи',
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',
         'settings_cas_show_studios': 'Показувати студії',
-        'settings_cas_show_description': 'Опис фільму',
         'settings_cas_show_tagline': 'Показувати слоган'
     };
-
-    let debounceTimer;
 
     function debounce(func, delay) {
         return function () {
@@ -98,7 +95,6 @@
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
-            'cas_show_description': true,
             'cas_show_tagline': true
         };
 
@@ -178,7 +174,6 @@
             },
             { name: 'cas_slideshow_enabled', type: 'trigger' },
             { name: 'cas_show_studios', type: 'trigger' },
-            { name: 'cas_show_description', type: 'trigger' },
             { name: 'cas_show_tagline', type: 'trigger' }
         ];
 
@@ -234,19 +229,21 @@
                 .removeClass('cas-anim-slide cas-anim-spring')
                 .addClass('cas-anim-' + animStyle);
 
-            const showDesc = !!Lampa.Storage.get('cas_show_description');
             const showTag = !!Lampa.Storage.get('cas_show_tagline');
 
-            currentCard.find('.cas-description').toggle(showDesc);
+            // Custom description is ALWAYS visible when it has content.
+            currentCard.find('.cas-description').each(function () {
+                const el = $(this);
+                const text = el.text().trim();
+
+                el.css('display', text ? '-webkit-box' : 'none');
+            });
+
             currentCard.find('.cas-tagline').toggle(showTag);
 
             currentCard.find('.cas-studios-row').toggle(
                 !!Lampa.Storage.get('cas_show_studios')
             );
-
-            const buttons = currentCard.find('.full-start-new__buttons');
-
-            buttons.css('margin-top', showDesc ? '' : '0px');
 
             stopSlideshow();
 
@@ -302,7 +299,9 @@
 
                         <div class="cas-meta-line">
                             <div class="cas-meta-info"></div>
-                            <div class="cas-native-rating"></div>
+                            <div class="cas-native-rating">
+                                <div class="full-start-new__rate-line"></div>
+                            </div>
                         </div>
 
                         <div class="cas-description"></div>
@@ -357,10 +356,6 @@
                     </div>
 
                     <div class="full-start-new__reactions selector hide"></div>
-
-                    <!-- Native Lampa rating is moved into metadata row -->
-                    <div class="full-start-new__rate-line"></div>
-
                     <div class="rating--modss" style="display:none;"></div>
                 </div>
             </div>
@@ -513,11 +508,13 @@
 
         /* LAYOUT */
 
-        .full-start-new__details {
-            display: none !important;
-        }
-
-        .full-start-new__head {
+        /* Hide original Lampa details and its description. */
+        .full-start-new__details,
+        .full-start-new__description,
+        .full-start-new__overview,
+        .full-start-new__text,
+        .full-start-new__head,
+        .cas-details-wrapper {
             display: none !important;
         }
 
@@ -626,11 +623,6 @@
             font-size: var(--cas-meta-size);
         }
 
-        /*
-         * Native Lampa rating line.
-         * It is placed in .cas-meta-line by the template.
-         */
-
         .full-start-new__rate-line {
             display: flex !important;
             align-items: center;
@@ -650,7 +642,7 @@
             display: none !important;
         }
 
-        /* DESCRIPTION */
+        /* DESCRIPTION — ALWAYS ENABLED */
 
         .cas-description {
             font-size: var(--cas-meta-size) !important;
@@ -1352,20 +1344,13 @@
             render.find('.cas-tagline').hide();
         }
 
-        // DESCRIPTION
-        // Only one description, directly below metadata.
+        // DESCRIPTION — ALWAYS ENABLED
 
-        if (Lampa.Storage.get('cas_show_description')) {
-            tasks.push(
-                Promise.resolve().then(() => {
-                    render.find('.cas-description')
-                        .text(data.overview || '')
-                        .show();
-                })
-            );
-        } else {
-            render.find('.cas-description').hide();
-        }
+        const description = String(data.overview || '').trim();
+
+        render.find('.cas-description')
+            .text(description)
+            .css('display', description ? '-webkit-box' : 'none');
 
         // METADATA
 
@@ -1472,12 +1457,16 @@
 
             cardRoot.removeClass('cas-animated');
 
-            // Native rating is not hidden or replaced.
-            // It is already located in the metadata row by template.
+            // Reset custom fields before loading the next card.
 
-            render.find('.cas-description').empty();
+            render.find('.cas-description').empty().hide();
             render.find('.cas-meta-info').empty();
             render.find('.cas-logo').empty();
+
+            // Hide original Lampa description elements.
+            render.find(
+                '.full-start-new__details, .full-start-new__description, .full-start-new__overview, .full-start-new__text, .full-start-new__head'
+            ).hide();
 
             event.object.activity.onBeforeDestroy = cleanup;
 
@@ -1533,10 +1522,6 @@
                     });
                 }
 
-                if (event.data.reactions) {
-                    data.reactions = event.data.reactions;
-                }
-
                 debouncedLoadMovieData(render, data);
 
             } else {
@@ -1573,7 +1558,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.2 initialized successfully'
+                'NewCard 3.3 initialized successfully'
             );
 
         } catch (error) {
