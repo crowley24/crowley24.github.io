@@ -4,32 +4,29 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.4
+     * @version 3.1.5
      * @author Crowley24
      * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.4 CHANGES:
-     * - Rebuilt TMDB logo display system
-     * - Logo title hidden immediately while loading
-     * - Exact Кінотрейлери language selection priority
-     * - TMDB images endpoint
-     * - Fixed w500 logo quality
-     * - 20-second API request timeout
-     * - Logo image preload before display
-     * - Shared image preload cache
-     * - Request deduplication
-     * - No custom logo fade or transform animation
-     * - No visible text title while logo is loading
-     * - Native title fallback when no logo is available
-     * - Safe render token protection
-     * - All other interface features preserved
+     * 3.1.5 CHANGES:
+     * - Restored native Lampa background
+     * - Removed custom TMDB backdrop loading
+     * - Removed poster slideshow
+     * - Removed custom poster height and background styling
+     * - Removed Ken Burns poster animation
+     * - Removed slideshow settings
+     * - Removed all custom backdrop manipulation
+     * - Preserved TMDB logo loading and display
+     * - Preserved studio logos
+     * - Preserved metadata and native ratings
+     * - Preserved interface animations
+     * - Preserved buttons and mobile layout
      */
 
-    if (window.MOB_INTERFACE_V314_READY) return;
-    window.MOB_INTERFACE_V314_READY = true;
+    if (window.MOB_INTERFACE_V315_READY) return;
+    window.MOB_INTERFACE_V315_READY = true;
 
-    var slideshowTimer = null;
     var detailsCache = {};
     var logoCache = {};
     var logoRequests = {};
@@ -39,13 +36,13 @@
     var activeRenderToken = 0;
     var started = false;
 
+    // --------------------------------------------------
+    // SETTINGS
+    // --------------------------------------------------
+
     var settings_list = [
-        { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_ui_anim', default: true },
         { id: 'mobile_interface_ui_anim_effect', default: 'cinematic' },
-        { id: 'mobile_interface_slideshow', default: true },
-        { id: 'mobile_interface_slideshow_time', default: '10000' },
-        { id: 'mobile_interface_slideshow_quality', default: 'w780' },
         { id: 'mobile_interface_logo_size_v2', default: '125' },
         { id: 'mobile_interface_logo_quality', default: 'w500' },
         { id: 'mobile_interface_show_tagline', default: true },
@@ -59,13 +56,6 @@
             Lampa.Storage.set(opt.id, opt.default);
         }
     });
-
-    function stopSlideshow() {
-        if (slideshowTimer) {
-            clearInterval(slideshowTimer);
-            slideshowTimer = null;
-        }
-    }
 
     // --------------------------------------------------
     // TMDB LOGO LANGUAGE SELECTION
@@ -327,13 +317,6 @@
 
     // --------------------------------------------------
     // MOVIE LOGO DISPLAY
-    //
-    // Important:
-    // 1. Hide native title immediately.
-    // 2. Wait for TMDB logo.
-    // 3. Preload the actual image.
-    // 4. Display the ready image without animation.
-    // 5. Restore native title only when no logo is available.
     // --------------------------------------------------
 
     function displayMovieLogo(movie, $render, renderToken) {
@@ -658,10 +641,6 @@
             document.head.appendChild(style);
         }
 
-        var isPosterAnim = Lampa.Storage.get(
-            'mobile_interface_animation'
-        );
-
         var isUIAnim = Lampa.Storage.get(
             'mobile_interface_ui_anim'
         );
@@ -715,12 +694,6 @@
 
         // ANIMATIONS
 
-        css += '@keyframes kenBurnsEffect{';
-        css += '0%{transform:scale(1)}';
-        css += '50%{transform:scale(1.075)}';
-        css += '100%{transform:scale(1)}';
-        css += '}';
-
         css += '@keyframes anim_fluid{';
         css += '0%{opacity:0;transform:translate3d(0,22px,0) scale(.97);filter:blur(7px)}';
         css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
@@ -745,16 +718,6 @@
         css += '@keyframes anim_minimal{';
         css += '0%{opacity:0;transform:translateY(9px)}';
         css += '100%{opacity:1;transform:translateY(0)}';
-        css += '}';
-
-        css += '@keyframes poster_fade_in{';
-        css += '0%{opacity:0;transform:scale(1.025)}';
-        css += '100%{opacity:1;transform:scale(1)}';
-        css += '}';
-
-        css += '@keyframes premium_glow{';
-        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
-        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
         css += '}';
 
         css += '@media screen and (max-width:480px){';
@@ -804,55 +767,18 @@
         css += 'display:none!important;';
         css += '}';
 
-        // CINEMATIC POSTER
-
-        css += '.full-start-new .full-start-new__poster{';
-        css += 'position:relative!important;';
-        css += 'overflow:hidden!important;';
-        css += 'background:#050608;';
-        css += 'z-index:1;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
-
-        if (isUIAnim) {
-            css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
-        }
-
-        css += '}';
-
-        css += '.full-start-new .full-start-new__poster:after{';
-        css += 'content:"";';
-        css += 'position:absolute;';
-        css += 'inset:15% 0 0;';
-        css += 'pointer-events:none;';
-        css += 'z-index:2;';
-        css += 'background:linear-gradient(';
-        css += '180deg,';
-        css += 'rgba(5,7,11,0) 0%,';
-        css += 'rgba(5,7,11,.12) 22%,';
-        css += 'rgba(5,7,11,.38) 48%,';
-        css += 'rgba(5,7,11,.82) 78%,';
-        css += '#050608 100%';
-        css += ');';
-        css += '}';
-
-        css += '.full-start-new .full-start-new__poster img{';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'width:100%;';
-        css += 'height:100%;';
-        css += 'object-fit:cover;';
-        css += 'filter:saturate(1.06) contrast(1.045)!important;';
-        css += 'transform-origin:center center!important;';
-        css += 'transition:opacity 1.35s ease-in-out!important;';
-
-        if (isPosterAnim) {
-            css += 'animation:kenBurnsEffect 28s ease-in-out infinite!important;';
-        }
-
-        css += 'mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
-        css += '-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
-        css += '}';
+        /*
+         * BACKGROUND
+         *
+         * Не перевизначаємо:
+         * - .full-start-new__poster
+         * - розміри постера
+         * - фонове зображення
+         * - маску та градієнт
+         * - анімацію фонового зображення
+         *
+         * Фоном повністю керує стандартна Lampa.
+         */
 
         // MAIN CONTENT
 
@@ -864,7 +790,6 @@
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
         css += 'padding:0 14px!important;';
-        css += 'margin-top:-168px!important;';
         css += 'background:none!important;';
         css += '}';
 
@@ -1281,6 +1206,7 @@
 
     // --------------------------------------------------
     // TMDB DETAILS
+    // Studio logos only — no backdrop handling
     // --------------------------------------------------
 
     function applyMovieDetailsData(
@@ -1360,45 +1286,7 @@
             }
         }
 
-        // BACKDROPS
-
-        if (data.images && data.images.backdrops) {
-            var backdrops = data.images.backdrops.filter(
-                function (elem) {
-                    return elem.aspect_ratio > 1.5 &&
-                        (
-                            !elem.iso_639_1 ||
-                            elem.iso_639_1 === 'xx'
-                        );
-                }
-            );
-
-            if (backdrops.length === 0) {
-                backdrops = data.images.backdrops.filter(
-                    function (elem) {
-                        return elem.aspect_ratio > 1.5;
-                    }
-                );
-            }
-
-            if (backdrops.length > 0) {
-                backdrops.sort(function (a, b) {
-                    return (
-                        b.vote_average || 0
-                    ) - (
-                        a.vote_average || 0
-                    );
-                });
-
-                startPosterSlideshow(
-                    $render.find('.full-start-new__poster'),
-                    backdrops.slice(0, 15),
-                    renderToken
-                );
-            }
-        }
-
-        // RECHECK DUPLICATE METADATA
+        // DUPLICATE METADATA RECHECK
 
         hideDuplicateHeaderMetadata($render);
     }
@@ -1430,9 +1318,7 @@
         var url =
             'https://api.themoviedb.org/3/' +
             type + '/' + movieId +
-            '?api_key=' + Lampa.TMDB.key() +
-            '&append_to_response=images' +
-            '&include_image_language=uk,en,null';
+            '?api_key=' + Lampa.TMDB.key();
 
         $.ajax({
             url: url,
@@ -1472,103 +1358,6 @@
     }
 
     // --------------------------------------------------
-    // POSTER SLIDESHOW
-    // --------------------------------------------------
-
-    function startPosterSlideshow($poster, items, renderToken) {
-        if (
-            !Lampa.Storage.get('mobile_interface_slideshow') ||
-            !items ||
-            !items.length ||
-            !$poster ||
-            !$poster.length
-        ) {
-            return;
-        }
-
-        var index = 0;
-
-        stopSlideshow();
-
-        var intervalTime = parseInt(
-            Lampa.Storage.get(
-                'mobile_interface_slideshow_time',
-                '10000'
-            ),
-            10
-        );
-
-        if (!intervalTime || intervalTime < 1000) {
-            intervalTime = 10000;
-        }
-
-        slideshowTimer = setInterval(function () {
-            if (
-                renderToken !== activeRenderToken ||
-                !$poster[0] ||
-                !document.body.contains($poster[0])
-            ) {
-                stopSlideshow();
-                return;
-            }
-
-            index = (index + 1) % items.length;
-
-            var imgUrl = Lampa.TMDB.image(
-                '/t/p/' +
-                Lampa.Storage.get(
-                    'mobile_interface_slideshow_quality',
-                    'w780'
-                ) +
-                items[index].file_path
-            );
-
-            var nextImg = new Image();
-
-            nextImg.onload = function () {
-                if (
-                    renderToken !== activeRenderToken ||
-                    !$poster[0] ||
-                    !document.body.contains($poster[0])
-                ) {
-                    return;
-                }
-
-                var $current = $poster.find('img').first();
-
-                var $next = $('<img>')
-                    .attr('src', imgUrl)
-                    .css({
-                        opacity: 0,
-                        transition: 'opacity 1.35s ease-in-out'
-                    });
-
-                $poster.append($next);
-
-                requestAnimationFrame(function () {
-                    if (renderToken !== activeRenderToken) {
-                        return;
-                    }
-
-                    $next.css('opacity', 1);
-                    $current.css('opacity', 0);
-                });
-
-                setTimeout(function () {
-                    if ($current && $current.length) {
-                        $current.remove();
-                    }
-                }, 1450);
-            };
-
-            nextImg.onerror = function () {};
-
-            nextImg.src = imgUrl;
-
-        }, intervalTime);
-    }
-
-    // --------------------------------------------------
     // INITIALIZATION
     // --------------------------------------------------
 
@@ -1580,7 +1369,6 @@
                 e.type === 'onBeforeDestroy'
             ) {
                 activeRenderToken++;
-                stopSlideshow();
                 currentActiveId = null;
                 return;
             }
@@ -1603,8 +1391,6 @@
             ) {
                 return;
             }
-
-            stopSlideshow();
 
             var renderToken = ++activeRenderToken;
             var movie = e.data.movie;
@@ -1637,7 +1423,7 @@
                 renderToken
             );
 
-            // TMDB DETAILS
+            // TMDB DETAILS / STUDIO LOGO
 
             loadMovieDetails(
                 movie,
@@ -1656,19 +1442,6 @@
             component: 'mobile_interface',
             name: 'Мобільний інтерфейс',
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>'
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_animation',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Зум-ефект постера (Ken Burns)'
-            },
-            onChange: applyStyles
         });
 
         Lampa.SettingsApi.addParam({
@@ -1702,41 +1475,6 @@
                 name: 'Стиль анімації появи'
             },
             onChange: applyStyles
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_slideshow',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Автозміна фонових кадрів'
-            },
-            onChange: function () {
-                stopSlideshow();
-            }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_slideshow_time',
-                type: 'select',
-                values: {
-                    '10000': '10 сек',
-                    '15000': '15 сек',
-                    '20000': '20 сек'
-                },
-                default: '10000'
-            },
-            field: {
-                name: 'Інтервал зміни фону'
-            },
-            onChange: function () {
-                stopSlideshow();
-            }
         });
 
         Lampa.SettingsApi.addParam({
@@ -1837,7 +1575,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.4 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.5 Native Lampa Background initialized'
         );
     }
 
