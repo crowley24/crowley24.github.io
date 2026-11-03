@@ -3,19 +3,17 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.2 — TRUE FIXED CINEMATIC BACKDROP
+     * TMDB MOVIE LOGOS 1.5.4 — CLEAN CINEMATIC BACKDROP
      *
      * Lampa / Android TV
      *
-     * NEW 1.5.2:
-     * - Backdrop moved directly to document.body
-     * - No longer nested inside .full-start-new
-     * - Independent viewport-fixed background
-     * - Background stays stationary during card scrolling
-     * - Progressive background darkening on scroll
-     * - Smooth brightness restoration when scrolling up
-     * - Independent dimming layer
-     * - Scroll listeners automatically removed on destroy
+     * FIXES 1.5.4:
+     * - Reliable backdrop cleanup after card closing
+     * - MutationObserver monitors card removal
+     * - Body class cleanup
+     * - Scroll tracking cleanup
+     * - Safe handling of card transitions
+     * - Protection against premature backdrop removal
      *
      * PRESERVED:
      * - TMDB logo selection: Ukrainian > English > fallback
@@ -25,21 +23,20 @@
      * - Metadata and description
      * - Original Lampa buttons and navigation
      * - Premium logo appearance animation
-     *
-     * No external dependencies.
+     * - Clean stationary fullscreen backdrop
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v152_ready) return;
+    if (window.tmdb_movie_logos_v154_ready) return;
 
-    window.tmdb_movie_logos_v152_ready = true;
+    window.tmdb_movie_logos_v154_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    var VERSION = '1.5.2';
-    var CSS_ID = 'tml_v152_css';
+    var VERSION = '1.5.4';
+    var CSS_ID = 'tml_v154_css';
 
     var currentCard = null;
     var currentToken = 0;
@@ -52,13 +49,16 @@
     var currentScrollHandler = null;
     var scrollFrame = null;
 
+    var cardObserver = null;
+    var observerCheckFrame = null;
+
     var CACHE_TIMEOUT = 20000;
 
     /*
      * Scroll darkening settings
      */
     var SCROLL_DISTANCE = 700;
-    var MAX_DARKNESS = 0.48;
+    var MAX_DARKNESS = 0.30;
 
     /*
      * TMDB logo selection
@@ -439,23 +439,46 @@
 
         css.textContent =
 
-            /*
-             * Completely hide native Lampa background
-             */
             'body.tml-cinematic-active .background,' +
             'body.tml-cinematic-active .full-start__background,' +
-            'body.tml-cinematic-active .full-start__background-image{' +
+            'body.tml-cinematic-active .full-start__background-image,' +
+            'body.tml-cinematic-active .full-start-new__background,' +
+            'body.tml-cinematic-active .full-start-new__background-image,' +
+            'body.tml-cinematic-active .full-start-new__backdrop,' +
+            'body.tml-cinematic-active .full-start-new__bg,' +
+            'body.tml-cinematic-active .full-start-new__background-overlay,' +
+            'body.tml-cinematic-active .full-start-new__overlay,' +
+            'body.tml-cinematic-active .full-start__background-overlay,' +
+            'body.tml-cinematic-active .full-start__background-layer{' +
+                'display:none !important;' +
                 'opacity:0 !important;' +
                 'visibility:hidden !important;' +
                 'pointer-events:none !important;' +
-                'display:none !important;' +
+                'background:none !important;' +
+                'background-image:none !important;' +
             '}' +
 
-            /*
-             * Full card root
-             *
-             * Keep card content above body-level backdrop.
-             */
+            'body.tml-cinematic-active .full-start-new,' +
+            'body.tml-cinematic-active .full-start-new__body,' +
+            'body.tml-cinematic-active .full-start-new__right,' +
+            'body.tml-cinematic-active .full-start-new__left{' +
+                'background:transparent !important;' +
+                'background-color:transparent !important;' +
+                'background-image:none !important;' +
+                'box-shadow:none !important;' +
+            '}' +
+
+            'body.tml-cinematic-active .full-start-new:before,' +
+            'body.tml-cinematic-active .full-start-new:after,' +
+            'body.tml-cinematic-active .full-start-new__body:before,' +
+            'body.tml-cinematic-active .full-start-new__body:after{' +
+                'content:none !important;' +
+                'display:none !important;' +
+                'background:none !important;' +
+                'background-image:none !important;' +
+                'box-shadow:none !important;' +
+            '}' +
+
             '.full-start-new{' +
                 'position:relative !important;' +
                 'z-index:1 !important;' +
@@ -463,13 +486,6 @@
                 'background:transparent !important;' +
             '}' +
 
-            /*
-             * Independent fixed fullscreen backdrop
-             *
-             * IMPORTANT:
-             * This element is now a direct child of document.body.
-             * It is NOT inside .full-start-new.
-             */
             '.tml-cinematic-backdrop{' +
                 'position:fixed !important;' +
                 'top:0 !important;' +
@@ -483,16 +499,15 @@
                 'pointer-events:none;' +
                 'opacity:0;' +
                 'transition:opacity .65s ease;' +
-                'background:#080808;' +
+                'background:transparent;' +
+                'background-image:none !important;' +
+                'filter:none !important;' +
             '}' +
 
             '.tml-cinematic-backdrop.tml-backdrop-visible{' +
                 'opacity:1;' +
             '}' +
 
-            /*
-             * Backdrop image
-             */
             '.tml-cinematic-backdrop img{' +
                 'position:absolute;' +
                 'top:0;' +
@@ -503,15 +518,14 @@
                 'object-position:center center;' +
                 'opacity:0;' +
                 'transition:opacity .75s ease;' +
+                'filter:none !important;' +
+                'transform:none !important;' +
             '}' +
 
             '.tml-cinematic-backdrop img.tml-image-visible{' +
                 'opacity:1;' +
             '}' +
 
-            /*
-             * Independent scroll darkening layer
-             */
             '.tml-backdrop-dim{' +
                 'position:absolute;' +
                 'inset:0;' +
@@ -523,28 +537,6 @@
                 'will-change:opacity;' +
             '}' +
 
-            /*
-             * Minimal cinematic bottom gradient
-             */
-            '.tml-cinematic-backdrop:after{' +
-                'content:"";' +
-                'position:absolute;' +
-                'inset:0;' +
-                'z-index:3;' +
-                'background:' +
-                    'linear-gradient(' +
-                        'to top,' +
-                        'rgba(0,0,0,.78) 0%,' +
-                        'rgba(0,0,0,.48) 22%,' +
-                        'rgba(0,0,0,.12) 55%,' +
-                        'rgba(0,0,0,0) 78%' +
-                    ');' +
-                'pointer-events:none;' +
-            '}' +
-
-            /*
-             * Card content above backdrop
-             */
             '.full-start-new__body{' +
                 'position:relative !important;' +
                 'z-index:2;' +
@@ -558,9 +550,6 @@
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Information block
-             */
             '.full-start-new__right{' +
                 'position:absolute !important;' +
                 'left:0 !important;' +
@@ -580,9 +569,6 @@
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Studio logo
-             */
             '.tml-studio-logo{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -621,9 +607,6 @@
                 'filter:none;' +
             '}' +
 
-            /*
-             * Title / movie logo
-             */
             '.full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
@@ -662,9 +645,6 @@
                 'transform:translateY(0) scale(1);' +
             '}' +
 
-            /*
-             * Tagline
-             */
             '.full-start-new__tagline{' +
                 'width:100%;' +
                 'max-width:100%;' +
@@ -688,9 +668,6 @@
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Metadata — no animation
-             */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -728,17 +705,11 @@
                 'text-overflow:ellipsis;' +
             '}' +
 
-            /*
-             * Hide native duplicate information
-             */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
                 'display:none !important;' +
             '}' +
 
-            /*
-             * Description
-             */
             '.tml-cinematic-description{' +
                 'display:-webkit-box;' +
                 'width:100%;' +
@@ -755,9 +726,6 @@
                 'line-clamp:3;' +
             '}' +
 
-            /*
-             * Native buttons remain visible and interactive
-             */
             '.full-start-new__buttons{' +
                 'position:relative;' +
                 'z-index:5;' +
@@ -780,12 +748,11 @@
             '.full-description{' +
                 'display:none !important;' +
             '}';
-
         document.head.appendChild(css);
     }
 
     /*
-     * Get rendered card root
+     * Get rendered card root.
      */
     function getCardRoot(ev) {
         try {
@@ -809,13 +776,7 @@
     }
 
     /*
-     * Calculate current scroll position
-     *
-     * Supports:
-     * - Window scrolling
-     * - Document scrolling
-     * - Lampa internal scroll containers
-     * - Full card and its parent containers
+     * Calculate current scroll position.
      */
     function getScrollPosition(root) {
         var position = 0;
@@ -851,10 +812,6 @@
             element = element.parentElement;
         }
 
-        /*
-         * Detect movement of the card itself.
-         * Useful when Lampa uses translated containers.
-         */
         if (root && root.length) {
             var rect = root[0].getBoundingClientRect();
 
@@ -867,7 +824,7 @@
     }
 
     /*
-     * Update background darkness
+     * Update background darkness.
      */
     function updateBackdropDarkness() {
         scrollFrame = null;
@@ -888,9 +845,6 @@
             scroll / SCROLL_DISTANCE
         );
 
-        /*
-         * Smooth ease-out curve
-         */
         progress = progress * (2 - progress);
 
         var darkness = MAX_DARKNESS * progress;
@@ -902,7 +856,7 @@
     }
 
     /*
-     * Start lightweight scroll tracking
+     * Start lightweight scroll tracking.
      */
     function startScrollTracking(root, token) {
         stopScrollTracking();
@@ -911,7 +865,6 @@
 
         currentScrollHandler = function () {
             if (token !== currentToken) return;
-
             if (scrollFrame !== null) return;
 
             scrollFrame = requestAnimationFrame(
@@ -919,9 +872,6 @@
             );
         };
 
-        /*
-         * Capture scroll events from internal containers.
-         */
         document.addEventListener(
             'scroll',
             currentScrollHandler,
@@ -934,14 +884,11 @@
             { passive: true }
         );
 
-        /*
-         * Initial state
-         */
         updateBackdropDarkness();
     }
 
     /*
-     * Stop scroll tracking
+     * Stop scroll tracking.
      */
     function stopScrollTracking() {
         if (currentScrollHandler) {
@@ -966,19 +913,71 @@
     }
 
     /*
-     * Create independent fixed backdrop
+     * Stop card observer.
+     */
+    function stopCardObserver() {
+        if (cardObserver) {
+            cardObserver.disconnect();
+            cardObserver = null;
+        }
+
+        if (observerCheckFrame !== null) {
+            cancelAnimationFrame(observerCheckFrame);
+            observerCheckFrame = null;
+        }
+    }
+
+    /*
+     * Check whether current card is still active.
      *
-     * IMPORTANT 1.5.2:
-     * Backdrop is appended directly to document.body.
-     * It is no longer a child of the card root.
+     * Important:
+     * Do not rely on destroy event alone.
+     * The card may be removed from DOM without destroy.
+     */
+    function checkCardPresence(token) {
+        observerCheckFrame = null;
+
+        if (token !== currentToken) return;
+        if (!currentRoot || !currentRoot.length) return;
+
+        var rootElement = currentRoot[0];
+
+        if (!document.documentElement.contains(rootElement)) {
+            clearCurrent();
+        }
+    }
+
+    /*
+     * Observe DOM changes while card is active.
+     */
+    function startCardObserver(root, token) {
+        stopCardObserver();
+
+        if (!root || !root.length) return;
+        if (typeof MutationObserver === 'undefined') return;
+
+        cardObserver = new MutationObserver(function () {
+            if (token !== currentToken) return;
+            if (observerCheckFrame !== null) return;
+
+            observerCheckFrame = requestAnimationFrame(function () {
+                checkCardPresence(token);
+            });
+        });
+
+        cardObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    /*
+     * Create independent fixed backdrop.
      */
     function prepareBackdrop(root, card, type, token) {
         if (!root || !root.length) return;
         if (!document.body) return;
 
-        /*
-         * Remove any previous backdrop.
-         */
         $('.tml-cinematic-backdrop').remove();
 
         var backdrop = $(
@@ -994,19 +993,13 @@
         backdrop.append(image);
         backdrop.append(dimLayer);
 
-        /*
-         * Critical change:
-         * Attach backdrop directly to BODY.
-         */
         $(document.body).append(backdrop);
 
         currentBackdrop = backdrop;
         currentDimLayer = dimLayer;
 
-        /*
-         * Enable scroll darkening immediately.
-         */
         startScrollTracking(root, token);
+        startCardObserver(root, token);
 
         ensureBackdrop(card, type, function (path) {
             if (token !== currentToken) return;
@@ -1036,6 +1029,7 @@
 
             image.on('error', function () {
                 if (token !== currentToken) return;
+                if (currentCard !== card) return;
 
                 backdrop.addClass('tml-backdrop-visible');
             });
@@ -1045,7 +1039,7 @@
     }
 
     /*
-     * Prepare studio logo
+     * Prepare studio logo.
      */
     function prepareStudioLogo(root, card, type, token) {
         var title = root.find(
@@ -1090,7 +1084,7 @@
     }
 
     /*
-     * Move tagline after title
+     * Move tagline after title.
      */
     function prepareTagline(root) {
         var title = root.find(
@@ -1107,7 +1101,7 @@
     }
 
     /*
-     * Metadata
+     * Metadata.
      */
     function prepareMetadata(root, card) {
         var parts = buildMetadata(card);
@@ -1156,7 +1150,7 @@
     }
 
     /*
-     * Description
+     * Description.
      */
     function prepareDescription(root, card) {
         var metadata = root.find(
@@ -1183,7 +1177,7 @@
     }
 
     /*
-     * Prepare logo element
+     * Prepare logo element.
      */
     function prepareLogo(titleBlock) {
         var original = titleBlock.contents().clone(true, true);
@@ -1200,7 +1194,7 @@
     }
 
     /*
-     * Restore original title
+     * Restore original title.
      */
     function showOriginalTitle(titleBlock, original, logo) {
         if (!titleBlock || !titleBlock.length) return;
@@ -1212,7 +1206,7 @@
     }
 
     /*
-     * Display TMDB logo with premium animation
+     * Display TMDB logo with premium animation.
      */
     function displayLogo(url, titleBlock, original, logo, token) {
         if (!url || !logo || !logo.length) return;
@@ -1244,36 +1238,25 @@
     }
 
     /*
-     * Clear current card
+     * Clear current card.
      */
     function clearCurrent() {
-        /*
-         * Remove scroll listeners first.
-         */
         stopScrollTracking();
+        stopCardObserver();
 
         if (currentLogo) {
             currentLogo.off('error load');
         }
 
-        /*
-         * Remove body-level backdrop.
-         */
         if (currentBackdrop) {
             currentBackdrop.find('img').off('load error');
             currentBackdrop.remove();
         }
 
-        /*
-         * Safety cleanup for any old nested backdrop.
-         */
         if (currentRoot && currentRoot.length) {
             currentRoot.find('.tml-cinematic-backdrop').remove();
         }
 
-        /*
-         * Remove any orphaned backdrop.
-         */
         $('.tml-cinematic-backdrop').remove();
 
         $('body').removeClass('tml-cinematic-active');
@@ -1287,7 +1270,7 @@
     }
 
     /*
-     * Process full card
+     * Process full card.
      */
     function processCard(ev) {
         if (!ev || ev.type !== 'complite') return;
@@ -1318,25 +1301,24 @@
         $('body').addClass('tml-cinematic-active');
 
         /*
-         * Independent body-level fixed backdrop
-         * with progressive scroll darkening.
+         * Independent body-level fixed backdrop.
          */
         prepareBackdrop(root, card, type, token);
 
         /*
-         * Information layout
+         * Information layout.
          */
         prepareTagline(root);
         prepareMetadata(root, card);
         prepareDescription(root, card);
 
         /*
-         * Studio logo
+         * Studio logo.
          */
         prepareStudioLogo(root, card, type, token);
 
         /*
-         * Movie / series logo
+         * Movie / series logo.
          */
         var elements = prepareLogo(titleBlock);
 
@@ -1367,7 +1349,7 @@
     }
 
     /*
-     * Lampa full card events
+     * Lampa full card events.
      */
     Lampa.Listener.follow('full', function (ev) {
         if (!ev) return;
@@ -1384,7 +1366,7 @@
     });
 
     /*
-     * Initialize
+     * Initialize.
      */
     addCSS();
 
