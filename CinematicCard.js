@@ -3,45 +3,48 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.5 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.2 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
-     * CHANGES 1.4.5:
-     * - Seamless slideshow startup
-     * - First slideshow frame duplicates native backdrop
-     * - No visual jump when opening a movie card
-     * - First additional backdrop appears after 10 seconds
-     * - Smooth 1.5s crossfade
-     * - Full slideshow cleanup on card destroy
+     * LOGO:
+     * - TMDB logos for movies and TV series
+     * - Same logo selection as Кінотрейлери 2.3
+     * - Original cache logic
+     * - Original title fallback
+     *
+     * CINEMATIC MODE:
+     * - Standard Lampa backdrop preserved
+     * - Poster hidden
+     * - Information block positioned bottom-left
+     * - TMDB logo
+     * - Small italic tagline directly under logo
+     * - Single metadata row: year / rating / genres
+     * - Short description below metadata
+     * - Native Lampa buttons preserved
+     * - Reactions hidden
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v145_ready) return;
+    if (window.tmdb_movie_logos_v142_ready) return;
+
+    window.tmdb_movie_logos_v142_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
-
-    window.tmdb_movie_logos_v145_ready = true;
 
     var currentCard = null;
     var currentTitle = null;
     var currentImage = null;
     var currentToken = 0;
 
-    var slideshowTimer = null;
-    var slideshowRoot = null;
-    var slideshowImages = [];
-    var slideshowToken = 0;
-
     var CACHE_TIMEOUT = 20000;
-    var SLIDESHOW_INTERVAL = 10000;
-
-    var CSS_ID = 'tmdb_movie_logos_v145_css';
+    var CSS_ID = 'tmdb_movie_logos_v142_css';
 
     /*
      * TMDB logo selection
+     * Same algorithm as Кінотрейлери 2.3
      */
     function pickLogo(logos) {
         var order = [
@@ -63,6 +66,7 @@
 
     /*
      * Cache
+     * Original request coalescing and timeout logic
      */
     function cached(item, key, request, cb) {
         if (item[key] !== undefined) {
@@ -87,11 +91,13 @@
             if (completed) return;
 
             completed = true;
+
             clearTimeout(timer);
 
             item[key] = value || null;
 
             var list = item[key + '_wait'] || [];
+
             item[key + '_wait'] = null;
 
             list.forEach(function (callback) {
@@ -151,37 +157,9 @@
     }
 
     /*
-     * Country names
-     */
-    function getCountries(card) {
-        var countries = [];
-
-        if (
-            card.production_countries &&
-            card.production_countries.length
-        ) {
-            countries = card.production_countries
-                .map(function (country) {
-                    return country.name || '';
-                })
-                .filter(Boolean);
-        }
-
-        if (
-            !countries.length &&
-            card.origin_country &&
-            card.origin_country.length
-        ) {
-            countries = card.origin_country.slice(0, 2);
-        }
-
-        return countries.slice(0, 2);
-    }
-
-    /*
      * Metadata builder
      *
-     * Year · Country · Rating · Genres
+     * Year · ★ Rating · Genres
      */
     function buildMetadata(card) {
         var parts = [];
@@ -198,16 +176,11 @@
             parts.push(year);
         }
 
-        var countries = getCountries(card);
-
-        if (countries.length) {
-            parts.push(countries.join(', '));
-        }
-
         var rating = parseFloat(card.vote_average || 0);
 
         if (rating > 0) {
             if (rating > 10) rating = 10;
+
             parts.push('★ ' + rating.toFixed(1));
         }
 
@@ -227,6 +200,8 @@
 
     /*
      * CSS
+     * Default Lampa backdrop remains untouched.
+     * Native buttons are not recreated.
      */
     function addCSS() {
         if (document.getElementById(CSS_ID)) return;
@@ -237,6 +212,9 @@
 
         css.textContent =
 
+            /*
+             * Cinematic card positioning
+             */
             '.full-start-new{' +
                 'position:relative;' +
             '}' +
@@ -248,10 +226,16 @@
                 'height:auto;' +
             '}' +
 
+            /*
+             * Hide poster
+             */
             '.full-start-new__left{' +
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Information block
+             */
             '.full-start-new__right{' +
                 'position:absolute !important;' +
                 'left:0 !important;' +
@@ -267,10 +251,16 @@
                 'z-index:2;' +
             '}' +
 
+            /*
+             * Remove year/country header above logo
+             */
             '.full-start-new__head{' +
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Logo / title
+             */
             '.full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
@@ -298,6 +288,9 @@
                 'filter:none;' +
             '}' +
 
+            /*
+             * Tagline directly under logo
+             */
             '.full-start-new__tagline{' +
                 'display:block;' +
                 'width:100%;' +
@@ -322,6 +315,9 @@
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Metadata row
+             */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -359,11 +355,17 @@
                 'text-overflow:ellipsis;' +
             '}' +
 
+            /*
+             * Hide original rating and details rows
+             */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Description
+             */
             '.tml-cinematic-description{' +
                 'display:-webkit-box;' +
                 'width:100%;' +
@@ -379,6 +381,9 @@
                 'line-clamp:3;' +
             '}' +
 
+            /*
+             * Native Lampa buttons
+             */
             '.full-start-new__buttons{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -389,35 +394,21 @@
                 'padding:0;' +
             '}' +
 
+            /*
+             * Hide reactions
+             */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Hide separate detail description
+             */
             '.full-descr,' +
             '.full-start__description,' +
             '.full-start__descr,' +
             '.full-description{' +
                 'display:none !important;' +
-            '}' +
-
-            /*
-             * Slideshow overlay
-             */
-            '.tml-backdrop-layer{' +
-                'position:absolute !important;' +
-                'inset:0 !important;' +
-                'width:100% !important;' +
-                'height:100% !important;' +
-                'object-fit:cover !important;' +
-                'object-position:center center !important;' +
-                'opacity:0 !important;' +
-                'transition:opacity 1.5s ease-in-out !important;' +
-                'pointer-events:none !important;' +
-                'z-index:0 !important;' +
-            '}' +
-
-            '.tml-backdrop-layer.tml-backdrop-visible{' +
-                'opacity:1 !important;' +
             '}';
 
         document.head.appendChild(css);
@@ -472,28 +463,10 @@
     }
 
     /*
-     * Get outer activity root
-     */
-    function getActivityRoot(ev) {
-        try {
-            if (
-                !ev ||
-                !ev.object ||
-                !ev.object.activity ||
-                typeof ev.object.activity.render !== 'function'
-            ) {
-                return $();
-            }
-
-            return ev.object.activity.render();
-
-        } catch (e) {
-            return $();
-        }
-    }
-
-    /*
-     * Tagline position
+     * Prepare tagline position
+     *
+     * Move existing native tagline directly
+     * after the title/logo.
      */
     function prepareTagline(root) {
         if (!root || !root.length) return;
@@ -512,7 +485,7 @@
     }
 
     /*
-     * Metadata row
+     * Prepare metadata row
      */
     function prepareMetadata(root, card) {
         if (!root || !root.length) return;
@@ -563,7 +536,7 @@
     }
 
     /*
-     * Description
+     * Prepare cinematic description
      */
     function prepareDescription(root, card) {
         if (!root || !root.length) return;
@@ -585,6 +558,7 @@
 
         if (!description.length) {
             description = $('<div class="tml-cinematic-description"></div>');
+
             description.insertAfter(metadata);
         }
 
@@ -592,234 +566,9 @@
     }
 
     /*
-     * Stop slideshow
-     */
-    function stopSlideshow() {
-        if (slideshowTimer) {
-            clearInterval(slideshowTimer);
-            slideshowTimer = null;
-        }
-
-        slideshowToken++;
-
-        slideshowImages.forEach(function (image) {
-            if (image && image.length) {
-                image.off('load error');
-                image.remove();
-            }
-        });
-
-        slideshowImages = [];
-        slideshowRoot = null;
-    }
-
-    /*
-     * Start slideshow
-     *
-     * 1. First overlay duplicates native backdrop.
-     * 2. It becomes visible without changing the picture.
-     * 3. After 10 seconds, the first additional TMDB backdrop appears.
-     * 4. Further images crossfade every 10 seconds.
-     */
-    function startSlideshow(activityRoot, card, type, token) {
-        stopSlideshow();
-
-        if (!activityRoot || !activityRoot.length) return;
-        if (!card || !card.id || !card.backdrop_path) return;
-
-        var nativeBackground = activityRoot.find(
-            '.full-start__background'
-        ).first();
-
-        if (!nativeBackground.length) return;
-
-        var nativeSrc =
-            nativeBackground.attr('src') ||
-            nativeBackground[0].src ||
-            '';
-
-        if (!nativeSrc) return;
-
-        var slideshowId = slideshowToken;
-
-        slideshowRoot = activityRoot;
-
-        cached(card, 'tml_backdrops', function (done) {
-            var lang = Lampa.Storage.field('tmdb_lang');
-            var langs = (lang || 'en') + ',en,null';
-
-            tmdb.get(
-                type + '/' + card.id + '/images',
-                {
-                    filter: {
-                        include_image_language: langs
-                    }
-                },
-                function (json) {
-                    var backdrops = json && json.backdrops
-                        ? json.backdrops
-                        : [];
-
-                    var paths = [];
-                    var original = card.backdrop_path;
-
-                    backdrops.forEach(function (item) {
-                        if (
-                            item.file_path &&
-                            item.file_path !== original &&
-                            paths.indexOf(item.file_path) === -1
-                        ) {
-                            paths.push(item.file_path);
-                        }
-                    });
-
-                    done(paths);
-                },
-                function () {
-                    done([]);
-                }
-            );
-        }, function (paths) {
-            if (token !== currentToken) return;
-            if (slideshowId !== slideshowToken) return;
-            if (!slideshowRoot || !slideshowRoot.length) return;
-            if (!nativeBackground.closest('body').length) return;
-            if (!paths || paths.length < 1) return;
-
-            var urls = paths.map(function (path) {
-                return Lampa.Api.img(path, 'w1280');
-            });
-
-            /*
-             * Create two layers using native background geometry.
-             */
-            var first = nativeBackground.clone(false);
-            var second = nativeBackground.clone(false);
-
-            first
-                .removeClass('loaded dim')
-                .removeAttr('id')
-                .removeAttr('src')
-                .addClass('tml-backdrop-layer');
-
-            second
-                .removeClass('loaded dim')
-                .removeAttr('id')
-                .removeAttr('src')
-                .addClass('tml-backdrop-layer');
-
-            nativeBackground.after(first);
-            first.after(second);
-
-            var layers = [first, second];
-
-            slideshowImages = layers;
-
-            var active = 0;
-            var nextIndex = 0;
-            var loading = false;
-
-            /*
-             * First layer:
-             * use exactly the same image as the native Lampa backdrop.
-             */
-            first.on('load', function () {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-
-                requestAnimationFrame(function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    first.addClass('tml-backdrop-visible');
-                });
-            });
-
-            first.on('error', function () {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-
-                /*
-                 * If duplicate loading fails, native backdrop
-                 * remains visible underneath.
-                 */
-            });
-
-            first.attr('src', nativeSrc);
-
-            /*
-             * Load and display the next additional backdrop.
-             */
-            function showNext() {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-                if (!slideshowRoot || !slideshowRoot.length) return;
-                if (loading || !urls.length) return;
-
-                loading = true;
-
-                var target = 1 - active;
-                var image = layers[target];
-
-                image
-                    .removeClass('tml-backdrop-visible')
-                    .off('load error');
-
-                image.on('load', function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    loading = false;
-
-                    requestAnimationFrame(function () {
-                        if (token !== currentToken) return;
-                        if (slideshowId !== slideshowToken) return;
-
-                        image.addClass('tml-backdrop-visible');
-
-                        layers[active].removeClass(
-                            'tml-backdrop-visible'
-                        );
-
-                        active = target;
-                    });
-                });
-
-                image.on('error', function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    loading = false;
-
-                    /*
-                     * Skip a failed image.
-                     */
-                    nextIndex = (nextIndex + 1) % urls.length;
-                });
-
-                image.attr('src', urls[nextIndex]);
-
-                nextIndex = (nextIndex + 1) % urls.length;
-            }
-
-            /*
-             * IMPORTANT:
-             * Do not start the timer immediately.
-             * The original backdrop remains on screen for 10 seconds.
-             */
-            slideshowTimer = setInterval(
-                showNext,
-                SLIDESHOW_INTERVAL
-            );
-        });
-    }
-
-    /*
-     * Clear current card state
+     * Clear previous card state
      */
     function clearCurrent() {
-        stopSlideshow();
-
         if (currentImage) {
             currentImage.off('error');
         }
@@ -888,11 +637,9 @@
 
         if (!card || !card.id) return;
 
-        var activityRoot = getActivityRoot(ev);
         var titleBlock = getTitleBlock(ev);
         var root = getCardRoot(ev);
 
-        if (!activityRoot.length) return;
         if (!titleBlock.length || !root.length) return;
 
         clearCurrent();
@@ -904,7 +651,7 @@
         currentTitle = titleBlock;
 
         /*
-         * Cinematic information
+         * Position tagline and build information
          */
         prepareTagline(root);
         prepareMetadata(root, card);
@@ -939,11 +686,6 @@
                 token
             );
         });
-
-        /*
-         * TMDB backdrop slideshow
-         */
-        startSlideshow(activityRoot, card, type, token);
     }
 
     /*
