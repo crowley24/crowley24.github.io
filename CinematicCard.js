@@ -3,7 +3,7 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.0 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.1 — CINEMATIC MODE
      *
      * Lampa / Android TV
      *
@@ -19,18 +19,18 @@
      * - Standard Lampa backdrop preserved
      * - Poster hidden
      * - Information block positioned bottom-left
-     * - TMDB logo above metadata
+     * - TMDB logo
+     * - Single metadata row: year / rating / genres
      * - Short description below metadata
      * - Native Lampa buttons preserved
      * - Reactions hidden
      * - No custom background or backdrop effects
-     * - No shadows or filters
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v140_ready) return;
+    if (window.tmdb_movie_logos_v141_ready) return;
 
-    window.tmdb_movie_logos_v140_ready = true;
+    window.tmdb_movie_logos_v141_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
@@ -42,8 +42,7 @@
     var currentToken = 0;
 
     var CACHE_TIMEOUT = 20000;
-
-    var CSS_ID = 'tmdb_movie_logos_v140_css';
+    var CSS_ID = 'tmdb_movie_logos_v141_css';
 
     /*
      * TMDB logo selection
@@ -161,10 +160,53 @@
     }
 
     /*
+     * Metadata builder
+     *
+     * Order:
+     * Year · ★ Rating · Genres
+     */
+    function buildMetadata(card) {
+        var parts = [];
+
+        var release = (
+            card.release_date ||
+            card.first_air_date ||
+            ''
+        ) + '';
+
+        var year = release ? release.slice(0, 4) : '';
+
+        if (year) {
+            parts.push(year);
+        }
+
+        var rating = parseFloat(card.vote_average || 0);
+
+        if (rating > 0) {
+            if (rating > 10) rating = 10;
+
+            parts.push('★ ' + rating.toFixed(1));
+        }
+
+        var genres = (card.genres || [])
+            .slice(0, 3)
+            .map(function (genre) {
+                return genre.name || '';
+            })
+            .filter(Boolean);
+
+        if (genres.length) {
+            parts.push(genres.join(', '));
+        }
+
+        return parts;
+    }
+
+    /*
      * CSS
      *
-     * The default Lampa backdrop is not modified.
-     * Native button elements are not recreated.
+     * Default Lampa backdrop remains untouched.
+     * Native buttons are not recreated.
      */
     function addCSS() {
         if (document.getElementById(CSS_ID)) return;
@@ -190,7 +232,7 @@
             '}' +
 
             /*
-             * Hide poster completely
+             * Hide poster
              */
             '.full-start-new__left{' +
                 'display:none !important;' +
@@ -198,7 +240,6 @@
 
             /*
              * Information block
-             * Bottom-left positioning
              */
             '.full-start-new__right{' +
                 'position:absolute !important;' +
@@ -216,18 +257,14 @@
             '}' +
 
             /*
-             * Year and country line
+             * Remove year/country header above logo
              */
             '.full-start-new__head{' +
-                'display:block;' +
-                'margin:0 0 0.65em 0;' +
-                'font-size:1em;' +
-                'line-height:1.35;' +
-                'opacity:0.82;' +
+                'display:none !important;' +
             '}' +
 
             /*
-             * Title / TMDB logo
+             * Logo / title
              */
             '.full-start-new__title{' +
                 'display:flex;' +
@@ -257,37 +294,66 @@
             '}' +
 
             /*
+             * Metadata row
+             */
+            '.tml-cinematic-meta{' +
+                'display:flex;' +
+                'align-items:center;' +
+                'flex-wrap:nowrap;' +
+                'gap:0.55em;' +
+                'width:100%;' +
+                'max-width:100%;' +
+                'margin:0 0 0.8em 0;' +
+                'padding:0;' +
+                'overflow:hidden;' +
+                'white-space:nowrap;' +
+                'font-family:Inter,system-ui,sans-serif;' +
+                'font-size:1.05em;' +
+                'font-weight:400;' +
+                'line-height:1.4;' +
+                'color:rgba(255,255,255,.88);' +
+                'box-sizing:border-box;' +
+            '}' +
+
+            '.tml-cinematic-meta-item{' +
+                'display:inline-block;' +
+                'flex:0 0 auto;' +
+                'white-space:nowrap;' +
+            '}' +
+
+            '.tml-cinematic-meta-separator{' +
+                'display:inline-block;' +
+                'flex:0 0 auto;' +
+                'opacity:.65;' +
+                'font-size:.9em;' +
+            '}' +
+
+            '.tml-cinematic-meta-item:last-child{' +
+                'overflow:hidden;' +
+                'text-overflow:ellipsis;' +
+            '}' +
+
+            /*
+             * Hide original rating and details rows
+             */
+            '.full-start-new__rate-line,' +
+            '.full-start-new__details{' +
+                'display:none !important;' +
+            '}' +
+
+            /*
              * Tagline
              */
             '.full-start-new__tagline{' +
                 'margin:0 0 0.6em 0;' +
             '}' +
 
-            /*
-             * Ratings row
-             */
-            '.full-start-new__rate-line{' +
-                'display:flex;' +
-                'align-items:center;' +
-                'flex-wrap:wrap;' +
-                'gap:0.65em;' +
-                'margin:0 0 0.55em 0;' +
+            '.full-start-new__tagline:empty{' +
+                'display:none !important;' +
             '}' +
 
             /*
-             * Metadata
-             */
-            '.full-start-new__details{' +
-                'display:block;' +
-                'width:100%;' +
-                'margin:0 0 0.75em 0;' +
-                'line-height:1.5;' +
-                'font-size:0.95em;' +
-                'opacity:0.9;' +
-            '}' +
-
-            /*
-             * Short description
+             * Description
              */
             '.tml-cinematic-description{' +
                 'display:-webkit-box;' +
@@ -298,7 +364,7 @@
                 'overflow:hidden;' +
                 'font-size:1em;' +
                 'line-height:1.45;' +
-                'opacity:0.9;' +
+                'opacity:.9;' +
                 '-webkit-box-orient:vertical;' +
                 '-webkit-line-clamp:3;' +
                 'line-clamp:3;' +
@@ -325,19 +391,12 @@
             '}' +
 
             /*
-             * Hide separate full description section
+             * Hide separate detail description
              */
             '.full-descr,' +
             '.full-start__description,' +
             '.full-start__descr,' +
             '.full-description{' +
-                'display:none !important;' +
-            '}' +
-
-            /*
-             * Remove tagline spacing when empty
-             */
-            '.full-start-new__tagline:empty{' +
                 'display:none !important;' +
             '}';
 
@@ -393,16 +452,57 @@
     }
 
     /*
-     * Add cinematic description
+     * Prepare metadata row
+     */
+    function prepareMetadata(root, card) {
+        if (!root || !root.length) return;
+
+        var parts = buildMetadata(card);
+
+        var row = root.find(
+            '.tml-cinematic-meta'
+        ).first();
+
+        if (!row.length) {
+            row = $('<div class="tml-cinematic-meta"></div>');
+
+            row.insertAfter(
+                root.find('.full-start-new__title').first()
+            );
+        }
+
+        row.empty();
+
+        parts.forEach(function (part, index) {
+            if (index > 0) {
+                row.append(
+                    $('<span class="tml-cinematic-meta-separator">·</span>')
+                );
+            }
+
+            row.append(
+                $('<span class="tml-cinematic-meta-item"></span>').text(part)
+            );
+        });
+
+        if (!parts.length) {
+            row.hide();
+        } else {
+            row.show();
+        }
+    }
+
+    /*
+     * Prepare cinematic description
      */
     function prepareDescription(root, card) {
         if (!root || !root.length) return;
 
-        var details = root.find(
-            '.full-start-new__details'
+        var metadata = root.find(
+            '.tml-cinematic-meta'
         ).first();
 
-        if (!details.length) return;
+        if (!metadata.length) return;
 
         var description = root.find(
             '.tml-cinematic-description'
@@ -416,7 +516,7 @@
         if (!description.length) {
             description = $('<div class="tml-cinematic-description"></div>');
 
-            description.insertAfter(details);
+            description.insertAfter(metadata);
         }
 
         description.text(card.overview);
@@ -509,8 +609,9 @@
         currentTitle = titleBlock;
 
         /*
-         * Cinematic description
+         * Metadata and description
          */
+        prepareMetadata(root, card);
         prepareDescription(root, card);
 
         /*
