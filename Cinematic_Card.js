@@ -1,43 +1,31 @@
+
 (function () {
     'use strict';
 
     /*
      * @name NEWCARD
-     * @version 3.1
+     * @version 3.2
      * @author Crowley24
-     * @description Modern TV interface with native-style TMDB logo display
+     * @description Modern TV interface with native Lampa ratings
      * @platforms Lampa | Android TV
+     *
+     * 3.2 CHANGES:
+     * - Removed all custom ratings (TMDB / CUB)
+     * - Removed all quality badges and quality parser
+     * - Native Lampa rating moved into metadata row
+     * - Description placed directly below metadata
+     * - Removed duplicate native description from details
+     * - Preserved background, slideshow, logos, studios and buttons
      */
 
     const PLUGIN_NAME = 'NewCard';
     const PLUGIN_ID = 'new_card_style';
-    const ASSETS_PATH = 'https://crowley38.github.io/Icons/';
     const CACHE_LIFETIME = 1000 * 60 * 60 * 24;
     const LOGO_CACHE_TIMEOUT = 20000;
 
     let currentInterval = null;
     let logoRequestId = 0;
     let logoRequests = {};
-
-    const ICONS = {
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
-    };
-
-    const QUALITY_ICONS = {
-        '4K': ASSETS_PATH + '4K.svg',
-        '2K': ASSETS_PATH + '2K.svg',
-        'FULL HD': ASSETS_PATH + 'FULL HD.svg',
-        'HD': ASSETS_PATH + 'HD.svg',
-        'HDR': ASSETS_PATH + 'HDR.svg',
-        'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
-        'UKR': ASSETS_PATH + 'UKR.svg',
-        '7.1': ASSETS_PATH + '7.1.svg',
-        '5.1': ASSETS_PATH + '5.1.svg',
-        '4.0': ASSETS_PATH + '4.0.svg',
-        '2.0': ASSETS_PATH + '2.0.svg',
-        'DUB': ASSETS_PATH + 'DUB.svg'
-    };
 
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
@@ -50,8 +38,6 @@
         'settings_cas_animation_style': 'Стиль анімації появи',
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',
         'settings_cas_show_studios': 'Показувати студії',
-        'settings_cas_show_quality': 'Показувати якість',
-        'settings_cas_show_rating': 'Показувати рейтинги',
         'settings_cas_show_description': 'Опис фільму',
         'settings_cas_show_tagline': 'Показувати слоган'
     };
@@ -62,29 +48,32 @@
         return function () {
             const context = this;
             const args = arguments;
+
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+
+            debounceTimer = setTimeout(
+                () => func.apply(context, args),
+                delay
+            );
         };
     }
 
     function preloadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
+
             img.onload = () => resolve(img);
             img.onerror = reject;
             img.src = src;
         });
     }
 
-    function getRatingColor(val) {
-        const n = parseFloat(val);
-        return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
-    }
-
     function formatTime(mins) {
         if (!mins) return '';
+
         const h = Math.floor(mins / 60);
         const m = mins % 60;
+
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
@@ -94,6 +83,10 @@
         addSettings();
         attachLoader();
     }
+
+    // =====================================================
+    // SETTINGS
+    // =====================================================
 
     function addSettings() {
         const defaults = {
@@ -105,8 +98,6 @@
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
-            'cas_show_quality': true,
-            'cas_show_rating': true,
             'cas_show_description': true,
             'cas_show_tagline': true
         };
@@ -187,8 +178,6 @@
             },
             { name: 'cas_slideshow_enabled', type: 'trigger' },
             { name: 'cas_show_studios', type: 'trigger' },
-            { name: 'cas_show_quality', type: 'trigger' },
-            { name: 'cas_show_rating', type: 'trigger' },
             { name: 'cas_show_description', type: 'trigger' },
             { name: 'cas_show_tagline', type: 'trigger' }
         ];
@@ -214,7 +203,11 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+
+        const scale = parseInt(
+            Lampa.Storage.get('cas_logo_scale') || 100
+        ) / 100;
+
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
@@ -246,17 +239,13 @@
 
             currentCard.find('.cas-description').toggle(showDesc);
             currentCard.find('.cas-tagline').toggle(showTag);
+
             currentCard.find('.cas-studios-row').toggle(
                 !!Lampa.Storage.get('cas_show_studios')
             );
-            currentCard.find('.cas-quality-row').toggle(
-                !!Lampa.Storage.get('cas_show_quality')
-            );
-            currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(
-                !!Lampa.Storage.get('cas_show_rating')
-            );
 
             const buttons = currentCard.find('.full-start-new__buttons');
+
             buttons.css('margin-top', showDesc ? '' : '0px');
 
             stopSlideshow();
@@ -285,11 +274,16 @@
         }
     }
 
+    // =====================================================
+    // TEMPLATE
+    // =====================================================
+
     function addCustomTemplate() {
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
 
         const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
             <div class="full-start-new__body">
+
                 <div class="full-start-new__left hide">
                     <div class="full-start-new__poster">
                         <img class="full-start-new__img full--poster" />
@@ -298,16 +292,17 @@
 
                 <div class="full-start-new__right">
                     <div class="left-title__content">
+
                         <div class="cas-logo-container">
                             <div class="cas-studios-row"></div>
                             <div class="cas-logo"></div>
                         </div>
 
-                        <div class="cas-tagline" style="display: none;"></div>
+                        <div class="cas-tagline" style="display:none;"></div>
 
                         <div class="cas-meta-line">
                             <div class="cas-meta-info"></div>
-                            <div class="cas-quality-row"></div>
+                            <div class="cas-native-rating"></div>
                         </div>
 
                         <div class="cas-description"></div>
@@ -318,6 +313,7 @@
                         </div>
 
                         <div class="full-start-new__buttons">
+
                             <div class="full-start__button selector button--play">
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
@@ -356,17 +352,21 @@
                                     <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>
                                 </svg>
                             </div>
+
                         </div>
                     </div>
 
                     <div class="full-start-new__reactions selector hide"></div>
-                    <div class="cas-bottom-ratings"></div>
-                    <div class="full-start-new__rate-line hide"></div>
-                    <div class="rating--modss" style="display: none;"></div>
+
+                    <!-- Native Lampa rating is moved into metadata row -->
+                    <div class="full-start-new__rate-line"></div>
+
+                    <div class="rating--modss" style="display:none;"></div>
                 </div>
             </div>
 
             <div class="hide buttons--container">
+
                 <div class="full-start__button view--torrent hide">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24">
                         <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
@@ -380,16 +380,22 @@
                     </svg>
                     <span>#{full_trailers}</span>
                 </div>
+
             </div>
         </div>`;
 
         Lampa.Template.add('full_start_new', template);
     }
 
+    // =====================================================
+    // STYLES
+    // =====================================================
+
     function addStyles() {
         if ($('#cas-main-styles').length) return;
 
         const styles = `<style id="cas-main-styles">
+
         :root {
             --cas-logo-scale: 1;
             --cas-blocks-gap: 30px;
@@ -408,27 +414,32 @@
             transform: translateZ(0);
         }
 
-        .full-start__background.loaded { opacity: 1 !important; }
-        .full-start__background.dim { opacity: 0.35 !important; }
+        .full-start__background.loaded {
+            opacity: 1 !important;
+        }
+
+        .full-start__background.dim {
+            opacity: 0.35 !important;
+        }
 
         @keyframes casKenBurnsParallax {
-            0% { transform: scale(1.02) translate3d(0, 0, 0); }
-            50% { transform: scale(1.10) translate3d(5px, -15px, 0); }
-            100% { transform: scale(1.02) translate3d(0, 0, 0); }
+            0% { transform: scale(1.02) translate3d(0,0,0); }
+            50% { transform: scale(1.10) translate3d(5px,-15px,0); }
+            100% { transform: scale(1.02) translate3d(0,0,0); }
         }
 
         @keyframes casCinematicPanScan {
-            0% { transform: scale(1.06) translate3d(0, 0, 0); }
-            33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
-            66% { transform: scale(1.10) translate3d(20px, 15px, 0); }
-            100% { transform: scale(1.06) translate3d(0, 0, 0); }
+            0% { transform: scale(1.06) translate3d(0,0,0); }
+            33% { transform: scale(1.12) translate3d(-25px,-12px,0); }
+            66% { transform: scale(1.10) translate3d(20px,15px,0); }
+            100% { transform: scale(1.06) translate3d(0,0,0); }
         }
 
         @keyframes casDynamicTiltZoom {
-            0% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
-            33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px, 10px, 0); }
-            66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px, -10px, 0); }
-            100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
+            0% { transform: scale(1.08) rotate(0deg) translate3d(0,0,0); }
+            33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px,10px,0); }
+            66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px,-10px,0); }
+            100% { transform: scale(1.08) rotate(0deg) translate3d(0,0,0); }
         }
 
         body.cas--zoom-kenburns .full-start__background img,
@@ -454,19 +465,18 @@
 
         .cas-tagline,
         .cas-studios-row,
-        .cas-rate-items,
         .cas-meta-info,
-        .cas-quality-row,
+        .cas-native-rating,
         .cas-description,
         .cas-details-wrapper,
-        .full-start-new__buttons,
-        .cas-bottom-ratings {
+        .full-start-new__buttons {
             opacity: 0 !important;
             will-change: transform, opacity;
             backface-visibility: hidden;
         }
 
-        /* Логотип не бере участі в анімаціях інтерфейсу */
+        /* LOGO */
+
         .cas-logo {
             opacity: 1 !important;
             transform: none !important;
@@ -501,76 +511,69 @@
             color: #fff;
         }
 
-        .cas-quality-row .cas-quality-item {
-            opacity: 0;
-            transform: translate3d(0, 6px, 0) scale(0.9);
-            transition: opacity 0.3s var(--cas-curve-slide), transform 0.3s var(--cas-curve-slide);
+        /* LAYOUT */
+
+        .full-start-new__details {
+            display: none !important;
         }
 
-        .cas-quality-row.show-quality .cas-quality-item {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) scale(1);
+        .full-start-new__head {
+            display: none !important;
         }
 
-        .cas-quality-row.show-quality .cas-quality-item:nth-child(1) { transition-delay: 0s; }
-        .cas-quality-row.show-quality .cas-quality-item:nth-child(2) { transition-delay: 0.05s; }
-        .cas-quality-row.show-quality .cas-quality-item:nth-child(3) { transition-delay: 0.10s; }
-        .cas-quality-row.show-quality .cas-quality-item:nth-child(4) { transition-delay: 0.15s; }
-        .cas-quality-row.show-quality .cas-quality-item:nth-child(5) { transition-delay: 0.20s; }
-
-        .cas-anim-slide .cas-tagline,
-        .cas-anim-slide .cas-studios-row,
-        .cas-anim-slide .cas-rate-items,
-        .cas-anim-slide .cas-meta-info,
-        .cas-anim-slide .cas-quality-row,
-        .cas-anim-slide .cas-description,
-        .cas-anim-slide .cas-details-wrapper,
-        .cas-anim-slide .full-start-new__buttons,
-        .cas-anim-slide .cas-bottom-ratings {
-            transform: translate3d(0, 8px, 0);
-            transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);
+        .full-start-new__body {
+            display: flex;
+            height: 85vh;
+            position: relative;
+            width: 100%;
         }
 
-        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.03s; }
-        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.06s; }
-        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.09s; }
-        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }
-        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }
-        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }
-        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.18s; }
-
-        .cas-anim-spring .cas-tagline,
-        .cas-anim-spring .cas-studios-row,
-        .cas-anim-spring .cas-rate-items,
-        .cas-anim-spring .cas-meta-info,
-        .cas-anim-spring .cas-quality-row,
-        .cas-anim-spring .cas-description,
-        .cas-anim-spring .cas-details-wrapper,
-        .cas-anim-spring .full-start-new__buttons,
-        .cas-anim-spring .cas-bottom-ratings {
-            transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);
-            transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);
+        .full-start-new__left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 4em 3em 2em 2em;
+            position: relative;
+            z-index: 2;
         }
 
-        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.03s; }
-        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.06s; }
-        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.09s; }
-        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }
-        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
-        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
-        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.18s; }
+        .full-start-new__right {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-start !important;
+            text-align: left !important;
+            padding: 4em 4em 2em 0;
+            position: relative;
+            z-index: 2;
+            margin-left: 0 !important;
+        }
 
-        .full-start-new__details { display: none !important; }
-        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }
+        .full-start-new__poster,
+        .full-start-new__title {
+            display: none;
+        }
 
-        .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }
-        .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }
-        .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }
-        .full-start-new__poster, .full-start-new__title { display: none; }
+        .left-title .full-start-new__left {
+            display: none !important;
+        }
 
-        .left-title .full-start-new__left { display: none !important; }
-        .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }
-        .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
+        .left-title .full-start-new__right {
+            width: 100% !important;
+            padding-left: 2em !important;
+        }
+
+        .left-title__content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            text-align: left !important;
+            width: 100%;
+        }
+
+        /* LOGO CONTAINER */
 
         .cas-logo-container {
             position: relative;
@@ -583,22 +586,27 @@
             align-items: flex-start !important;
         }
 
+        /* TAGLINE */
+
         .cas-tagline {
             font-size: calc(var(--cas-meta-size) * 0.95);
             font-style: italic;
-            color: rgba(255, 255, 255, 0.85);
+            color: rgba(255,255,255,0.85);
             margin-bottom: 16px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
             max-width: 650px;
             text-align: left !important;
         }
+
+        /* METADATA + NATIVE RATING */
 
         .cas-meta-line {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             flex-wrap: wrap;
+            width: 100%;
         }
 
         .cas-meta-info {
@@ -608,15 +616,57 @@
             justify-content: flex-start !important;
             gap: 8px;
             font-weight: 400;
+            font-size: var(--cas-meta-size);
         }
 
-        .cas-quality-row {
-            margin-top: 0 !important;
-            display: flex;
+        .cas-native-rating {
+            display: flex !important;
             align-items: center;
             justify-content: flex-start !important;
-            gap: 6px;
+            font-size: var(--cas-meta-size);
         }
+
+        /*
+         * Native Lampa rating line.
+         * It is placed in .cas-meta-line by the template.
+         */
+
+        .full-start-new__rate-line {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-start !important;
+            position: relative !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+            min-height: 0;
+            font-size: var(--cas-meta-size);
+        }
+
+        .full-start-new__rate-line:empty {
+            display: none !important;
+        }
+
+        /* DESCRIPTION */
+
+        .cas-description {
+            font-size: var(--cas-meta-size) !important;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.75);
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            max-width: 650px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+            text-align: left !important;
+        }
+
+        /* BUTTONS */
 
         .full-start-new__buttons {
             display: flex !important;
@@ -625,8 +675,10 @@
             flex-wrap: wrap;
             width: 100%;
             margin-left: 0 !important;
-            margin-top: 0px !important;
+            margin-top: 0 !important;
         }
+
+        /* STUDIOS */
 
         .cas-studios-row {
             display: flex;
@@ -653,51 +705,113 @@
             opacity: 0.95;
         }
 
-        .cas-description {
-            font-size: var(--cas-meta-size) !important;
-            line-height: 1.35;
-            color: rgba(255,255,255,0.7);
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            max-width: 650px;
-            margin-top: 4px;
-            margin-bottom: 8px;
-            text-align: left !important;
+        /* ANIMATION: SLIDE */
+
+        .cas-anim-slide .cas-tagline,
+        .cas-anim-slide .cas-studios-row,
+        .cas-anim-slide .cas-meta-info,
+        .cas-anim-slide .cas-native-rating,
+        .cas-anim-slide .cas-description,
+        .cas-anim-slide .cas-details-wrapper,
+        .cas-anim-slide .full-start-new__buttons {
+            transform: translate3d(0,8px,0);
+            transition:
+                opacity 0.35s var(--cas-curve-slide),
+                transform 0.35s var(--cas-curve-slide);
         }
 
-        .cas-quality-item img { height: 12px; }
-
-        .cas-bottom-ratings {
-            position: absolute;
-            right: 2.5em;
-            bottom: 2em;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: var(--cas-meta-size);
-            font-weight: 600;
-            z-index: 3;
+        .cas-anim-slide.cas-animated .cas-studios-row {
+            opacity: 0.9 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.03s;
         }
 
-        .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-        .cas-rate-item img { height: 1.1em; }
-        .left-title .full-start-new__body { height: 85vh; }
-
-        .cas-audio-item {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: 600;
-            color: white;
+        .cas-anim-slide.cas-animated .cas-tagline {
+            opacity: 0.85 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.06s;
         }
+
+        .cas-anim-slide.cas-animated .cas-meta-info,
+        .cas-anim-slide.cas-animated .cas-native-rating {
+            opacity: 0.9 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.09s;
+        }
+
+        .cas-anim-slide.cas-animated .cas-description {
+            opacity: 0.75 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.12s;
+        }
+
+        .cas-anim-slide.cas-animated .full-start-new__buttons {
+            opacity: 1 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.16s;
+        }
+
+        /* ANIMATION: SPRING */
+
+        .cas-anim-spring .cas-tagline,
+        .cas-anim-spring .cas-studios-row,
+        .cas-anim-spring .cas-meta-info,
+        .cas-anim-spring .cas-native-rating,
+        .cas-anim-spring .cas-description,
+        .cas-anim-spring .cas-details-wrapper,
+        .cas-anim-spring .full-start-new__buttons {
+            transform: scale3d(0.92,0.92,1) translate3d(0,6px,0);
+            transition:
+                opacity 0.4s cubic-bezier(0.175,0.885,0.32,1.275),
+                transform 0.4s var(--cas-curve-spring);
+        }
+
+        .cas-anim-spring.cas-animated .cas-studios-row {
+            opacity: 0.9 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.03s;
+        }
+
+        .cas-anim-spring.cas-animated .cas-tagline {
+            opacity: 0.85 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.06s;
+        }
+
+        .cas-anim-spring.cas-animated .cas-meta-info,
+        .cas-anim-spring.cas-animated .cas-native-rating {
+            opacity: 0.9 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.09s;
+        }
+
+        .cas-anim-spring.cas-animated .cas-description {
+            opacity: 0.75 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.12s;
+        }
+
+        .cas-anim-spring.cas-animated .full-start-new__buttons {
+            opacity: 1 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.16s;
+        }
+
+        .left-title .full-start-new__body {
+            height: 85vh;
+        }
+
         </style>`;
 
         Lampa.Template.add('left_title_css', styles);
-        $('body').append(Lampa.Template.get('left_title_css', {}, true));
+        $('body').append(
+            Lampa.Template.get('left_title_css', {}, true)
+        );
     }
+
+    // =====================================================
+    // BACKDROP CACHE
+    // =====================================================
 
     function getCachedData(id) {
         const cache = Lampa.Storage.get('cas_images_cache') || {};
@@ -727,10 +841,18 @@
         Lampa.Storage.set('cas_images_cache', cache);
     }
 
+    // =====================================================
+    // CLEANUP / SLIDESHOW
+    // =====================================================
+
     function cleanup() {
         stopSlideshow();
         logoRequestId++;
-        $('.left-title__content').parent().parent().removeClass('cas-animated');
+
+        $('.left-title__content')
+            .parent()
+            .parent()
+            .removeClass('cas-animated');
     }
 
     function stopSlideshow() {
@@ -750,60 +872,67 @@
 
         if (!backdrops || backdrops.length <= 1) return;
 
-        let lang_backdrops = [];
-        let no_lang_backdrops = [];
-        let other_backdrops = [];
+        let langBackdrops = [];
+        let noLangBackdrops = [];
+        let otherBackdrops = [];
 
-        backdrops.forEach((b) => {
-            let lang = b.iso_639_1;
+        backdrops.forEach(b => {
+            const lang = b.iso_639_1;
 
-            if (lang === currentLang) lang_backdrops.push(b);
-            else if (!lang || lang === 'xx' || lang === 'null') no_lang_backdrops.push(b);
-            else other_backdrops.push(b);
+            if (lang === currentLang) {
+                langBackdrops.push(b);
+            } else if (!lang || lang === 'xx' || lang === 'null') {
+                noLangBackdrops.push(b);
+            } else {
+                otherBackdrops.push(b);
+            }
         });
 
-        let final_backdrops = [].concat(no_lang_backdrops);
+        let finalBackdrops = [].concat(noLangBackdrops);
 
-        if (final_backdrops.length < 3 && lang_backdrops.length > 0) {
-            final_backdrops = final_backdrops.concat(lang_backdrops);
+        if (finalBackdrops.length < 3 && langBackdrops.length > 0) {
+            finalBackdrops = finalBackdrops.concat(langBackdrops);
         }
 
-        if (final_backdrops.length < 3 && other_backdrops.length > 0) {
-            other_backdrops.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
-            final_backdrops = final_backdrops.concat(other_backdrops);
+        if (finalBackdrops.length < 3 && otherBackdrops.length > 0) {
+            otherBackdrops.sort(
+                (a, b) => (b.vote_average || 0) - (a.vote_average || 0)
+            );
+
+            finalBackdrops = finalBackdrops.concat(otherBackdrops);
         }
 
-        final_backdrops = final_backdrops.slice(0, 15);
+        finalBackdrops = finalBackdrops.slice(0, 15);
 
-        if (final_backdrops.length <= 1) return;
+        if (finalBackdrops.length <= 1) return;
 
         let idx = 0;
-        let is_active = true;
+        let isActive = true;
 
         currentInterval = setInterval(() => {
-            if (!is_active) {
+            if (!isActive) {
                 clearInterval(currentInterval);
                 return;
             }
 
-            idx = (idx + 1) % final_backdrops.length;
+            idx = (idx + 1) % finalBackdrops.length;
 
-            let nextSrc = Lampa.TMDB.image(
-                '/t/p/original' + final_backdrops[idx].file_path
+            const nextSrc = Lampa.TMDB.image(
+                '/t/p/original' + finalBackdrops[idx].file_path
             );
 
-            let $bgImg = render.find(
+            const $bgImg = render.find(
                 '.full-start__background img, img.full-start__background'
             ).last();
 
             if (!$bgImg.length) return;
 
-            let img = new Image();
+            const img = new Image();
 
             img.onload = () => {
-                if (!is_active) return;
+                if (!isActive) return;
 
-                let $container = render.find('.full-start__background');
+                const $container = render.find('.full-start__background');
 
                 $container.css({
                     transition: 'opacity 0.4s ease',
@@ -811,14 +940,16 @@
                 });
 
                 setTimeout(() => {
-                    if (!is_active) return;
+                    if (!isActive) return;
 
                     $bgImg.attr('src', nextSrc);
 
                     setTimeout(() => {
-                        if (!is_active) return;
+                        if (!isActive) return;
+
                         $container.css('opacity', 0.35);
                     }, 100);
+
                 }, 400);
             };
 
@@ -830,12 +961,9 @@
         window.casBgInterval = currentInterval;
     }
 
-    /*
-     * LOGO SYSTEM
-     * Поведінка як у Кінотрейлери 2.3:
-     * мова Lampa -> en -> null -> перший логотип.
-     * Без проміжного тексту та без анімації логотипа.
-     */
+    // =====================================================
+    // TMDB LOGO SYSTEM
+    // =====================================================
 
     function getPreferredLogoLanguage() {
         let lang = '';
@@ -929,7 +1057,6 @@
         if (requestId !== logoRequestId) return;
 
         const title = data.title || data.name || '';
-
         const logoContainer = render.find('.cas-logo');
 
         if (!title) {
@@ -968,10 +1095,12 @@
             logoContainer.empty();
 
             const image = $('<img>');
+
             image.attr('src', logoUrl);
             image.attr('alt', data.title || data.name || '');
 
             logoContainer.append(image);
+
         } catch (e) {
             showLogoFallback(render, data, requestId);
         }
@@ -983,7 +1112,6 @@
 
         const logoContainer = render.find('.cas-logo');
 
-        // Не показуємо текстову назву під час завантаження логотипа.
         logoContainer.empty();
 
         const cachedLogo = getCachedLogo(cacheId);
@@ -998,11 +1126,17 @@
 
             if (selected) {
                 setCachedLogo(cacheId, selected);
-                displayMovieLogo(render, data, imagesData.logos, requestId);
-                return;
+
+                displayMovieLogo(
+                    render,
+                    data,
+                    imagesData.logos,
+                    requestId
+                );
+            } else {
+                showLogoFallback(render, data, requestId);
             }
 
-            showLogoFallback(render, data, requestId);
             return;
         }
 
@@ -1015,7 +1149,13 @@
 
                     if (selected) {
                         setCachedLogo(cacheId, selected);
-                        displayMovieLogo(render, data, result.logos, requestId);
+
+                        displayMovieLogo(
+                            render,
+                            data,
+                            result.logos,
+                            requestId
+                        );
                     } else {
                         showLogoFallback(render, data, requestId);
                     }
@@ -1028,6 +1168,7 @@
         }
 
         const type = data.name ? 'tv/' : 'movie/';
+
         const imagesUrl = Lampa.TMDB.api(
             type + data.id + '/images?api_key=' + Lampa.TMDB.key()
         );
@@ -1037,8 +1178,10 @@
 
             const timeout = setTimeout(() => {
                 if (completed) return;
+
                 completed = true;
                 resolve(null);
+
             }, LOGO_CACHE_TIMEOUT);
 
             $.getJSON(imagesUrl, result => {
@@ -1047,6 +1190,7 @@
                 completed = true;
                 clearTimeout(timeout);
                 resolve(result || null);
+
             }).fail(() => {
                 if (completed) return;
 
@@ -1068,7 +1212,13 @@
 
                 if (selected) {
                     setCachedLogo(cacheId, selected);
-                    displayMovieLogo(render, data, result.logos, requestId);
+
+                    displayMovieLogo(
+                        render,
+                        data,
+                        result.logos,
+                        requestId
+                    );
                 } else {
                     showLogoFallback(render, data, requestId);
                 }
@@ -1078,6 +1228,10 @@
         });
     }
 
+    // =====================================================
+    // STUDIO LOGOS
+    // =====================================================
+
     function renderStudioLogosWithColorAnalysis(container, data) {
         container.empty();
 
@@ -1086,8 +1240,12 @@
         ).filter(s => s.logo_path).slice(0, 1);
 
         studios.forEach(studio => {
-            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
-            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);
+            const logoUrl = Lampa.TMDB.image(
+                '/t/p/w200' + studio.logo_path
+            );
+
+            const id = 'cas_studio_' +
+                Math.random().toString(36).substr(2, 9);
 
             container.append(
                 `<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`
@@ -1139,12 +1297,17 @@
                             );
                         }
                     }
+
                 } catch (e) {}
             };
 
             img.src = logoUrl;
         });
     }
+
+    // =====================================================
+    // IMAGE PROCESSING
+    // =====================================================
 
     async function processImages(render, data, res) {
         try {
@@ -1160,32 +1323,51 @@
                 const currentLang =
                     Lampa.Storage.get('tmdb_lang') || 'uk';
 
-                startSlideshow(render, res.backdrops, currentLang);
+                startSlideshow(
+                    render,
+                    res.backdrops,
+                    currentLang
+                );
             }
+
         } catch (error) {
             showLogoFallback(render, data, logoRequestId);
         }
     }
 
+    // =====================================================
+    // MOVIE METADATA + DESCRIPTION
+    // =====================================================
+
     async function loadMovieDataOptimized(render, data) {
         const tasks = [];
 
+        // TAGLINE
+
         if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
-            render.find('.cas-tagline').text(`«${data.tagline}»`).show();
+            render.find('.cas-tagline')
+                .text('«' + data.tagline + '»')
+                .show();
         } else {
             render.find('.cas-tagline').hide();
         }
+
+        // DESCRIPTION
+        // Only one description, directly below metadata.
 
         if (Lampa.Storage.get('cas_show_description')) {
             tasks.push(
                 Promise.resolve().then(() => {
                     render.find('.cas-description')
-                        .html(data.overview || '')
-                        .css('opacity', '1')
+                        .text(data.overview || '')
                         .show();
                 })
             );
+        } else {
+            render.find('.cas-description').hide();
         }
+
+        // METADATA
 
         tasks.push(
             Promise.resolve().then(() => {
@@ -1206,69 +1388,48 @@
 
                 const time = formatTime(
                     data.runtime ||
-                    (data.episode_run_time ? data.episode_run_time[0] : 0)
+                    (data.episode_run_time
+                        ? data.episode_run_time[0]
+                        : 0)
                 );
 
                 const genres = (data.genres || [])
                     .map(g => g.name)
                     .join(', ');
 
-                let ratings = '';
+                const metaParts = [];
 
-                const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-
-                if (tmdbV > 0) {
-                    ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                if (year) {
+                    metaParts.push(
+                        `<span class="cas-wave-year">${year}</span>`
+                    );
                 }
 
-                if (data.reactions && data.reactions.result) {
-                    let sum = 0;
-                    let cnt = 0;
-
-                    const coef = {
-                        fire: 10,
-                        nice: 7.5,
-                        think: 5,
-                        bore: 2.5,
-                        shit: 0
-                    };
-
-                    data.reactions.result.forEach(r => {
-                        if (r.counter) {
-                            sum += r.counter * coef[r.type];
-                            cnt += r.counter;
-                        }
-                    });
-
-                    if (cnt >= 1) {
-                        const isTv = !!data.name;
-
-                        const cubV = (
-                            (
-                                (isTv ? 7.4 : 6.5) * (isTv ? 50 : 150) +
-                                sum
-                            ) /
-                            ((isTv ? 50 : 150) + cnt)
-                        ).toFixed(1);
-
-                        ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
-                    }
+                if (country) {
+                    metaParts.push(
+                        `<span class="cas-wave-country">${country}</span>`
+                    );
                 }
 
-                let metaParts = [];
+                if (time) {
+                    metaParts.push(
+                        `<span class="cas-wave-time">${time}</span>`
+                    );
+                }
 
-                if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
-                if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
-                if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
-                if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
+                if (genres) {
+                    metaParts.push(
+                        `<span class="cas-wave-genre">${genres}</span>`
+                    );
+                }
 
                 render.find('.cas-meta-info').html(
                     metaParts.join(' &bull; ')
                 );
-
-                render.find('.cas-bottom-ratings').html(ratings);
             })
         );
+
+        // STUDIOS
 
         if (Lampa.Storage.get('cas_show_studios')) {
             tasks.push(
@@ -1279,163 +1440,11 @@
                     );
                 })
             );
+        } else {
+            render.find('.cas-studios-row').empty();
         }
 
         await Promise.all(tasks);
-
-        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
-            let qualityElement = render.find('.cas-quality-row');
-            let buttonsBlock = render.find('.full-start-new__buttons');
-
-            qualityElement.hide();
-
-            Lampa.Parser.get(
-                {
-                    search: data.title || data.name,
-                    movie: data,
-                    page: 1
-                },
-                res => {
-                    try {
-                        const items = res.Results || res;
-
-                        if (
-                            items &&
-                            Array.isArray(items) &&
-                            items.length > 0
-                        ) {
-                            const b = {
-                                res: '',
-                                hdr: false,
-                                dv: false,
-                                ukr: false,
-                                audio: '',
-                                dub: false
-                            };
-
-                            items.slice(0, 8).forEach(i => {
-                                const t = (
-                                    i.Title || i.title || ''
-                                ).toLowerCase();
-
-                                if (t.includes('4k') || t.includes('2160')) {
-                                    b.res = '4K';
-                                } else if (
-                                    !b.res &&
-                                    (t.includes('1080') || t.includes('fhd'))
-                                ) {
-                                    b.res = 'FULL HD';
-                                }
-
-                                if (t.includes('hdr')) b.hdr = true;
-
-                                if (
-                                    t.includes('dv') ||
-                                    t.includes('dovi') ||
-                                    t.includes('vision')
-                                ) {
-                                    b.dv = true;
-                                }
-
-                                if (
-                                    t.includes('ukr') ||
-                                    t.includes('укр')
-                                ) {
-                                    b.ukr = true;
-                                }
-
-                                if (
-                                    t.includes('5.1') ||
-                                    t.includes('5 1')
-                                ) {
-                                    b.audio = '5.1';
-                                } else if (
-                                    t.includes('7.1') ||
-                                    t.includes('7 1')
-                                ) {
-                                    b.audio = '7.1';
-                                }
-
-                                if (
-                                    t.includes('4.0') ||
-                                    t.includes('4 0')
-                                ) {
-                                    b.audio = '4.0';
-                                } else if (
-                                    t.includes('2.0') ||
-                                    t.includes('2 0')
-                                ) {
-                                    b.audio = '2.0';
-                                }
-
-                                if (
-                                    t.includes('dub') ||
-                                    t.includes('дубл')
-                                ) {
-                                    b.dub = true;
-                                }
-                            });
-
-                            let qH = '';
-
-                            if (b.res) {
-                                qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                            }
-
-                            if (b.dv) {
-                                qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
-                            } else if (b.hdr) {
-                                qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;
-                            }
-
-                            if (b.audio) {
-                                qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;
-                            }
-
-                            if (b.dub) {
-                                qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;
-                            }
-
-                            if (b.ukr) {
-                                qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                            }
-
-                            if (qH) {
-                                qualityElement.html(qH).show();
-
-                                if (buttonsBlock.length) {
-                                    buttonsBlock.off(
-                                        'transitionend.casQuality animationend.casQuality'
-                                    );
-
-                                    buttonsBlock.on(
-                                        'transitionend.casQuality animationend.casQuality',
-                                        function handler(e) {
-                                            if (e.target === this) {
-                                                qualityElement.addClass('show-quality');
-
-                                                buttonsBlock.off(
-                                                    'transitionend.casQuality animationend.casQuality',
-                                                    handler
-                                                );
-                                            }
-                                        }
-                                    );
-                                } else {
-                                    qualityElement.addClass('show-quality');
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        qualityElement.hide();
-                    }
-                }
-            ).fail(() => {
-                qualityElement.hide();
-            });
-        } else {
-            render.find('.cas-quality-row').hide();
-        }
     }
 
     const debouncedLoadMovieData = debounce((render, data) => {
@@ -1444,22 +1453,30 @@
         } catch (error) {}
     }, 250);
 
+    // =====================================================
+    // LAMPA EVENT LISTENER
+    // =====================================================
+
     function attachLoader() {
         Lampa.Listener.follow('full', event => {
             if (event.type !== 'complite') return;
 
             const data = event.data.movie;
             const render = event.object.activity.render();
-            const cardRoot = render.find('.full-start-new.left-title');
 
-            // Кожна нова картка отримує власний ідентифікатор запиту логотипа.
+            const cardRoot = render.find(
+                '.full-start-new.left-title'
+            );
+
             logoRequestId++;
 
             cardRoot.removeClass('cas-animated');
 
-            render.find('.cas-quality-row').removeClass('show-quality');
+            // Native rating is not hidden or replaced.
+            // It is already located in the metadata row by template.
 
-            // Порожній контейнер до отримання логотипа.
+            render.find('.cas-description').empty();
+            render.find('.cas-meta-info').empty();
             render.find('.cas-logo').empty();
 
             event.object.activity.onBeforeDestroy = cleanup;
@@ -1473,8 +1490,14 @@
                 const processImagesWrapper = async res => {
                     try {
                         await processImages(render, data, res);
+
                     } catch (e) {
-                        showLogoFallback(render, data, logoRequestId);
+                        showLogoFallback(
+                            render,
+                            data,
+                            logoRequestId
+                        );
+
                     } finally {
                         requestAnimationFrame(() => {
                             cardRoot.addClass('cas-animated');
@@ -1484,6 +1507,7 @@
 
                 if (cached) {
                     processImagesWrapper(cached);
+
                 } else {
                     const imagesUrl = Lampa.TMDB.api(
                         (data.name ? 'tv/' : 'movie/') +
@@ -1495,8 +1519,13 @@
                     $.getJSON(imagesUrl, res => {
                         setCachedData(cacheId, res);
                         processImagesWrapper(res);
+
                     }).fail(() => {
-                        showLogoFallback(render, data, logoRequestId);
+                        showLogoFallback(
+                            render,
+                            data,
+                            logoRequestId
+                        );
 
                         requestAnimationFrame(() => {
                             cardRoot.addClass('cas-animated');
@@ -1509,11 +1538,14 @@
                 }
 
                 debouncedLoadMovieData(render, data);
+
             } else {
                 requestAnimationFrame(() => {
                     cardRoot.addClass('cas-animated');
                 });
             }
+
+            // Initial focus
 
             setTimeout(() => {
                 const firstButton = render.find(
@@ -1521,27 +1553,46 @@
                 ).first();
 
                 if (firstButton.length) {
-                    render.find('.full-start__button').removeClass('focus');
-                    firstButton.addClass('focus').trigger('focus');
+                    render.find('.full-start__button')
+                        .removeClass('focus');
+
+                    firstButton
+                        .addClass('focus')
+                        .trigger('focus');
                 }
             }, 200);
         });
     }
 
+    // =====================================================
+    // START
+    // =====================================================
+
     function startPlugin() {
         try {
             initializePlugin();
-            console.log('NewCard plugin initialized successfully');
+
+            console.log(
+                'NewCard 3.2 initialized successfully'
+            );
+
         } catch (error) {
-            console.error('Failed to initialize NewCard plugin:', error);
+            console.error(
+                'Failed to initialize NewCard plugin:',
+                error
+            );
         }
     }
 
     if (window.appready) {
         startPlugin();
+
     } else {
         Lampa.Listener.follow('app', e => {
-            if (e.type === 'ready') startPlugin();
+            if (e.type === 'ready') {
+                startPlugin();
+            }
         });
     }
+
 })();
