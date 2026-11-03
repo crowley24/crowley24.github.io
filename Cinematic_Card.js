@@ -3,26 +3,18 @@
 
     /*
      * @name NEWCARD
-     * @version 3.3.4
+     * @version 3.3.5
      * @author Crowley24
      * @description Cinematic TV interface with Trailer Feed logo behavior
      * @platforms Lampa | Android TV
      *
-     * 3.3.4 CHANGES:
-     * - Logo display behavior copied from Trailer Feed 2.3
-     * - No custom logo entrance animation
-     * - No logo transform, scaling, shadow or filter
-     * - Logo geometry: 30em x 8em
-     * - Logo object-fit: contain
-     * - Logo object-position: left center
-     * - Logo shown immediately after successful loading
-     * - Metadata animation disabled
-     * - Three-line description
-     * - Rating first in metadata row
-     * - 24-hour logo cache
-     * - Language-filtered TMDB image request
-     * - Stale request protection
-     * - Preserved original NEWCARD background and controls
+     * 3.3.5 CHANGES:
+     * - Independent full-screen fixed gradient overlay
+     * - Gradient no longer belongs to the content block
+     * - Background remains bright in the upper part
+     * - Gradual darkening starts around metadata/description area
+     * - Gradient remains stationary while scrolling
+     * - All NEWCARD 3.3.4 functionality preserved
      */
 
     const PLUGIN_NAME = 'NewCard';
@@ -316,6 +308,9 @@
             Lampa.Storage.get('cas_animation_style') || 'slide';
 
         const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
+
+            <div class="cas-screen-gradient"></div>
+
             <div class="full-start-new__body">
 
                 <div class="full-start-new__left hide">
@@ -491,6 +486,41 @@
             transform-origin: center center;
         }
 
+        /* =================================================
+           FIXED FULL-SCREEN GRADIENT
+           ================================================= */
+
+        .left-title .cas-screen-gradient {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+
+            width: 100vw !important;
+            height: 100vh !important;
+
+            display: block !important;
+            pointer-events: none !important;
+
+            z-index: 2 !important;
+
+            background: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0) 0%,
+                rgba(0,0,0,0) 40%,
+                rgba(0,0,0,0.06) 47%,
+                rgba(0,0,0,0.16) 55%,
+                rgba(0,0,0,0.34) 67%,
+                rgba(0,0,0,0.62) 81%,
+                rgba(0,0,0,0.82) 92%,
+                rgba(0,0,0,0.94) 100%
+            );
+
+            transform: translateZ(0);
+            will-change: auto;
+        }
+
         /* TRAILER FEED INFORMATION BLOCK */
 
         .cas-tagline,
@@ -530,12 +560,11 @@
             flex-direction: column;
             align-items: flex-start !important;
             text-align: left !important;
-            background: linear-gradient(
-                to top,
-                rgba(0,0,0,.94) 0%,
-                rgba(0,0,0,.65) 48%,
-                transparent 100%
-            );
+
+            /* Градієнт перенесено в окремий fixed overlay */
+
+            background: none !important;
+
             cursor: pointer;
         }
 
@@ -818,6 +847,19 @@
             .left-title__content {
                 padding: 4em 8em 12.5em 1.5em;
                 right: 0;
+            }
+
+            .left-title .cas-screen-gradient {
+                background: linear-gradient(
+                    to bottom,
+                    rgba(0,0,0,0) 0%,
+                    rgba(0,0,0,0) 34%,
+                    rgba(0,0,0,0.08) 45%,
+                    rgba(0,0,0,0.22) 57%,
+                    rgba(0,0,0,0.48) 72%,
+                    rgba(0,0,0,0.76) 87%,
+                    rgba(0,0,0,0.94) 100%
+                );
             }
 
             .cas-logo-container {
@@ -1796,7 +1838,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.4 initialized successfully'
+                'NewCard 3.3.5 initialized successfully'
             );
 
         } catch (error) {
