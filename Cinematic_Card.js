@@ -1,19 +1,18 @@
-
 (function () {
     'use strict';
 
     /*
      * @name NEWCARD
-     * @version 3.3
+     * @version 3.3.1
      * @author Crowley24
      * @description Modern TV interface with native Lampa ratings
      * @platforms Lampa | Android TV
      *
-     * 3.3 CHANGES:
-     * - Description is now always enabled
+     * 3.3.1 CHANGES:
+     * - Added verified CSS selectors to hide original Lampa description
+     * - Custom TMDB description always enabled
+     * - Native Lampa rating placed inside metadata row
      * - Removed description toggle from settings
-     * - Hidden original Lampa description completely
-     * - Native Lampa rating correctly placed inside metadata row
      * - Preserved background, slideshow, logos, studios and buttons
      */
 
@@ -231,7 +230,6 @@
 
             const showTag = !!Lampa.Storage.get('cas_show_tagline');
 
-            // Custom description is ALWAYS visible when it has content.
             currentCard.find('.cas-description').each(function () {
                 const el = $(this);
                 const text = el.text().trim();
@@ -508,13 +506,18 @@
 
         /* LAYOUT */
 
-        /* Hide original Lampa details and its description. */
+        /* Hide original Lampa details and original description. */
+
         .full-start-new__details,
         .full-start-new__description,
         .full-start-new__overview,
         .full-start-new__text,
         .full-start-new__head,
-        .cas-details-wrapper {
+        .cas-details-wrapper,
+        .full-descr,
+        .full-start__description,
+        .full-start__descr,
+        .full-description {
             display: none !important;
         }
 
@@ -1464,8 +1467,17 @@
             render.find('.cas-logo').empty();
 
             // Hide original Lampa description elements.
+
             render.find(
-                '.full-start-new__details, .full-start-new__description, .full-start-new__overview, .full-start-new__text, .full-start-new__head'
+                '.full-start-new__details, ' +
+                '.full-start-new__description, ' +
+                '.full-start-new__overview, ' +
+                '.full-start-new__text, ' +
+                '.full-start-new__head, ' +
+                '.full-descr, ' +
+                '.full-start__description, ' +
+                '.full-start__descr, ' +
+                '.full-description'
             ).hide();
 
             event.object.activity.onBeforeDestroy = cleanup;
@@ -1558,7 +1570,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3 initialized successfully'
+                'NewCard 3.3.1 initialized successfully'
             );
 
         } catch (error) {
