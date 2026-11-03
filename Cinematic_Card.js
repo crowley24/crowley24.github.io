@@ -548,25 +548,21 @@
         }
 
         .left-title__content {
-            position: absolute !important;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 5;
-            box-sizing: border-box;
-            width: 100%;
-            padding: 7em 12em 2.5em 3em;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start !important;
-            text-align: left !important;
-
-            /* Градієнт перенесено в окремий fixed overlay */
-
-            background: none !important;
-
-            cursor: pointer;
-        }
+    position: absolute !important;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 7em 12em 2.5em 3em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    text-align: left !important;
+    background: transparent !important;
+    cursor: pointer;
+}
 
         .cas-logo-container {
             position: relative;
