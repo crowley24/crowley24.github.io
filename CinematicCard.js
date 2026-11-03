@@ -2,18 +2,16 @@
     'use strict';
 
     /*
-     * CROWLEY24 — LOGO REPLACER PLUGIN
-     * Заміна текстових заголовків на графічні логотипи (на базі механіки плагіна «КіноТрейлери»)
+     * CROWLEY24 — FULL CARD LOGO REPLACER
+     * Заміна текстового заголовка на графічний логотип у повній картці (на базі «КіноТрейлери»)
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.crowley_logo_replacer) return;
+    if (window.crowley_full_logo_replacer) return;
 
-    window.crowley_logo_replacer = true;
+    window.crowley_full_logo_replacer = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
-
-    // Кеш для логотипів, щоб не робити зайвих запитів до API
     var logoCache = {};
 
     // --------------------------------------------------
@@ -39,7 +37,9 @@
     }
 
     function cachedLogo(item, cb) {
-        var type = item.name ? 'tv' : 'movie';
+        var type = (item.name || item.first_air_date) ? 'tv' : 'movie';
+        if (item.method) type = item.method; // Точне визначення типу від Lampa
+        
         var id = item.id;
         var cacheKey = type + '_' + id;
 
@@ -71,7 +71,6 @@
                     : null;
 
                 var logoUrl = logo ? Lampa.Api.img(logo.file_path, 'w500') : null;
-
                 finish(logoUrl);
             },
             function () {
@@ -93,46 +92,52 @@
     }
 
     // --------------------------------------------------
-    // ІН'ЄКЦІЯ ЛОГОТИПІВ У КАРТКИ ТА ЕКРАНИ
+    // ОБРОБКА ПОВНОЇ КАРТКИ
     // --------------------------------------------------
 
-    function processElement(container) {
-        $(container).find('.card, .full-start, .view--full').each(function () {
-            var $el = $(this);
+    function processFullCard(container) {
+        $(container).find('.full-start').each(function () {
+            var $fullStart = $(this);
             
-            // Шукаємо дані картки у DOM-елементі Lampa
-            var cardData = $el.data('card') || $el[0].card_data;
+            // Запобігаємо повторній обробці того самого контейнера
+            if ($fullStart.hasClass('crowley-logo-processed')) return;
+
+            // Отримуємо дані фільму/серіалу з активіті або DOM
+            var cardData = $fullStart.data('card') || (window.active && window.active.card);
+            
+            // Якщо напряму через data немає, пробуємо витягнути з глобального об'єкта поточного компонента
+            if (!cardData && Lampa.Activity.active() && Lampa.Activity.active().card) {
+                cardData = Lampa.Activity.active().card;
+            }
+
             if (!cardData || !cardData.id) return;
 
-            // Шукаємо контейнери для заголовка та майбутнього логотипа
-            var $title = $el.find('.card__title, .full-start__title');
+            $fullStart.addClass('crowley-logo-processed');
+
+            var $title = $fullStart.find('.full-start__title');
             if (!$title.length) return;
 
-            // Перевіряємо, чи вже створювали логотип для цієї картки
-            if ($el.hasClass('has-tmdb-logo')) return;
-            $el.addClass('has-tmdb-logo');
-
-            // Створюємо елемент картинки для логотипа, якщо його ще немає
-            var $logo = $el.find('.tmdb-replaced-logo');
+            // Створюємо елемент для графічного логотипа перед заголовком
+            var $logo = $fullStart.find('.crowley-full-logo');
             if (!$logo.length) {
-                $logo = $('<img class="tmdb-replaced-logo" style="display:none; object-fit:contain; object-position:left center; max-width:100%; max-height:4.5em; margin-bottom:.3em;">');
+                $logo = $('<img class="crowley-full-logo" style="display:none; object-fit:contain; object-position:left center; max-width:28em; max-height:7em; margin-bottom:0.4em;">');
                 $title.before($logo);
             }
 
             cachedLogo(cardData, function (url) {
                 if (url) {
                     $logo.attr('src', url).show();
-                    $title.hide(); // Ховаємо звичайний текст, якщо знайшли якісний логотип
+                    $title.hide(); // Ховаємо текстовий заголовок, якщо є якісний логотип
                 } else {
                     $logo.hide();
-                    $title.show();
+                    $title.show(); // Залишаємо стандартний текст за відсутності логотипа
                 }
             });
         });
     }
 
     // --------------------------------------------------
-    // СТЕЖЕННЯ ЗА ЗМІНАМИ ДОМ-ДЕРЕВА (СПЕЦІЙНО ДЛЯ LAMPA)
+    // МОНІТОРИНГ ПОЯВИ ПОВНОЇ КАРТКИ (MutationObserver)
     // --------------------------------------------------
 
     function initObserver() {
@@ -142,7 +147,9 @@
                     for (var i = 0; i < mutation.addedNodes.length; i++) {
                         var node = mutation.addedNodes[i];
                         if (node.nodeType === 1) {
-                            processElement(node);
+                            if ($(node).hasClass('full-start') || $(node).find('.full-start').length) {
+                                processFullCard(node);
+                            }
                         }
                     }
                 }
@@ -156,20 +163,17 @@
     }
 
     // --------------------------------------------------
-    // ЗАПУСК
+    // ЗАПУСК ПЛАГІНА
     // --------------------------------------------------
 
     function start() {
-        if (window.crowley_logo_replacer_started) return;
-        window.crowley_logo_replacer_started = true;
+        if (window.crowley_full_logo_replacer_started) return;
+        window.crowley_full_logo_replacer_started = true;
 
-        // Первинна обробка того, що вже є на сторінці
-        processElement(document.body);
-
-        // Запуск моніторингу динамічного завантаження елементів
+        processFullCard(document.body);
         initObserver();
 
-        console.log('Crowley24 Logo Replacer initialized.');
+        console.log('Crowley24 Full Card Logo Replacer initialized.');
     }
 
     if (window.appready) {
