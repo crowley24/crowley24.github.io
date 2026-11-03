@@ -1,1383 +1,1017 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB CINEMATIC MOBILE 1.1.0
+     * TMDB CINEMATIC MOBILE 1.2.0
      *
      * Lampa / Mobile
      *
-     * FEATURES:
-     * - Full cinematic TMDB backdrop
-     * - Independent mobile backdrop loading
-     * - TMDB movie / TV logos
-     * - Language priority: Lampa language > English > neutral > first
-     * - Production company logos
-     * - Native Lampa tagline and metadata
-     * - Custom overview description
-     * - Smooth image transitions
-     * - TMDB image cache
-     * - Protection against outdated requests
-     * - Automatic cleanup
-     *
-     * IMPORTANT:
-     * - Mobile only
-     * - Native Lampa buttons are not modified
-     * - No slideshow
-     * - No custom navigation
+     * Features:
+     * - Mobile devices only
+     * - Full-width cinematic TMDB backdrop
+     * - TMDB logo: Ukrainian > English > neutral
+     * - Tagline
+     * - TMDB / IMDb / KP ratings
+     * - Production companies
+     * - Overview
+     * - Native Lampa buttons preserved
+     * - Robust full activity detection
+     * - Request protection
+     * - Image cache
      */
 
-    if (!window.Lampa || !window.Lampa.Listener) return;
-
-    if (window.tmdb_cinematic_mobile_110_ready) return;
-    window.tmdb_cinematic_mobile_110_ready = true;
-
-    var VERSION = '1.1.0';
-
-    var CACHE_PREFIX = 'tmdb_cinematic_mobile_110_';
+    var VERSION = '1.2.0';
+    var READY_KEY = 'tmdb_cinematic_mobile_120_ready';
+    var CACHE_KEY = 'tmdb_cinematic_mobile_cache_120';
     var CACHE_TTL = 6 * 60 * 60 * 1000;
-    var REQUEST_TIMEOUT = 20000;
 
-    var MAX_STUDIOS = 4;
+    if (window[READY_KEY]) return;
+    window[READY_KEY] = true;
 
-    var activeStates = [];
-    var requestCounter = 0;
+    if (!window.Lampa || !window.$) return;
 
-    var CSS_ID = 'tmdb-cinematic-mobile-110-css';
+    var Lampa = window.Lampa;
+    var $ = window.$;
 
-    /*
-     * MOBILE DETECTION
-     */
+    var currentId = 0;
+    var requestId = 0;
+    var observer = null;
+    var activeRoot = null;
+
+    var memoryCache = {};
+
+    /* -------------------------------------------------------
+       DEVICE
+    ------------------------------------------------------- */
 
     function isMobile() {
-        try {
-            if (Lampa.Platform && Lampa.Platform.screen('tv')) {
-                return false;
-            }
-        } catch (e) {}
-
         var ua = navigator.userAgent || '';
 
-        return window.innerWidth <= 790 ||
-            /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+        var phoneUA =
+            /iPhone|iPod|Android.*Mobile|Windows Phone|IEMobile/i.test(ua);
+
+        var tabletUA =
+            /iPad|Android(?!.*Mobile)|Tablet/i.test(ua);
+
+        if (phoneUA) return true;
+        if (tabletUA) return false;
+
+        return window.innerWidth <= 790 &&
+            !isTV();
     }
 
-    /*
-     * LANGUAGE
-     */
-
-    function getLanguage() {
-        var lang = '';
-
+    function isTV() {
         try {
-            if (Lampa.Storage && Lampa.Storage.get) {
-                lang = Lampa.Storage.get('tmdb_lang') ||
-                    Lampa.Storage.get('language') ||
-                    '';
+            if (Lampa.Platform && Lampa.Platform.screen) {
+                if (Lampa.Platform.screen('tv')) return true;
             }
         } catch (e) {}
 
-        if (!lang && Lampa.Lang) {
-            try {
-                lang = Lampa.Lang.code || '';
-            } catch (e) {}
-        }
-
-        lang = String(lang || 'uk').toLowerCase();
-
-        if (lang.indexOf('-') !== -1) {
-            lang = lang.split('-')[0];
-        }
-
-        if (lang.indexOf('_') !== -1) {
-            lang = lang.split('_')[0];
-        }
-
-        return lang;
+        return false;
     }
 
-    /*
-     * TMDB IMAGE URL
-     */
+    /* -------------------------------------------------------
+       HELPERS
+    ------------------------------------------------------- */
 
-    function imageUrl(path, size) {
-        if (!path) return '';
+    function elementOf(value) {
+        if (!value) return null;
 
-        try {
-            return Lampa.Api.img(path, size || 'original');
-        } catch (e) {
-            return '';
-        }
-    }
+        if (value.nodeType === 1) return value;
 
-    /*
-     * CACHE
-     */
-
-    function cacheGet(key) {
-        try {
-            var raw = localStorage.getItem(CACHE_PREFIX + key);
-
-            if (!raw) return null;
-
-            var data = JSON.parse(raw);
-
-            if (!data || !data.time || !data.value) {
-                localStorage.removeItem(CACHE_PREFIX + key);
-                return null;
-            }
-
-            if (Date.now() - data.time > CACHE_TTL) {
-                localStorage.removeItem(CACHE_PREFIX + key);
-                return null;
-            }
-
-            return data.value;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function cacheSet(key, value) {
-        try {
-            localStorage.setItem(
-                CACHE_PREFIX + key,
-                JSON.stringify({
-                    time: Date.now(),
-                    value: value
-                })
-            );
-        } catch (e) {}
-    }
-
-    /*
-     * TMDB SOURCE
-     */
-
-    function getTMDB() {
-        try {
-            return Lampa.Api.sources.tmdb;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    /*
-     * TMDB REQUEST
-     *
-     * Uses the native Lampa TMDB source.
-     */
-
-    function tmdbRequest(path, langs, callback) {
-        var tmdb = getTMDB();
-
-        if (!tmdb || typeof tmdb.get !== 'function') {
-            callback(null);
-            return;
+        if (value[0] && value[0].nodeType === 1) {
+            return value[0];
         }
 
-        var finished = false;
-
-        var timer = setTimeout(function () {
-            done(null);
-        }, REQUEST_TIMEOUT);
-
-        function done(data) {
-            if (finished) return;
-
-            finished = true;
-
-            clearTimeout(timer);
-
-            callback(data || null);
-        }
-
-        try {
-            var result = tmdb.get(
-                path,
-                {
-                    filter: {
-                        include_image_language: langs
-                    }
-                },
-                function (data) {
-                    done(data);
-                }
-            );
-
-            if (result && typeof result.then === 'function') {
-                result.then(function (data) {
-                    done(data);
-                }).catch(function () {
-                    done(null);
-                });
-            }
-        } catch (e) {
-            done(null);
-        }
-    }
-
-    /*
-     * IMAGE LANGUAGE PRIORITY
-     *
-     * 1. Lampa language
-     * 2. English
-     * 3. Neutral
-     * 4. First available
-     */
-
-    function pickLogo(logos) {
-        if (!logos || !logos.length) return null;
-
-        var lang = getLanguage();
-
-        var preferred = logos.filter(function (logo) {
-            return logo.iso_639_1 === lang;
-        });
-
-        if (preferred.length) {
-            return preferred[0];
-        }
-
-        var english = logos.filter(function (logo) {
-            return logo.iso_639_1 === 'en';
-        });
-
-        if (english.length) {
-            return english[0];
-        }
-
-        var neutral = logos.filter(function (logo) {
-            return !logo.iso_639_1;
-        });
-
-        if (neutral.length) {
-            return neutral[0];
-        }
-
-        return logos[0];
-    }
-
-    /*
-     * BACKDROP PRIORITY
-     */
-
-    function pickBackdrop(backdrops) {
-        if (!backdrops || !backdrops.length) return null;
-
-        var sorted = backdrops.slice().sort(function (a, b) {
-            return (b.vote_average || 0) - (a.vote_average || 0);
-        });
-
-        return sorted[0];
-    }
-
-    /*
-     * CREATE IMAGE
-     */
-
-    function preloadImage(url, callback) {
-        if (!url) {
-            callback(null);
-            return;
-        }
-
-        var image = new Image();
-
-        var completed = false;
-
-        function finish(result) {
-            if (completed) return;
-
-            completed = true;
-
-            image.onload = null;
-            image.onerror = null;
-
-            callback(result);
-        }
-
-        image.onload = function () {
-            finish(image);
-        };
-
-        image.onerror = function () {
-            finish(null);
-        };
-
-        image.src = url;
-    }
-
-    /*
-     * STATE
-     */
-
-    function createState(root, card, link) {
-        requestCounter++;
-
-        var state = {
-            id: requestCounter,
-            root: root,
-            card: card,
-            link: link,
-            alive: true,
-            backdrop: null,
-            logo: null,
-            studioRow: null,
-            description: null,
-            originalTitle: '',
-            titleElement: null
-        };
-
-        activeStates.push(state);
-
-        return state;
-    }
-
-    function isAlive(state) {
-        return !!(
-            state &&
-            state.alive &&
-            state.root &&
-            state.root.isConnected
-        );
-    }
-
-    /*
-     * CLEANUP
-     */
-
-    function cleanupState(state) {
-        if (!state || !state.alive) return;
-
-        state.alive = false;
-
-        if (state.root) {
-            state.root.classList.remove('tmlm-active');
-
-            var elements = state.root.querySelectorAll(
-                '.tmlm-backdrop, .tmlm-gradient, ' +
-                '.tmlm-studios, .tmlm-description'
-            );
-
-            Array.prototype.forEach.call(elements, function (element) {
-                if (element.parentNode) {
-                    element.parentNode.removeChild(element);
-                }
-            });
-
-            var title = state.root.querySelector(
-                '.full-start-new__title'
-            );
-
-            if (title && title.dataset.tmlmOriginal !== undefined) {
-                title.innerHTML = '';
-
-                title.textContent = title.dataset.tmlmOriginal;
-
-                delete title.dataset.tmlmOriginal;
-                delete title.dataset.tmlmLogo;
-            }
-
-            var tagline = state.root.querySelector(
-                '.full-start-new__tagline'
-            );
-
-            if (tagline) {
-                tagline.style.display = '';
-            }
-        }
-
-        activeStates = activeStates.filter(function (item) {
-            return item !== state;
-        });
-    }
-
-    function cleanupAll() {
-        activeStates.slice().forEach(function (state) {
-            cleanupState(state);
-        });
-    }
-
-    /*
-     * ROOT ELEMENT
-     */
-
-    function getCardRoot(body) {
-        if (!body) return null;
-
-        var element = body.jquery ? body[0] : body;
-
-        if (!element) return null;
-
-        if (element.classList &&
-            element.classList.contains('full-start-new')) {
-            return element;
-        }
-
-        if (element.querySelector) {
-            return element.querySelector('.full-start-new');
+        if (value.jquery && value.get) {
+            return value.get(0);
         }
 
         return null;
     }
 
-    /*
-     * BACKDROP
-     *
-     * Important:
-     * Native Lampa removes .full-start__background
-     * on mobile screens.
-     *
-     * We therefore create our own independent backdrop
-     * inside .full-start-new.
-     */
+    function findCard(value) {
+        var root = elementOf(value);
 
-    function createBackdrop(state) {
-        if (!isAlive(state)) return;
+        if (!root) return null;
 
-        var root = state.root;
-
-        var backdrop = document.createElement('div');
-
-        backdrop.className = 'tmlm-backdrop';
-
-        var image = document.createElement('img');
-
-        image.className = 'tmlm-backdrop__image';
-
-        image.alt = '';
-
-        backdrop.appendChild(image);
-
-        var gradient = document.createElement('div');
-
-        gradient.className = 'tmlm-gradient';
-
-        root.insertBefore(backdrop, root.firstChild);
-
-        root.appendChild(gradient);
-
-        state.backdrop = backdrop;
-
-        var path = state.card.backdrop_path || '';
-
-        var cacheKey = 'backdrop_' + state.card.id;
-
-        var cached = cacheGet(cacheKey);
-
-        if (cached) {
-            showBackdrop(state, cached);
-            return;
+        if (root.matches && root.matches('.full-start-new')) {
+            return root;
         }
 
-        if (path) {
-            var url = imageUrl(path, 'w1280');
+        if (root.querySelector) {
+            var card = root.querySelector('.full-start-new');
 
-            preloadImage(url, function (loaded) {
-                if (!isAlive(state)) return;
-
-                if (loaded) {
-                    cacheSet(cacheKey, path);
-                    showBackdrop(state, path);
-                } else {
-                    loadBackdropFromImages(state);
-                }
-            });
-        } else {
-            loadBackdropFromImages(state);
+            if (card) return card;
         }
+
+        return null;
     }
 
-    function showBackdrop(state, path) {
-        if (!isAlive(state)) return;
+    function findActivity(event) {
+        if (!event || !event.data) return null;
 
-        var url = imageUrl(path, 'w1280');
+        var data = event.data;
 
-        if (!url || !state.backdrop) return;
+        var link = data.link;
 
-        var image = state.backdrop.querySelector('img');
+        if (link) {
+            var html = link.html;
 
-        if (!image) return;
+            var card = findCard(html);
 
-        preloadImage(url, function (loaded) {
-            if (!isAlive(state) || !loaded) return;
+            if (card) return card;
 
-            image.src = url;
+            var linkElement = elementOf(html);
 
-            state.backdrop.classList.add('tmlm-loaded');
-        });
-    }
+            if (linkElement && linkElement.querySelector) {
+                card = linkElement.querySelector('.full-start-new');
 
-    function loadBackdropFromImages(state) {
-        if (!isAlive(state)) return;
-
-        var type = getMediaType(state.card);
-
-        var key = 'images_' + type + '_' + state.card.id;
-
-        var cached = cacheGet(key);
-
-        if (cached) {
-            var backdrop = pickBackdrop(cached.backdrops || []);
-
-            if (backdrop && backdrop.file_path) {
-                cacheSet('backdrop_' + state.card.id, backdrop.file_path);
-                showBackdrop(state, backdrop.file_path);
+                if (card) return card;
             }
-
-            return;
         }
 
-        requestImages(state, function (images) {
-            if (!isAlive(state) || !images) return;
+        var bodyCard = findCard(data.body);
 
-            cacheSet(key, images);
+        if (bodyCard) return bodyCard;
 
-            var backdrop = pickBackdrop(images.backdrops || []);
-
-            if (backdrop && backdrop.file_path) {
-                cacheSet('backdrop_' + state.card.id, backdrop.file_path);
-                showBackdrop(state, backdrop.file_path);
-            }
-        });
+        return findCard(data.html);
     }
 
-    /*
-     * MEDIA TYPE
-     */
+    function getMovie(event) {
+        if (!event || !event.data) return null;
 
-    function getMediaType(card) {
-        if (card.media_type === 'tv') return 'tv';
+        var data = event.data;
 
-        if (card.media_type === 'movie') return 'movie';
+        if (data.data && data.data.movie) {
+            return data.data.movie;
+        }
 
-        if (card.first_air_date) return 'tv';
+        if (data.movie) return data.movie;
 
-        if (card.name && !card.release_date) return 'tv';
+        if (data.object) return data.object;
+
+        return null;
+    }
+
+    function getType(movie) {
+        if (!movie) return 'movie';
+
+        if (
+            movie.number_of_seasons ||
+            movie.first_air_date ||
+            movie.name ||
+            movie.original_name
+        ) {
+            return 'tv';
+        }
 
         return 'movie';
     }
 
-    /*
-     * LOAD TMDB IMAGES
-     */
+    function getId(movie) {
+        if (!movie) return 0;
 
-    function requestImages(state, callback) {
-        if (!isAlive(state)) return;
+        return Number(
+            movie.id ||
+            movie.tmdb_id ||
+            movie.movie_id ||
+            0
+        );
+    }
 
-        var card = state.card;
+    function escapeHTML(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
-        var type = getMediaType(card);
+    function imageUrl(path, size) {
+        if (!path) return '';
 
-        var langs = getLanguage() + ',en,null';
+        if (/^https?:\/\//i.test(path)) return path;
 
-        var key = 'images_' + type + '_' + card.id;
+        return 'https://image.tmdb.org/t/p/' +
+            (size || 'w1280') + path;
+    }
 
-        var cached = cacheGet(key);
+    function isAlive(element) {
+        if (!element) return false;
+
+        if (typeof element.isConnected === 'boolean') {
+            return element.isConnected;
+        }
+
+        return document.documentElement.contains(element);
+    }
+
+    /* -------------------------------------------------------
+       CACHE
+    ------------------------------------------------------- */
+
+    function cacheGet(key) {
+        if (memoryCache[key]) {
+            var item = memoryCache[key];
+
+            if (Date.now() - item.time < CACHE_TTL) {
+                return item.data;
+            }
+        }
+
+        try {
+            var storage = JSON.parse(
+                localStorage.getItem(CACHE_KEY) || '{}'
+            );
+
+            var saved = storage[key];
+
+            if (
+                saved &&
+                saved.time &&
+                Date.now() - saved.time < CACHE_TTL
+            ) {
+                memoryCache[key] = saved;
+                return saved.data;
+            }
+        } catch (e) {}
+
+        return null;
+    }
+
+    function cacheSet(key, data) {
+        var item = {
+            time: Date.now(),
+            data: data
+        };
+
+        memoryCache[key] = item;
+
+        try {
+            var storage = JSON.parse(
+                localStorage.getItem(CACHE_KEY) || '{}'
+            );
+
+            storage[key] = item;
+
+            var keys = Object.keys(storage);
+
+            if (keys.length > 100) {
+                keys.sort(function (a, b) {
+                    return storage[a].time - storage[b].time;
+                });
+
+                keys.slice(0, keys.length - 100).forEach(function (key) {
+                    delete storage[key];
+                });
+            }
+
+            localStorage.setItem(
+                CACHE_KEY,
+                JSON.stringify(storage)
+            );
+        } catch (e) {}
+    }
+
+    /* -------------------------------------------------------
+       TMDB API
+    ------------------------------------------------------- */
+
+    function tmdbImages(type, id, callback) {
+        var cacheKey = type + '_' + id + '_images';
+
+        var cached = cacheGet(cacheKey);
 
         if (cached) {
             callback(cached);
             return;
         }
 
-        tmdbRequest(
-            type + '/' + card.id + '/images',
-            langs,
-            function (data) {
-                if (!isAlive(state)) return;
-
-                if (!data) {
-                    callback(null);
-                    return;
-                }
-
-                cacheSet(key, data);
-
-                callback(data);
-            }
-        );
-    }
-
-    /*
-     * MOVIE / TV LOGO
-     */
-
-    function createLogo(state) {
-        if (!isAlive(state)) return;
-
-        var title = state.root.querySelector(
-            '.full-start-new__title'
-        );
-
-        if (!title) return;
-
-        state.titleElement = title;
-
-        state.originalTitle = title.textContent || '';
-
-        title.dataset.tmlmOriginal = state.originalTitle;
-
-        var type = getMediaType(state.card);
-
-        var key = 'images_' + type + '_' + state.card.id;
-
-        var cached = cacheGet(key);
-
-        if (cached) {
-            displayLogo(state, cached);
+        if (
+            !Lampa.Api ||
+            !Lampa.Api.sources ||
+            !Lampa.Api.sources.tmdb ||
+            !Lampa.Api.sources.tmdb.get
+        ) {
+            callback(null);
             return;
         }
 
-        requestImages(state, function (images) {
-            if (!isAlive(state) || !images) return;
+        var path = '/' + type + '/' + id + '/images';
 
-            displayLogo(state, images);
-        });
-    }
+        var params = {
+            filter: {
+                include_image_language: 'uk,en,null'
+            }
+        };
 
-    function displayLogo(state, images) {
-        if (!isAlive(state) || !images) return;
+        var completed = false;
 
-        var logo = pickLogo(images.logos || []);
+        function done(data) {
+            if (completed) return;
 
-        if (!logo || !logo.file_path) return;
+            completed = true;
 
-        var url = imageUrl(logo.file_path, 'w500');
+            if (data && typeof data === 'object') {
+                cacheSet(cacheKey, data);
+                callback(data);
+            } else {
+                callback(null);
+            }
+        }
 
-        if (!url) return;
-
-        preloadImage(url, function (loaded) {
-            if (!isAlive(state) || !loaded) return;
-
-            var title = state.titleElement;
-
-            if (!title) return;
-
-            if (title.dataset.tmlmLogo === 'true') return;
-
-            title.innerHTML = '';
-
-            var image = document.createElement('img');
-
-            image.className = 'tmlm-movie-logo';
-
-            image.alt = state.originalTitle;
-
-            image.src = url;
-
-            title.appendChild(image);
-
-            title.dataset.tmlmLogo = 'true';
-
-            title.classList.add('tmlm-title-with-logo');
-
-            state.logo = image;
-
-            var tagline = state.root.querySelector(
-                '.full-start-new__tagline'
+        try {
+            var result = Lampa.Api.sources.tmdb.get(
+                path,
+                params,
+                done
             );
 
-            if (tagline && state.card.tagline) {
-                tagline.classList.add('tmlm-tagline-visible');
+            if (result && typeof result.then === 'function') {
+                result.then(done).catch(function () {
+                    done(null);
+                });
             }
-        });
-    }
-
-    /*
-     * PRODUCTION COMPANY LOGOS
-     */
-
-    function createStudios(state) {
-        if (!isAlive(state)) return;
-
-        var companies = state.card.production_companies || [];
-
-        if (!companies.length) return;
-
-        var valid = companies.filter(function (company) {
-            return company.logo_path;
-        }).slice(0, MAX_STUDIOS);
-
-        if (!valid.length) return;
-
-        var details = state.root.querySelector(
-            '.full-start-new__details'
-        );
-
-        if (!details) return;
-
-        var row = document.createElement('div');
-
-        row.className = 'tmlm-studios';
-
-        valid.forEach(function (company) {
-            var url = imageUrl(company.logo_path, 'w300');
-
-            if (!url) return;
-
-            var item = document.createElement('div');
-
-            item.className = 'tmlm-studios__item';
-
-            var image = document.createElement('img');
-
-            image.alt = company.name || '';
-
-            image.src = url;
-
-            item.appendChild(image);
-
-            row.appendChild(item);
-        });
-
-        if (!row.children.length) return;
-
-        details.insertAdjacentElement('afterend', row);
-
-        state.studioRow = row;
-    }
-
-    /*
-     * DESCRIPTION
-     */
-
-    function createDescription(state) {
-        if (!isAlive(state)) return;
-
-        var overview = String(state.card.overview || '').trim();
-
-        if (!overview) return;
-
-        var studios = state.studioRow;
-
-        var details = state.root.querySelector(
-            '.full-start-new__details'
-        );
-
-        if (!details) return;
-
-        var description = document.createElement('div');
-
-        description.className = 'tmlm-description';
-
-        description.textContent = overview;
-
-        if (studios && studios.parentNode) {
-            studios.insertAdjacentElement('afterend', description);
-        } else {
-            details.insertAdjacentElement('afterend', description);
+        } catch (e) {
+            done(null);
         }
 
-        state.description = description;
+        setTimeout(function () {
+            done(null);
+        }, 15000);
     }
 
-    /*
-     * TAGLINE
-     */
+    /* -------------------------------------------------------
+       LOGO SELECTION
+    ------------------------------------------------------- */
 
-    function prepareTagline(state) {
-        if (!isAlive(state)) return;
+    function selectLogo(images) {
+        if (!images || !images.logos) return null;
 
-        var tagline = state.root.querySelector(
-            '.full-start-new__tagline'
-        );
+        var logos = images.logos;
 
-        if (!tagline) return;
+        if (!logos.length) return null;
 
-        if (!state.card.tagline) {
-            tagline.style.display = 'none';
-            return;
+        function findLanguage(language) {
+            return logos.find(function (logo) {
+                return logo.iso_639_1 === language;
+            });
         }
 
-        tagline.textContent = state.card.tagline;
+        var selected =
+            findLanguage('uk') ||
+            findLanguage('en') ||
+            logos.find(function (logo) {
+                return !logo.iso_639_1;
+            });
 
-        tagline.classList.add('tmlm-tagline-visible');
-    }
-
-    /*
-     * CARD INITIALIZATION
-     */
-
-    function processCard(event) {
-        if (!isMobile()) return;
-
-        if (!event || !event.data) return;
-
-        var body = event.data.body;
-
-        var root = getCardRoot(body);
-
-        if (!root) return;
-
-        var response = event.data.data || {};
-
-        var card = response.movie || event.data.object || {};
-
-        if (!card || !card.id) return;
-
-        /*
-         * Remove previous state for the same card root.
-         */
-
-        activeStates.slice().forEach(function (state) {
-            if (state.root === root) {
-                cleanupState(state);
-            }
-        });
-
-        root.classList.add('tmlm-active');
-
-        var state = createState(
-            root,
-            card,
-            event.data.link || null
-        );
-
-        /*
-         * Keep native Lampa elements intact.
-         */
-
-        prepareTagline(state);
-
-        createBackdrop(state);
-
-        createLogo(state);
-
-        createStudios(state);
-
-        createDescription(state);
-    }
-
-    /*
-     * CLEANUP ON FULL DESTROY
-     */
-
-    function processDestroy(event) {
-        if (!event || !event.data) {
-            cleanupAll();
-            return;
+        if (!selected) {
+            selected = logos[0];
         }
 
-        var link = event.data.link;
-
-        if (!link) {
-            cleanupAll();
-            return;
-        }
-
-        activeStates.slice().forEach(function (state) {
-            if (state.link === link) {
-                cleanupState(state);
-            }
-        });
+        return selected && selected.file_path
+            ? selected.file_path
+            : null;
     }
 
-    /*
-     * CSS
-     */
+    /* -------------------------------------------------------
+       BACKDROP SELECTION
+    ------------------------------------------------------- */
+
+    function selectBackdrop(movie, images) {
+        if (movie && movie.backdrop_path) {
+            return movie.backdrop_path;
+        }
+
+        if (
+            images &&
+            images.backdrops &&
+            images.backdrops.length
+        ) {
+            var backdrop = images.backdrops[0];
+
+            return backdrop.file_path || '';
+        }
+
+        return '';
+    }
+
+    /* -------------------------------------------------------
+       METADATA
+    ------------------------------------------------------- */
+
+    function getYear(movie) {
+        var date =
+            movie.release_date ||
+            movie.first_air_date ||
+            '';
+
+        return date ? String(date).substring(0, 4) : '';
+    }
+
+    function getGenres(movie) {
+        if (!movie || !movie.genres) return '';
+
+        return movie.genres
+            .map(function (genre) {
+                return genre.name;
+            })
+            .filter(Boolean)
+            .join(' · ');
+    }
+
+    function getCountries(movie) {
+        if (!movie) return '';
+
+        var countries = movie.production_countries || [];
+
+        return countries
+            .map(function (country) {
+                return country.name;
+            })
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(', ');
+    }
+
+    function getStudios(movie) {
+        if (!movie || !movie.production_companies) return [];
+
+        return movie.production_companies
+            .filter(function (company) {
+                return company && company.name;
+            })
+            .slice(0, 5);
+    }
+
+    function getRating(movie) {
+        var rating = Number(movie && movie.vote_average || 0);
+
+        return rating > 0 ? rating.toFixed(1) : '';
+    }
+
+    /* -------------------------------------------------------
+       HTML
+    ------------------------------------------------------- */
+
+    function createMarkup(movie, images) {
+        var logo = selectLogo(images);
+
+        var backdrop = selectBackdrop(movie, images);
+
+        var tagline = movie.tagline || '';
+
+        var overview = movie.overview || '';
+
+        var studios = getStudios(movie);
+
+        var year = getYear(movie);
+
+        var countries = getCountries(movie);
+
+        var genres = getGenres(movie);
+
+        var rating = getRating(movie);
+
+        var title =
+            movie.title ||
+            movie.name ||
+            movie.original_title ||
+            movie.original_name ||
+            '';
+
+        var logoHTML = logo
+            ? '<img class="tmlm-logo" src="' +
+                escapeHTML(imageUrl(logo, 'w500')) +
+                '" alt="' + escapeHTML(title) + '">'
+            : '<div class="tmlm-title">' +
+                escapeHTML(title) +
+                '</div>';
+
+        var studioHTML = studios.length
+            ? '<div class="tmlm-studios">' +
+                studios.map(function (studio) {
+                    return '<span>' +
+                        escapeHTML(studio.name) +
+                        '</span>';
+                }).join('') +
+                '</div>'
+            : '';
+
+        var meta = [];
+
+        if (year) meta.push(year);
+
+        if (countries) meta.push(countries);
+
+        if (genres) meta.push(genres);
+
+        var metaHTML = meta.length
+            ? '<div class="tmlm-meta">' +
+                meta.map(function (item) {
+                    return '<span>' +
+                        escapeHTML(item) +
+                        '</span>';
+                }).join('<i></i>') +
+                '</div>'
+            : '';
+
+        var ratingHTML = rating
+            ? '<div class="tmlm-rating">' +
+                '<span class="tmlm-rating__value">' +
+                escapeHTML(rating) +
+                '</span>' +
+                '<span class="tmlm-rating__source">TMDB</span>' +
+                '</div>'
+            : '';
+
+        var taglineHTML = tagline
+            ? '<div class="tmlm-tagline">' +
+                escapeHTML(tagline) +
+                '</div>'
+            : '';
+
+        var overviewHTML = overview
+            ? '<div class="tmlm-overview">' +
+                escapeHTML(overview) +
+                '</div>'
+            : '';
+
+        return '' +
+            '<div class="tmlm-hero">' +
+                '<div class="tmlm-backdrop">' +
+                    (backdrop
+                        ? '<img src="' +
+                            escapeHTML(imageUrl(backdrop, 'w1280')) +
+                            '" alt="">'
+                        : '') +
+                '</div>' +
+                '<div class="tmlm-gradient"></div>' +
+                '<div class="tmlm-content">' +
+                    '<div class="tmlm-logo-wrap">' +
+                        logoHTML +
+                    '</div>' +
+                    taglineHTML +
+                    ratingHTML +
+                    metaHTML +
+                    studioHTML +
+                    overviewHTML +
+                '</div>' +
+            '</div>';
+    }
+
+    /* -------------------------------------------------------
+       STYLES
+    ------------------------------------------------------- */
 
     function addStyles() {
-        if (document.getElementById(CSS_ID)) return;
+        if (document.getElementById('tmlm-styles')) return;
 
         var css = `
-/*
- * TMDB CINEMATIC MOBILE 1.1.0
- * Mobile-only styles
- */
+        @media screen and (max-width: 790px) {
 
-@media screen and (max-width: 790px) {
+            .full-start-new.tmlm-active {
+                position: relative !important;
+                display: block !important;
+                width: 100% !important;
+                min-height: 100vh !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #080808 !important;
+            }
 
-    .full-start-new.tmlm-active {
-        position: relative !important;
-        display: block !important;
-        width: 100% !important;
-        min-height: 100vh !important;
-        min-height: 100svh !important;
-        overflow: hidden !important;
-        background: #080808 !important;
-        isolation: isolate;
-    }
+            .full-start-new.tmlm-active .full-start-new__body {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                gap: 0 !important;
+            }
 
-    /*
-     * BACKDROP
-     */
+            .full-start-new.tmlm-active .full-start-new__left {
+                display: none !important;
+            }
 
-    .full-start-new.tmlm-active .tmlm-backdrop {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 66vh;
-        height: 66svh;
-        min-height: 390px;
-        max-height: 720px;
-        overflow: hidden;
-        z-index: 0;
-        pointer-events: none;
-        background: #080808;
-    }
+            .full-start-new.tmlm-active .full-start-new__right {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 20px 30px !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                background: transparent !important;
+            }
 
-    .full-start-new.tmlm-active .tmlm-backdrop__image {
-        display: block;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center 25%;
-        opacity: 0;
-        transform: scale(1.025);
-        transition:
-            opacity 1.1s ease,
-            transform 5s ease;
-    }
+            .full-start-new.tmlm-active .full-start-new__title,
+            .full-start-new.tmlm-active .full-start-new__tagline,
+            .full-start-new.tmlm-active .full-start-new__details,
+            .full-start-new.tmlm-active .full-start-new__rate-line,
+            .full-start-new.tmlm-active .full-start-new__reactions {
+                display: none !important;
+            }
 
-    .full-start-new.tmlm-active .tmlm-backdrop.tmlm-loaded
-    .tmlm-backdrop__image {
-        opacity: 0.88;
-        transform: scale(1);
-    }
+            .tmlm-hero {
+                position: relative;
+                width: calc(100% + 40px);
+                margin: 0 -20px 0;
+                min-height: 470px;
+                overflow: hidden;
+                background: #080808;
+                isolation: isolate;
+            }
 
-    /*
-     * BACKDROP GRADIENT
-     */
+            .tmlm-backdrop {
+                position: absolute;
+                inset: 0;
+                z-index: -2;
+                overflow: hidden;
+                background: #101010;
+            }
 
-    .full-start-new.tmlm-active .tmlm-gradient {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 78vh;
-        height: 78svh;
-        min-height: 520px;
-        z-index: 1;
-        pointer-events: none;
+            .tmlm-backdrop img {
+                display: block;
+                width: 100%;
+                height: 100%;
+                min-height: 470px;
+                object-fit: cover;
+                object-position: center top;
+                opacity: 0;
+                transform: scale(1.025);
+                transition:
+                    opacity 900ms ease,
+                    transform 1800ms ease;
+            }
 
-        background:
-            linear-gradient(
-                to bottom,
-                rgba(0,0,0,0.04) 0%,
-                rgba(0,0,0,0.08) 32%,
-                rgba(0,0,0,0.50) 58%,
-                rgba(0,0,0,0.88) 82%,
-                #080808 100%
-            );
-    }
+            .tmlm-backdrop img.tmlm-loaded {
+                opacity: 1;
+                transform: scale(1);
+            }
 
-    /*
-     * MAIN CONTENT
-     */
+            .tmlm-gradient {
+                position: absolute;
+                inset: 0;
+                z-index: -1;
+                background:
+                    linear-gradient(
+                        to bottom,
+                        rgba(0,0,0,0.02) 0%,
+                        rgba(0,0,0,0.08) 28%,
+                        rgba(0,0,0,0.55) 52%,
+                        rgba(8,8,8,0.96) 82%,
+                        #080808 100%
+                    );
+            }
 
-    .full-start-new.tmlm-active .full-start-new__body {
-        position: relative !important;
-        z-index: 2 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        width: 100% !important;
-        min-height: 100vh;
-        min-height: 100svh;
-        padding: 35vh 0 28px !important;
-        box-sizing: border-box !important;
-    }
+            .tmlm-content {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                min-height: 470px;
+                padding: 0 20px 24px;
+                box-sizing: border-box;
+            }
 
-    .full-start-new.tmlm-active .full-start-new__left {
-        display: none !important;
-    }
+            .tmlm-logo-wrap {
+                display: flex;
+                align-items: flex-end;
+                justify-content: flex-start;
+                min-height: 65px;
+                max-height: 125px;
+                margin-bottom: 12px;
+            }
 
-    .full-start-new.tmlm-active .full-start-new__right {
-        display: flex !important;
-        flex-direction: column !important;
-        width: 100% !important;
-        max-width: none !important;
-        padding: 0 22px !important;
-        box-sizing: border-box !important;
-        margin: 0 !important;
-    }
+            .tmlm-logo {
+                display: block;
+                max-width: 82%;
+                max-height: 105px;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                object-position: left bottom;
+                filter: none;
+                animation: tmlm-logo-in 650ms ease both;
+            }
 
-    /*
-     * HEAD / YEAR / COUNTRY
-     */
+            .tmlm-title {
+                font-size: 30px;
+                line-height: 1.08;
+                font-weight: 800;
+                letter-spacing: -0.7px;
+                color: #fff;
+                text-shadow: 0 2px 16px rgba(0,0,0,.4);
+            }
 
-    .full-start-new.tmlm-active .full-start-new__head {
-        position: relative;
-        z-index: 2;
-        font-size: 0.95em;
-        line-height: 1.4;
-        color: rgba(255,255,255,0.78);
-        margin-bottom: 10px;
-        letter-spacing: 0.04em;
-    }
+            .tmlm-tagline {
+                color: rgba(255,255,255,.82);
+                font-size: 13px;
+                line-height: 1.4;
+                font-weight: 400;
+                margin: 0 0 13px;
+                max-width: 95%;
+            }
 
-    /*
-     * TITLE / LOGO
-     */
+            .tmlm-rating {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 12px;
+            }
 
-    .full-start-new.tmlm-active .full-start-new__title {
-        display: block !important;
-        width: 100% !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        margin: 0 0 12px !important;
-        padding: 0 !important;
-        font-size: 2.3em !important;
-        line-height: 1.12 !important;
-        font-weight: 700 !important;
-        color: #fff;
-        overflow: visible !important;
-        text-overflow: clip !important;
-        -webkit-line-clamp: unset !important;
-        line-clamp: unset !important;
-    }
+            .tmlm-rating__value {
+                color: #fff;
+                font-size: 14px;
+                font-weight: 700;
+            }
 
-    .full-start-new.tmlm-active
-    .full-start-new__title.tmlm-title-with-logo {
-        display: flex !important;
-        align-items: flex-end;
-        min-height: 0 !important;
-    }
+            .tmlm-rating__source {
+                color: rgba(255,255,255,.55);
+                font-size: 10px;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+            }
 
-    .full-start-new.tmlm-active .tmlm-movie-logo {
-        display: block;
-        width: auto;
-        height: auto;
-        max-width: 88%;
-        max-height: 125px;
-        object-fit: contain;
-        object-position: left bottom;
-        opacity: 0;
-        animation: tmlmLogoAppear 0.8s ease forwards;
-        filter: none;
-    }
+            .tmlm-meta {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 7px;
+                color: rgba(255,255,255,.75);
+                font-size: 11px;
+                line-height: 1.5;
+                margin-bottom: 12px;
+            }
 
-    @keyframes tmlmLogoAppear {
-        from {
-            opacity: 0;
-            transform: translateY(9px);
+            .tmlm-meta i {
+                display: block;
+                width: 3px;
+                height: 3px;
+                flex: 0 0 3px;
+                border-radius: 50%;
+                background: rgba(255,255,255,.5);
+            }
+
+            .tmlm-studios {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin: 0 0 13px;
+            }
+
+            .tmlm-studios span {
+                color: rgba(255,255,255,.65);
+                font-size: 10px;
+                line-height: 1.4;
+                padding: 4px 8px;
+                border: 1px solid rgba(255,255,255,.16);
+                border-radius: 4px;
+                background: rgba(255,255,255,.045);
+            }
+
+            .tmlm-overview {
+                color: rgba(255,255,255,.82);
+                font-size: 13px;
+                line-height: 1.55;
+                font-weight: 400;
+                max-width: 100%;
+                display: -webkit-box;
+                -webkit-line-clamp: 5;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .full-start-new.tmlm-active .full-start-new__buttons {
+                display: flex !important;
+                position: relative !important;
+                width: 100% !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                margin: 0 !important;
+                padding: 8px 0 24px !important;
+                box-sizing: border-box !important;
+                z-index: 5 !important;
+            }
+
+            .full-start-new.tmlm-active .full-start__button {
+                flex-shrink: 0;
+            }
+
+            .full-start-new.tmlm-active .buttons--container {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                padding: 0 20px 25px !important;
+                box-sizing: border-box !important;
+            }
+
+            @keyframes tmlm-logo-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /*
-     * TAGLINE
-     */
-
-    .full-start-new.tmlm-active .full-start-new__tagline {
-        display: block;
-        font-size: 1.12em !important;
-        line-height: 1.35 !important;
-        font-weight: 400;
-        color: rgba(255,255,255,0.88);
-        margin: 0 0 17px !important;
-        max-width: 95%;
-        opacity: 0;
-        transform: translateY(7px);
-        transition:
-            opacity 0.7s ease,
-            transform 0.7s ease;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__tagline.tmlm-tagline-visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    /*
-     * RATINGS
-     */
-
-    .full-start-new.tmlm-active .full-start-new__rate-line {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
-        gap: 9px;
-        margin: 0 0 13px !important;
-        padding: 0 !important;
-        font-size: 0.92em !important;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__rate-line > * {
-        margin: 0 !important;
-    }
-
-    .full-start-new.tmlm-active .full-start__rate {
-        font-size: 0.92em;
-    }
-
-    .full-start-new.tmlm-active .full-start__pg {
-        font-size: 0.9em;
-    }
-
-    /*
-     * DETAILS
-     */
-
-    .full-start-new.tmlm-active .full-start-new__details {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        width: 100% !important;
-        min-height: 0 !important;
-        margin: 0 0 13px !important;
-        padding: 0 !important;
-        color: rgba(255,255,255,0.76);
-        font-size: 0.94em !important;
-        line-height: 1.55;
-        gap: 4px 9px;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__details > * {
-        margin: 0 !important;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__split {
-        display: none !important;
-    }
-
-    /*
-     * PRODUCTION STUDIOS
-     */
-
-    .full-start-new.tmlm-active .tmlm-studios {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 13px;
-        margin: 0 0 15px;
-        min-height: 25px;
-    }
-
-    .full-start-new.tmlm-active .tmlm-studios__item {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        max-width: 100px;
-        height: 27px;
-    }
-
-    .full-start-new.tmlm-active .tmlm-studios__item img {
-        display: block;
-        max-width: 100px;
-        max-height: 25px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-        opacity: 0.88;
-    }
-
-    /*
-     * DESCRIPTION
-     */
-
-    .full-start-new.tmlm-active .tmlm-description {
-        position: relative;
-        z-index: 2;
-        display: -webkit-box;
-        width: 100%;
-        max-width: 100%;
-        margin: 0 0 20px;
-        padding: 0;
-        overflow: hidden;
-        color: rgba(255,255,255,0.82);
-        font-size: 1em;
-        font-weight: 300;
-        line-height: 1.55;
-        -webkit-line-clamp: 5;
-        line-clamp: 5;
-        -webkit-box-orient: vertical;
-        opacity: 0;
-        animation: tmlmDescriptionAppear 0.8s ease 0.15s forwards;
-    }
-
-    @keyframes tmlmDescriptionAppear {
-        from {
-            opacity: 0;
-            transform: translateY(8px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /*
-     * REACTIONS
-     */
-
-    .full-start-new.tmlm-active .full-start-new__reactions {
-        position: relative;
-        z-index: 2;
-        margin-top: 3px;
-    }
-
-    /*
-     * NATIVE BUTTONS
-     *
-     * No changes to button actions or selectors.
-     */
-
-    .full-start-new.tmlm-active .full-start-new__buttons {
-        position: relative;
-        z-index: 3;
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        gap: 10px;
-        width: 100%;
-        margin-top: 8px;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        padding: 5px 0 12px !important;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__buttons::-webkit-scrollbar {
-        display: none;
-    }
-
-    .full-start-new.tmlm-active
-    .full-start-new__buttons .full-start__button {
-        flex-shrink: 0;
-    }
-
-    /*
-     * HIDDEN POSTER
-     */
-
-    .full-start-new.tmlm-active .full-start-new__poster {
-        display: none !important;
-    }
-
-}
-
-/*
- * SMALL MOBILE SCREENS
- */
-
-@media screen and (max-width: 480px) {
-
-    .full-start-new.tmlm-active .full-start-new__body {
-        padding-top: 33vh !important;
-        padding-top: 33svh !important;
-    }
-
-    .full-start-new.tmlm-active .full-start-new__right {
-        padding-left: 18px !important;
-        padding-right: 18px !important;
-    }
-
-    .full-start-new.tmlm-active .full-start-new__title {
-        font-size: 2.05em !important;
-    }
-
-    .full-start-new.tmlm-active .tmlm-movie-logo {
-        max-height: 105px;
-        max-width: 92%;
-    }
-
-    .full-start-new.tmlm-active .full-start-new__tagline {
-        font-size: 1.02em !important;
-    }
-
-    .full-start-new.tmlm-active .tmlm-description {
-        font-size: 0.96em;
-        -webkit-line-clamp: 5;
-        line-clamp: 5;
-    }
-
-}
-
-/*
- * TABLETS / LARGE PHONES
- */
-
-@media screen and (min-width: 581px) and (max-width: 790px) {
-
-    .full-start-new.tmlm-active .full-start-new__body {
-        padding-top: 38vh !important;
-        padding-top: 38svh !important;
-    }
-
-    .full-start-new.tmlm-active .full-start-new__right {
-        padding-left: 28px !important;
-        padding-right: 28px !important;
-    }
-
-    .full-start-new.tmlm-active .tmlm-movie-logo {
-        max-height: 150px;
-    }
-
-}
-`;
+        `;
 
         var style = document.createElement('style');
 
-        style.id = CSS_ID;
-
+        style.id = 'tmlm-styles';
         style.textContent = css;
 
         document.head.appendChild(style);
     }
 
-    /*
-     * LISTENER
-     */
+    /* -------------------------------------------------------
+       IMAGE LOADING
+    ------------------------------------------------------- */
 
-    addStyles();
+    function activateImages(root) {
+        if (!root) return;
 
-    Lampa.Listener.follow('full', function (event) {
+        var images = root.querySelectorAll('.tmlm-backdrop img');
 
-        if (!event || !event.type) return;
+        images.forEach(function (img) {
+            function loaded() {
+                img.classList.add('tmlm-loaded');
+            }
 
-        if (event.type === 'complite') {
+            if (img.complete && img.naturalWidth > 0) {
+                loaded();
+            } else {
+                img.addEventListener('load', loaded, { once: true });
+            }
+        });
+    }
+
+    /* -------------------------------------------------------
+       APPLY CARD
+    ------------------------------------------------------- */
+
+    function applyCard(root, movie, images, token) {
+        if (!isAlive(root)) return;
+
+        if (token !== requestId) return;
+
+        if (!isMobile()) return;
+
+        var oldHero = root.querySelector('.tmlm-hero');
+
+        var markup = createMarkup(movie, images);
+
+        if (oldHero) {
+            oldHero.outerHTML = markup;
+        } else {
+            root.insertBefore(
+                document.createRange().createContextualFragment(markup),
+                root.firstChild
+            );
+        }
+
+        root.classList.add('tmlm-active');
+
+        activeRoot = root;
+
+        activateImages(root);
+    }
+
+    /* -------------------------------------------------------
+       PROCESS FULL CARD
+    ------------------------------------------------------- */
+
+    function processCard(event) {
+        if (!isMobile()) return;
+
+        var movie = getMovie(event);
+
+        if (!movie) return;
+
+        var id = getId(movie);
+
+        if (!id) return;
+
+        var token = ++requestId;
+
+        currentId = id;
+
+        var root = findActivity(event);
+
+        if (!root) {
+            waitForCard(event, movie, token);
+            return;
+        }
+
+        loadMovieImages(root, movie, token);
+    }
+
+    function loadMovieImages(root, movie, token) {
+        var id = getId(movie);
+
+        var type = getType(movie);
+
+        tmdbImages(type, id, function (images) {
+            if (token !== requestId) return;
+
+            if (!isAlive(root)) return;
+
+            applyCard(root, movie, images, token);
+        });
+    }
+
+    /* -------------------------------------------------------
+       WAIT FOR DOM
+    ------------------------------------------------------- */
+
+    function waitForCard(event, movie, token) {
+        var attempts = 0;
+
+        var timer = setInterval(function () {
+            attempts++;
+
+            if (token !== requestId) {
+                clearInterval(timer);
+                return;
+            }
+
+            var root = findActivity(event);
+
+            if (root) {
+                clearInterval(timer);
+                loadMovieImages(root, movie, token);
+                return;
+            }
+
+            if (attempts >= 30) {
+                clearInterval(timer);
+            }
+        }, 150);
+    }
+
+    /* -------------------------------------------------------
+       ACTIVITY LISTENER
+    ------------------------------------------------------- */
+
+    function handleFull(event) {
+        if (!event) return;
+
+        if (
+            event.type === 'complite' ||
+            event.type === 'complete'
+        ) {
             processCard(event);
         }
+    }
 
-        if (event.type === 'destroy') {
-            processDestroy(event);
-        }
+    /* -------------------------------------------------------
+       OBSERVER
+    ------------------------------------------------------- */
 
-    });
+    function startObserver() {
+        if (observer) return;
 
-    /*
-     * RESIZE SUPPORT
-     */
+        if (!window.MutationObserver) return;
 
-    var resizeTimer = null;
+        observer = new MutationObserver(function () {
+            if (!isMobile()) return;
 
-    window.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
+            if (!activeRoot || !isAlive(activeRoot)) return;
 
-        resizeTimer = setTimeout(function () {
-            if (!isMobile()) {
-                cleanupAll();
+            if (!activeRoot.classList.contains('tmlm-active')) {
+                activeRoot = null;
             }
-        }, 250);
-    });
+        });
 
-    /*
-     * DEBUG
-     */
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    }
 
-    window.tmdb_cinematic_mobile_110 = {
-        version: VERSION,
+    /* -------------------------------------------------------
+       INIT
+    ------------------------------------------------------- */
 
-        cleanup: cleanupAll,
+    function init() {
+        addStyles();
 
-        getActiveCount: function () {
-            return activeStates.length;
+        startObserver();
+
+        if (Lampa.Listener && Lampa.Listener.follow) {
+            Lampa.Listener.follow('full', handleFull);
         }
-    };
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
 })();
