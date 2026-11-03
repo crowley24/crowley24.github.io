@@ -1,19 +1,19 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.5.1 — CINEMATIC FIXED BACKDROP
+     * TMDB MOVIE LOGOS 1.5.2 — TRUE FIXED CINEMATIC BACKDROP
      *
      * Lampa / Android TV
      *
-     * NEW 1.5.1:
-     * - Native Lampa background completely hidden
-     * - Independent fixed fullscreen TMDB backdrop
-     * - Backdrop remains stationary while scrolling
+     * NEW 1.5.2:
+     * - Backdrop moved directly to document.body
+     * - No longer nested inside .full-start-new
+     * - Independent viewport-fixed background
+     * - Background stays stationary during card scrolling
      * - Progressive background darkening on scroll
      * - Smooth brightness restoration when scrolling up
-     * - Dedicated lightweight dimming layer
+     * - Independent dimming layer
      * - Scroll listeners automatically removed on destroy
      *
      * PRESERVED:
@@ -29,16 +29,16 @@
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v151_ready) return;
+    if (window.tmdb_movie_logos_v152_ready) return;
 
-    window.tmdb_movie_logos_v151_ready = true;
+    window.tmdb_movie_logos_v152_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    var VERSION = '1.5.1';
-    var CSS_ID = 'tml_v151_css';
+    var VERSION = '1.5.2';
+    var CSS_ID = 'tml_v152_css';
 
     var currentCard = null;
     var currentToken = 0;
@@ -452,15 +452,22 @@
 
             /*
              * Full card root
+             *
+             * Keep card content above body-level backdrop.
              */
             '.full-start-new{' +
                 'position:relative !important;' +
+                'z-index:1 !important;' +
                 'isolation:isolate;' +
                 'background:transparent !important;' +
             '}' +
 
             /*
              * Independent fixed fullscreen backdrop
+             *
+             * IMPORTANT:
+             * This element is now a direct child of document.body.
+             * It is NOT inside .full-start-new.
              */
             '.tml-cinematic-backdrop{' +
                 'position:fixed !important;' +
@@ -470,7 +477,7 @@
                 'bottom:0 !important;' +
                 'width:100vw !important;' +
                 'height:100vh !important;' +
-                'z-index:0;' +
+                'z-index:0 !important;' +
                 'overflow:hidden;' +
                 'pointer-events:none;' +
                 'opacity:0;' +
@@ -844,7 +851,8 @@
         }
 
         /*
-         * Also detect movement of the card itself.
+         * Detect movement of the card itself.
+         * Useful when Lampa uses translated containers.
          */
         if (root && root.length) {
             var rect = root[0].getBoundingClientRect();
@@ -958,11 +966,19 @@
 
     /*
      * Create independent fixed backdrop
+     *
+     * IMPORTANT 1.5.2:
+     * Backdrop is appended directly to document.body.
+     * It is no longer a child of the card root.
      */
     function prepareBackdrop(root, card, type, token) {
         if (!root || !root.length) return;
+        if (!document.body) return;
 
-        root.find('.tml-cinematic-backdrop').remove();
+        /*
+         * Remove any previous backdrop.
+         */
+        $('.tml-cinematic-backdrop').remove();
 
         var backdrop = $(
             '<div class="tml-cinematic-backdrop"></div>'
@@ -977,7 +993,11 @@
         backdrop.append(image);
         backdrop.append(dimLayer);
 
-        root.prepend(backdrop);
+        /*
+         * Critical change:
+         * Attach backdrop directly to BODY.
+         */
+        $(document.body).append(backdrop);
 
         currentBackdrop = backdrop;
         currentDimLayer = dimLayer;
@@ -1235,14 +1255,25 @@
             currentLogo.off('error load');
         }
 
+        /*
+         * Remove body-level backdrop.
+         */
         if (currentBackdrop) {
             currentBackdrop.find('img').off('load error');
             currentBackdrop.remove();
         }
 
+        /*
+         * Safety cleanup for any old nested backdrop.
+         */
         if (currentRoot && currentRoot.length) {
             currentRoot.find('.tml-cinematic-backdrop').remove();
         }
+
+        /*
+         * Remove any orphaned backdrop.
+         */
+        $('.tml-cinematic-backdrop').remove();
 
         $('body').removeClass('tml-cinematic-active');
 
@@ -1286,7 +1317,7 @@
         $('body').addClass('tml-cinematic-active');
 
         /*
-         * Independent fixed fullscreen backdrop
+         * Independent body-level fixed backdrop
          * with progressive scroll darkening.
          */
         prepareBackdrop(root, card, type, token);
