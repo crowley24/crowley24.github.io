@@ -3,18 +3,18 @@
 
     /*
      * @name NEWCARD
-     * @version 3.3.5
+     * @version 3.3.6
      * @author Crowley24
      * @description Cinematic TV interface with Trailer Feed logo behavior
      * @platforms Lampa | Android TV
      *
-     * 3.3.5 CHANGES:
-     * - Independent full-screen fixed gradient overlay
-     * - Gradient no longer belongs to the content block
-     * - Background remains bright in the upper part
-     * - Gradual darkening starts around metadata/description area
-     * - Gradient remains stationary while scrolling
-     * - All NEWCARD 3.3.4 functionality preserved
+     * 3.3.6 CHANGES:
+     * - Completely removed full-screen gradient overlay
+     * - Removed all cas-screen-gradient elements and styles
+     * - Removed additional background dimming rule
+     * - Slideshow no longer dims the background to 0.35 opacity
+     * - Background returns to full opacity after image changes
+     * - All NEWCARD 3.3.5 functionality preserved
      */
 
     const PLUGIN_NAME = 'NewCard';
@@ -309,8 +309,6 @@
 
         const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
 
-            <div class="cas-screen-gradient"></div>
-
             <div class="full-start-new__body">
 
                 <div class="full-start-new__left hide">
@@ -441,10 +439,6 @@
             opacity: 1 !important;
         }
 
-        .full-start__background.dim {
-            opacity: 0.35 !important;
-        }
-
         @keyframes casKenBurnsParallax {
             0% { transform: scale(1.02) translate3d(0,0,0); }
             50% { transform: scale(1.10) translate3d(5px,-15px,0); }
@@ -486,41 +480,6 @@
             transform-origin: center center;
         }
 
-        /* =================================================
-           FIXED FULL-SCREEN GRADIENT
-           ================================================= */
-
-        .left-title .cas-screen-gradient {
-            position: fixed !important;
-            top: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            left: 0 !important;
-
-            width: 100vw !important;
-            height: 100vh !important;
-
-            display: block !important;
-            pointer-events: none !important;
-
-            z-index: 2 !important;
-
-            background: linear-gradient(
-                to bottom,
-                rgba(0,0,0,0) 0%,
-                rgba(0,0,0,0) 40%,
-                rgba(0,0,0,0.06) 47%,
-                rgba(0,0,0,0.16) 55%,
-                rgba(0,0,0,0.34) 67%,
-                rgba(0,0,0,0.62) 81%,
-                rgba(0,0,0,0.82) 92%,
-                rgba(0,0,0,0.94) 100%
-            );
-
-            transform: translateZ(0);
-            will-change: auto;
-        }
-
         /* TRAILER FEED INFORMATION BLOCK */
 
         .cas-tagline,
@@ -548,21 +507,21 @@
         }
 
         .left-title__content {
-    position: absolute !important;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 5;
-    box-sizing: border-box;
-    width: 100%;
-    padding: 7em 12em 2.5em 3em;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start !important;
-    text-align: left !important;
-    background: transparent !important;
-    cursor: pointer;
-}
+            position: absolute !important;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 7em 12em 2.5em 3em;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            text-align: left !important;
+            background: transparent !important;
+            cursor: pointer;
+        }
 
         .cas-logo-container {
             position: relative;
@@ -845,19 +804,6 @@
                 right: 0;
             }
 
-            .left-title .cas-screen-gradient {
-                background: linear-gradient(
-                    to bottom,
-                    rgba(0,0,0,0) 0%,
-                    rgba(0,0,0,0) 34%,
-                    rgba(0,0,0,0.08) 45%,
-                    rgba(0,0,0,0.22) 57%,
-                    rgba(0,0,0,0.48) 72%,
-                    rgba(0,0,0,0.76) 87%,
-                    rgba(0,0,0,0.94) 100%
-                );
-            }
-
             .cas-logo-container {
                 width: 100%;
                 margin-bottom: .5em;
@@ -1062,7 +1008,10 @@
                     setTimeout(() => {
                         if (generation !== slideshowGeneration) return;
 
-                        $container.css('opacity', 0.35);
+                        // Повертаємо повну видимість фону.
+                        // Жодного затемнення до 0.35 більше немає.
+                        $container.css('opacity', 1);
+
                     }, 100);
 
                 }, 400);
@@ -1834,7 +1783,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.5 initialized successfully'
+                'NewCard 3.3.6 initialized successfully'
             );
 
         } catch (error) {
