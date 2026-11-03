@@ -3,7 +3,7 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.3.0
+     * TMDB MOVIE LOGOS 1.3.1
      *
      * Lampa / Android TV
      *
@@ -13,15 +13,16 @@
      * - Same logo selection as Кінотрейлери 2.3
      * - Same cache logic
      * - Immediate display from cache
-     * - No text title
+     * - Original title fallback when logo is unavailable
+     * - Original title restored if image loading fails
      * - No custom opacity animation
      * - No shadows / filters
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v130_ready) return;
+    if (window.tmdb_movie_logos_v131_ready) return;
 
-    window.tmdb_movie_logos_v130_ready = true;
+    window.tmdb_movie_logos_v131_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
@@ -59,7 +60,6 @@
     /*
      * Cache
      * Same request coalescing and timeout logic
-     * as Кінотрейлери 2.3
      */
     function cached(item, key, request, cb) {
         if (item[key] !== undefined) {
@@ -110,7 +110,6 @@
     /*
      * TMDB logo request
      * Same language filter and image size
-     * as Кінотрейлери 2.3
      */
     function ensureLogo(item, type, cb) {
         cached(item, 'tml_logo', function (done) {
@@ -155,11 +154,11 @@
      * CSS
      */
     function addCSS() {
-        if (document.getElementById('tmdb_movie_logos_v130_css')) return;
+        if (document.getElementById('tmdb_movie_logos_v131_css')) return;
 
         var css = document.createElement('style');
 
-        css.id = 'tmdb_movie_logos_v130_css';
+        css.id = 'tmdb_movie_logos_v131_css';
 
         css.textContent =
             '.full-start-new__title .tml-logo-image{' +
@@ -218,16 +217,33 @@
     }
 
     /*
-     * Create logo element immediately.
-     * Text title is not displayed.
+     * Create logo element and preserve original title
      */
     function prepareLogo(titleBlock) {
+        var original = titleBlock.contents().clone(true, true);
         var logo = $('<img class="tml-logo-image" alt="">');
 
         titleBlock.empty();
         titleBlock.append(logo);
 
-        return logo;
+        return {
+            logo: logo,
+            original: original
+        };
+    }
+
+    /*
+     * Restore ordinary title
+     */
+    function showOriginalTitle(titleBlock, original, logo) {
+        if (!titleBlock || !titleBlock.length) return;
+
+        if (logo) {
+            logo.off('error');
+        }
+
+        titleBlock.empty();
+        titleBlock.append(original);
     }
 
     /*
@@ -235,7 +251,7 @@
      * Same sequence as Кінотрейлери:
      * attr('src', url).show()
      */
-    function displayLogo(url, logo, token) {
+    function displayLogo(url, titleBlock, original, logo, token) {
         if (!url || !logo || !logo.length) return;
         if (token !== currentToken) return;
 
@@ -244,7 +260,7 @@
         logo.on('error', function () {
             if (token !== currentToken) return;
 
-            logo.hide();
+            showOriginalTitle(titleBlock, original, logo);
         });
 
         logo.attr('src', url).show();
@@ -272,20 +288,31 @@
         currentCard = card;
         currentTitle = titleBlock;
 
-        var logo = prepareLogo(titleBlock);
+        var elements = prepareLogo(titleBlock);
 
-        currentImage = logo;
+        currentImage = elements.logo;
 
         ensureLogo(card, type, function (url) {
             if (token !== currentToken) return;
             if (currentCard !== card) return;
 
             if (!url) {
-                logo.hide();
+                showOriginalTitle(
+                    titleBlock,
+                    elements.original,
+                    elements.logo
+                );
+
                 return;
             }
 
-            displayLogo(url, logo, token);
+            displayLogo(
+                url,
+                titleBlock,
+                elements.original,
+                elements.logo,
+                token
+            );
         });
     }
 
