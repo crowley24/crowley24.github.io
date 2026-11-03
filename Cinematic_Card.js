@@ -3,18 +3,18 @@
 
     /*
      * @name NEWCARD
-     * @version 3.3.6
+     * @version 3.3.7
      * @author Crowley24
      * @description Cinematic TV interface with Trailer Feed logo behavior
      * @platforms Lampa | Android TV
      *
-     * 3.3.6 CHANGES:
-     * - Completely removed full-screen gradient overlay
-     * - Removed all cas-screen-gradient elements and styles
-     * - Removed additional background dimming rule
-     * - Slideshow no longer dims the background to 0.35 opacity
-     * - Background returns to full opacity after image changes
-     * - All NEWCARD 3.3.5 functionality preserved
+     * 3.3.7 CHANGES:
+     * - Restored original NEWCARD 3.0 background behavior
+     * - Restored .full-start__background.dim opacity: 0.35
+     * - Restored original slideshow fade and dim sequence
+     * - No full-screen gradient overlay
+     * - Preserved slideshow generation safeguards
+     * - All other NEWCARD 3.3.6 functionality preserved
      */
 
     const PLUGIN_NAME = 'NewCard';
@@ -437,6 +437,10 @@
 
         .full-start__background.loaded {
             opacity: 1 !important;
+        }
+
+        .full-start__background.dim {
+            opacity: 0.35 !important;
         }
 
         @keyframes casKenBurnsParallax {
@@ -1008,9 +1012,7 @@
                     setTimeout(() => {
                         if (generation !== slideshowGeneration) return;
 
-                        // Повертаємо повну видимість фону.
-                        // Жодного затемнення до 0.35 більше немає.
-                        $container.css('opacity', 1);
+                        $container.css('opacity', 0.35);
 
                     }, 100);
 
@@ -1024,8 +1026,7 @@
 
         window.casBgInterval = currentInterval;
     }
-
-    // =====================================================
+        // =====================================================
     // TMDB LOGO SYSTEM — TRAILER FEED LANGUAGE PRIORITY
     // =====================================================
 
@@ -1783,7 +1784,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.6 initialized successfully'
+                'NewCard 3.3.7 initialized successfully'
             );
 
         } catch (error) {
