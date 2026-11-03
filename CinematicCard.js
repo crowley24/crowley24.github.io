@@ -2,34 +2,25 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.1.0
+     * TMDB MOVIE LOGOS 1.1.1
      *
      * Lampa / Android TV
      *
-     * FEATURES:
      * - Standard Lampa full card
      * - Movies and TV series
      * - TMDB logo search
-     * - Same logo selection as Кінотрейлери 2.3
-     * - Same TMDB request method
-     * - Same image URL generation
-     * - Same per-item request cache
-     * - Logo replaces standard title
-     * - Original title preserved if logo unavailable
-     * - No shadows / no filters
-     * - No background or metadata modifications
-     *
-     * 1.1.0:
-     * - Rebuilt using the verified full-card event
-     * - Uses ev.data.movie
-     * - Uses .full-start-new__title
-     * - Uses the exact Кінотрейлери 2.3 logo algorithm
+     * - Same logo algorithm as Кінотрейлери 2.3
+     * - Immediate title hiding
+     * - Logo appears after image preload
+     * - Original title restored on failure
+     * - No shadows / filters
+     * - No other card modifications
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v110_ready) return;
+    if (window.tmdb_movie_logos_v111_ready) return;
 
-    window.tmdb_movie_logos_v110_ready = true;
+    window.tmdb_movie_logos_v111_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
@@ -39,12 +30,12 @@
     var currentTitle = null;
     var currentImage = null;
     var currentToken = 0;
+    var currentCardTitle = '';
 
     var CACHE_TIMEOUT = 20000;
 
     // --------------------------------------------------
     // LOGO LANGUAGE PRIORITY
-    // Same as Кінотрейлери 2.3
     // --------------------------------------------------
 
     function pickLogo(logos) {
@@ -67,7 +58,6 @@
 
     // --------------------------------------------------
     // SAFE CACHE
-    // Same principle as Кінотрейлери 2.3
     // --------------------------------------------------
 
     function cached(item, key, request, cb) {
@@ -118,7 +108,6 @@
 
     // --------------------------------------------------
     // LOGO CACHE
-    // Exact request logic from Кінотрейлери 2.3
     // --------------------------------------------------
 
     function ensureLogo(item, type, cb) {
@@ -129,13 +118,11 @@
 
             tmdb.get(
                 type + '/' + item.id + '/images',
-
                 {
                     filter: {
                         include_image_language: langs
                     }
                 },
-
                 function (json) {
                     var logo = json.logos && json.logos.length
                         ? pickLogo(json.logos)
@@ -147,7 +134,6 @@
                             : null
                     );
                 },
-
                 function () {
                     done(null);
                 }
@@ -157,7 +143,6 @@
 
     // --------------------------------------------------
     // CARD TYPE
-    // Same detection as the working plugin
     // --------------------------------------------------
 
     function getCardType(card) {
@@ -165,7 +150,7 @@
     }
 
     // --------------------------------------------------
-    // RESTORE ORIGINAL TITLE
+    // RESTORE TITLE
     // --------------------------------------------------
 
     function restoreTitle() {
@@ -174,16 +159,113 @@
             currentImage.onerror = null;
         }
 
+        if (currentTitle && currentTitle.length) {
+            currentTitle
+                .removeClass('tml-title-hidden')
+                .removeClass('tml-logo-ready');
+
+            currentTitle.find('.tml-logo-image').remove();
+        }
+
         currentImage = null;
         currentTitle = null;
         currentCard = null;
-
         currentToken++;
     }
 
     // --------------------------------------------------
+    // CSS
+    // --------------------------------------------------
+
+    function addCSS() {
+        if (document.getElementById('tmdb_movie_logos_v111_css')) return;
+
+        var css = document.createElement('style');
+
+        css.id = 'tmdb_movie_logos_v111_css';
+
+        css.textContent =
+            '.full-start-new__title.tml-title-hidden{' +
+                'color:transparent!important;' +
+                'text-shadow:none!important;' +
+            '}' +
+
+            '.full-start-new__title.tml-title-hidden *{' +
+                'visibility:hidden!important;' +
+            '}' +
+
+            '.full-start-new__title .tml-logo-image{' +
+                'display:block;' +
+                'width:7em;' +
+                'height:auto;' +
+                'max-width:100%;' +
+                'max-height:8em;' +
+                'object-fit:contain;' +
+                'object-position:left center;' +
+                'margin:0;' +
+                'padding:0;' +
+                'border:0;' +
+                'box-shadow:none;' +
+                'filter:none;' +
+                'opacity:0;' +
+                'transition:opacity .35s ease;' +
+            '}' +
+
+            '.full-start-new__title.tml-logo-ready .tml-logo-image{' +
+                'opacity:1;' +
+            '}';
+
+        document.head.appendChild(css);
+    }
+
+    // --------------------------------------------------
+    // DISPLAY LOGO
+    // --------------------------------------------------
+
+    function displayLogo(url, titleBlock, token) {
+        if (!url || !titleBlock || !titleBlock.length) return;
+
+        if (token !== currentToken) return;
+
+        var img = new Image();
+
+        img.className = 'tml-logo-image';
+
+        img.onload = function () {
+            if (token !== currentToken) return;
+            if (!currentTitle || !currentTitle.length) return;
+
+            currentTitle.find('.tml-logo-image').remove();
+
+            currentTitle.append(img);
+
+            requestAnimationFrame(function () {
+                if (token !== currentToken) return;
+
+                currentTitle.addClass('tml-logo-ready');
+            });
+
+            currentImage = null;
+        };
+
+        img.onerror = function () {
+            if (token !== currentToken) return;
+
+            currentImage = null;
+
+            if (currentTitle && currentTitle.length) {
+                currentTitle
+                    .removeClass('tml-title-hidden')
+                    .removeClass('tml-logo-ready');
+            }
+        };
+
+        currentImage = img;
+        img.src = url;
+    }
+
+    // --------------------------------------------------
     // FIND TITLE BLOCK
-    // Standard Lampa full card
     // --------------------------------------------------
 
     function getTitleBlock(ev) {
@@ -208,66 +290,6 @@
     }
 
     // --------------------------------------------------
-    // DISPLAY LOGO
-    // Same image presentation approach as Кінотрейлери
-    // --------------------------------------------------
-
-    function displayLogo(url, titleBlock, token) {
-        if (!url || !titleBlock || !titleBlock.length) return;
-
-        if (token !== currentToken) return;
-
-        var img = new Image();
-
-        img.style.display = 'block';
-        img.style.width = '7em';
-        img.style.height = 'auto';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '8em';
-        img.style.objectFit = 'contain';
-        img.style.objectPosition = 'left center';
-        img.style.margin = '0';
-        img.style.padding = '0';
-        img.style.border = '0';
-        img.style.boxShadow = 'none';
-        img.style.filter = 'none';
-
-        currentImage = img;
-
-        img.onload = function () {
-            if (token !== currentToken) return;
-
-            if (!currentTitle || !currentTitle.length) return;
-
-            if (!currentTitle.closest('.full-start-new').length) return;
-
-            // Replace only the title.
-            // All other card elements remain untouched.
-
-            currentTitle.empty().append(img);
-        };
-
-        img.onerror = function () {
-            if (token !== currentToken) return;
-
-            currentImage = null;
-
-            // Restore the original text if the logo fails.
-            if (currentTitle && currentTitle.length) {
-                currentTitle.text(currentCardTitle);
-            }
-        };
-
-        img.src = url;
-    }
-
-    // --------------------------------------------------
-    // CURRENT TITLE
-    // --------------------------------------------------
-
-    var currentCardTitle = '';
-
-    // --------------------------------------------------
     // PROCESS FULL CARD
     // --------------------------------------------------
 
@@ -283,7 +305,6 @@
         if (!titleBlock.length) return;
 
         var type = getCardType(card);
-
         var token = ++currentToken;
 
         currentCard = card;
@@ -301,33 +322,33 @@
                 '';
         }
 
-        // Keep the original title visible while the logo loads.
+        // Hide the text immediately.
+        titleBlock
+            .removeClass('tml-logo-ready')
+            .addClass('tml-title-hidden');
 
         ensureLogo(card, type, function (url) {
             if (token !== currentToken) return;
-
             if (currentCard !== card) return;
 
-            if (!url) return;
+            if (!url) {
+                titleBlock.removeClass('tml-title-hidden');
+                return;
+            }
 
-            if (!currentTitle || !currentTitle.length) return;
-
-            // Preload the image and replace the title
-            // only after successful loading.
-
-            displayLogo(url, currentTitle, token);
+            displayLogo(url, titleBlock, token);
         });
     }
 
     // --------------------------------------------------
     // FULL CARD LISTENER
-    // Same event and lifecycle as the working plugin
     // --------------------------------------------------
 
     Lampa.Listener.follow('full', function (ev) {
         if (!ev) return;
 
         if (ev.type === 'complite') {
+            addCSS();
             processCard(ev);
         }
 
@@ -335,5 +356,7 @@
             restoreTitle();
         }
     });
+
+    addCSS();
 
 })();
