@@ -2,47 +2,53 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.6 — CINEMATIC NETFLIX MODE
+     * TMDB MOVIE LOGOS 1.4.4 — BRIGHT & VIVID
      *
      * Lampa / Android TV
      *
-     * CHANGES 1.4.6:
-     * - Netflix-style media buttons
-     * - White primary Play button
-     * - Dark translucent secondary buttons
-     * - Smooth remote-control focus animation
-     * - Small production studio logo above movie title logo
-     * - Studio logo loaded from TMDB production_companies
-     * - Original 1.4.5 seamless backdrop slideshow preserved
-     * - Original Lampa button actions preserved
+     * CHANGES 1.4.4:
+     * - Removed backdrop darkening overlays
+     * - Removed backdrop gradients
+     * - Removed backdrop filters
+     * - Preserved original Lampa backdrop image
+     * - Bright and vivid original image colors
+     *
+     * BASE:
+     * - TMDB MOVIE LOGOS 1.4.3
+     *
+     * PRESERVED:
+     * - TMDB logo selection
+     * - Original cache logic
+     * - Ukrainian country names
+     * - Production studio logo
+     * - Lower information block positioning
+     * - Native Lampa buttons
+     * - Cinematic metadata
+     * - Cinematic description
+     * - Original title fallback
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v146_ready) return;
+    if (window.tmdb_movie_logos_v144_ready) return;
+
+    window.tmdb_movie_logos_v144_ready = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    window.tmdb_movie_logos_v146_ready = true;
-
     var currentCard = null;
     var currentTitle = null;
     var currentImage = null;
+    var currentStudio = null;
     var currentToken = 0;
 
-    var slideshowTimer = null;
-    var slideshowRoot = null;
-    var slideshowImages = [];
-    var slideshowToken = 0;
-
     var CACHE_TIMEOUT = 20000;
-    var SLIDESHOW_INTERVAL = 10000;
-
-    var CSS_ID = 'tmdb_movie_logos_v146_css';
+    var CSS_ID = 'tmdb_movie_logos_v144_css';
 
     /*
      * TMDB logo selection
+     * Same algorithm as Кінотрейлери 2.3
      */
     function pickLogo(logos) {
         var order = [
@@ -64,6 +70,7 @@
 
     /*
      * Cache
+     * Original request coalescing and timeout logic
      */
     function cached(item, key, request, cb) {
         if (item[key] !== undefined) {
@@ -88,11 +95,13 @@
             if (completed) return;
 
             completed = true;
+
             clearTimeout(timer);
 
             item[key] = value || null;
 
             var list = item[key + '_wait'] || [];
+
             item[key + '_wait'] = null;
 
             list.forEach(function (callback) {
@@ -110,7 +119,7 @@
     }
 
     /*
-     * TMDB movie logo request
+     * TMDB logo request
      */
     function ensureLogo(item, type, cb) {
         cached(item, 'tml_logo', function (done) {
@@ -145,30 +154,60 @@
     }
 
     /*
-     * Production studio logo
-     *
-     * Uses production_companies from TMDB card data.
-     * Selects the first available studio logo.
+     * Studio logo selection
      */
-    function ensureStudioLogo(item, cb) {
+    function findStudioLogo(companies) {
+        if (!companies || !companies.length) return null;
+
+        var studio = companies.filter(function (company) {
+            return company &&
+                company.logo_path &&
+                company.logo_path.length;
+        })[0];
+
+        if (!studio) return null;
+
+        return {
+            url: Lampa.Api.img(studio.logo_path, 'w300'),
+            name: studio.name || ''
+        };
+    }
+
+    /*
+     * TMDB production studio logo request
+     *
+     * 1. Try data already available in the card.
+     * 2. If no logo is found, request full movie/TV details.
+     */
+    function ensureStudioLogo(item, type, cb) {
         cached(item, 'tml_studio_logo', function (done) {
-            var companies = item.production_companies || [];
 
-            var studio = companies.filter(function (company) {
-                return company &&
-                    company.logo_path &&
-                    company.logo_path.length;
-            })[0];
+            var existing = findStudioLogo(
+                item.production_companies
+            );
 
-            if (!studio) {
-                done(null);
+            if (existing) {
+                done(existing);
                 return;
             }
 
-            done({
-                url: Lampa.Api.img(studio.logo_path, 'w300'),
-                name: studio.name || ''
-            });
+            tmdb.get(
+                type + '/' + item.id,
+                {},
+                function (json) {
+                    var studio = findStudioLogo(
+                        json && json.production_companies
+                            ? json.production_companies
+                            : []
+                    );
+
+                    done(studio);
+                },
+                function () {
+                    done(null);
+                }
+            );
+
         }, cb);
     }
 
@@ -182,6 +221,99 @@
     /*
      * Country names
      */
+    function getCountryName(code) {
+        var countries = {
+            US: 'США',
+            GB: 'Велика Британія',
+            UK: 'Велика Британія',
+            FR: 'Франція',
+            DE: 'Німеччина',
+            IT: 'Італія',
+            ES: 'Іспанія',
+            PL: 'Польща',
+            UA: 'Україна',
+            CA: 'Канада',
+            AU: 'Австралія',
+            NZ: 'Нова Зеландія',
+            JP: 'Японія',
+            KR: 'Південна Корея',
+            CN: 'Китай',
+            HK: 'Гонконг',
+            IN: 'Індія',
+            RU: 'Росія',
+            TR: 'Туреччина',
+            BR: 'Бразилія',
+            MX: 'Мексика',
+            AR: 'Аргентина',
+            SE: 'Швеція',
+            NO: 'Норвегія',
+            DK: 'Данія',
+            FI: 'Фінляндія',
+            NL: 'Нідерланди',
+            BE: 'Бельгія',
+            CH: 'Швейцарія',
+            AT: 'Австрія',
+            IE: 'Ірландія',
+            CZ: 'Чехія',
+            SK: 'Словаччина',
+            HU: 'Угорщина',
+            RO: 'Румунія',
+            BG: 'Болгарія',
+            GR: 'Греція',
+            PT: 'Португалія',
+            IL: 'Ізраїль',
+            ZA: 'ПАР',
+            EG: 'Єгипет',
+            TH: 'Таїланд',
+            ID: 'Індонезія',
+            SG: 'Сінгапур',
+            MY: 'Малайзія',
+            PH: 'Філіппіни',
+            PK: 'Пакистан',
+            IR: 'Іран',
+            AE: 'ОАЕ',
+            SA: 'Саудівська Аравія',
+            CL: 'Чилі',
+            CO: 'Колумбія',
+            PE: 'Перу',
+            IS: 'Ісландія',
+            HR: 'Хорватія',
+            RS: 'Сербія',
+            SI: 'Словенія',
+            LT: 'Литва',
+            LV: 'Латвія',
+            EE: 'Естонія',
+            GE: 'Грузія',
+            AM: 'Вірменія',
+            KZ: 'Казахстан'
+        };
+
+        if (!code) return '';
+
+        code = String(code).toUpperCase();
+
+        if (countries[code]) {
+            return countries[code];
+        }
+
+        try {
+            if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+                var display = new Intl.DisplayNames(['uk'], {
+                    type: 'region'
+                });
+
+                var name = display.of(code);
+
+                if (name && name !== code) return name;
+            }
+        } catch (e) {}
+
+        return code;
+    }
+
+    /*
+     * Country list
+     */
     function getCountries(card) {
         var countries = [];
 
@@ -191,7 +323,9 @@
         ) {
             countries = card.production_countries
                 .map(function (country) {
-                    return country.name || '';
+                    return country.iso_3166_1
+                        ? getCountryName(country.iso_3166_1)
+                        : country.name || '';
                 })
                 .filter(Boolean);
         }
@@ -201,16 +335,29 @@
             card.origin_country &&
             card.origin_country.length
         ) {
-            countries = card.origin_country.slice(0, 2);
+            countries = card.origin_country
+                .map(getCountryName)
+                .filter(Boolean);
         }
 
-        return countries.slice(0, 2);
+        var unique = [];
+
+        countries.forEach(function (country) {
+            if (
+                country &&
+                unique.indexOf(country) === -1
+            ) {
+                unique.push(country);
+            }
+        });
+
+        return unique.slice(0, 2);
     }
 
     /*
      * Metadata builder
      *
-     * Year · Country · Rating · Genres
+     * Year · Country · ★ Rating · Genres
      */
     function buildMetadata(card) {
         var parts = [];
@@ -237,6 +384,7 @@
 
         if (rating > 0) {
             if (rating > 10) rating = 10;
+
             parts.push('★ ' + rating.toFixed(1));
         }
 
@@ -266,6 +414,52 @@
 
         css.textContent =
 
+            /*
+             * BRIGHT & VIVID BACKDROP
+             *
+             * Keep original Lampa background image.
+             * Remove additional darkening and filters.
+             */
+
+            '.full-start-new__background{' +
+                'opacity:1 !important;' +
+                'filter:none !important;' +
+                '-webkit-filter:none !important;' +
+                'background-color:transparent !important;' +
+                'background-blend-mode:normal !important;' +
+            '}' +
+
+            '.full-start-new__background:before,' +
+            '.full-start-new__background:after{' +
+                'background:none !important;' +
+                'background-image:none !important;' +
+                'opacity:0 !important;' +
+                'filter:none !important;' +
+                '-webkit-filter:none !important;' +
+                'box-shadow:none !important;' +
+            '}' +
+
+            '.full-start-new__background img,' +
+            '.full-start-new__background video{' +
+                'opacity:1 !important;' +
+                'filter:none !important;' +
+                '-webkit-filter:none !important;' +
+                'brightness:1 !important;' +
+                'saturate:1 !important;' +
+            '}' +
+
+            '.full-start-new__background-overlay,' +
+            '.full-start-new__overlay{' +
+                'background:none !important;' +
+                'background-image:none !important;' +
+                'opacity:0 !important;' +
+                'filter:none !important;' +
+                '-webkit-filter:none !important;' +
+            '}' +
+
+            /*
+             * Cinematic card positioning
+             */
             '.full-start-new{' +
                 'position:relative;' +
             '}' +
@@ -273,18 +467,24 @@
             '.full-start-new__body{' +
                 'position:relative;' +
                 'display:block;' +
-                'min-height:calc(100vh - 10rem);' +
+                'min-height:calc(100vh - 7rem);' +
                 'height:auto;' +
             '}' +
 
+            /*
+             * Hide poster
+             */
             '.full-start-new__left{' +
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Information block
+             */
             '.full-start-new__right{' +
                 'position:absolute !important;' +
                 'left:0 !important;' +
-                'bottom:0 !important;' +
+                'bottom:1.5rem !important;' +
                 'width:58% !important;' +
                 'max-width:58% !important;' +
                 'margin:0 !important;' +
@@ -296,6 +496,9 @@
                 'z-index:2;' +
             '}' +
 
+            /*
+             * Remove year/country header above logo
+             */
             '.full-start-new__head{' +
                 'display:none !important;' +
             '}' +
@@ -309,18 +512,18 @@
                 'justify-content:flex-start;' +
                 'width:100%;' +
                 'max-width:100%;' +
-                'height:1.55em;' +
-                'margin:0 0 0.45em 0;' +
+                'height:1.5em;' +
+                'margin:0 0 .4em 0;' +
                 'padding:0;' +
                 'overflow:hidden;' +
                 'box-sizing:border-box;' +
                 'opacity:0;' +
-                'transform:translateY(4px);' +
-                'transition:opacity .45s ease, transform .45s ease;' +
+                'transform:translateY(3px);' +
+                'transition:opacity .4s ease, transform .4s ease;' +
             '}' +
 
             '.tml-studio-logo.tml-studio-visible{' +
-                'opacity:.9;' +
+                'opacity:.92;' +
                 'transform:translateY(0);' +
             '}' +
 
@@ -329,7 +532,7 @@
                 'width:auto;' +
                 'height:auto;' +
                 'max-width:8em;' +
-                'max-height:1.35em;' +
+                'max-height:1.3em;' +
                 'object-fit:contain;' +
                 'object-position:left center;' +
                 'margin:0;' +
@@ -339,13 +542,16 @@
                 'filter:none;' +
             '}' +
 
+            /*
+             * Logo / title
+             */
             '.full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
                 'justify-content:flex-start;' +
                 'width:100%;' +
                 'min-height:0;' +
-                'margin:0 0 0.45em 0;' +
+                'margin:0 0 .45em 0;' +
                 'padding:0;' +
                 'font-size:2.2em;' +
                 'line-height:1.1;' +
@@ -366,17 +572,20 @@
                 'filter:none;' +
             '}' +
 
+            /*
+             * Tagline
+             */
             '.full-start-new__tagline{' +
                 'display:block;' +
                 'width:100%;' +
                 'max-width:100%;' +
-                'margin:0 0 0.8em 0;' +
+                'margin:0 0 .8em 0;' +
                 'padding:0;' +
-                'font-size:0.75em !important;' +
+                'font-size:.75em !important;' +
                 'font-weight:400 !important;' +
                 'font-style:italic !important;' +
                 'line-height:1.45 !important;' +
-                'letter-spacing:0.015em;' +
+                'letter-spacing:.015em;' +
                 'color:rgba(255,255,255,.78) !important;' +
                 'opacity:.9;' +
                 'overflow:hidden;' +
@@ -391,16 +600,16 @@
             '}' +
 
             /*
-             * Metadata
+             * Metadata row
              */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:nowrap;' +
-                'gap:0.55em;' +
+                'gap:.55em;' +
                 'width:100%;' +
                 'max-width:100%;' +
-                'margin:0 0 0.8em 0;' +
+                'margin:0 0 .8em 0;' +
                 'padding:0;' +
                 'overflow:hidden;' +
                 'white-space:nowrap;' +
@@ -430,6 +639,9 @@
                 'text-overflow:ellipsis;' +
             '}' +
 
+            /*
+             * Hide original rating and details rows
+             */
             '.full-start-new__rate-line,' +
             '.full-start-new__details{' +
                 'display:none !important;' +
@@ -454,78 +666,20 @@
             '}' +
 
             /*
-             * Netflix-style media buttons
+             * Native Lampa buttons
              */
             '.full-start-new__buttons{' +
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:wrap;' +
-                'gap:0.55em;' +
+                'gap:.45em;' +
                 'width:100%;' +
                 'margin:0;' +
-                'padding:0.25em 0.15em;' +
-                'box-sizing:border-box;' +
-            '}' +
-
-            '.full-start-new__buttons > *,' +
-            '.full-start-new__buttons .selector{' +
-                'display:inline-flex !important;' +
-                'align-items:center !important;' +
-                'justify-content:center !important;' +
-                'min-height:2.9em;' +
-                'padding:0 1.15em !important;' +
-                'border:1px solid rgba(255,255,255,.13) !important;' +
-                'border-radius:.35em !important;' +
-                'background:rgba(38,38,38,.88) !important;' +
-                'color:#fff !important;' +
-                'box-shadow:none !important;' +
-                'font-weight:600;' +
-                'text-shadow:none !important;' +
-                'box-sizing:border-box;' +
-                'transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;' +
-            '}' +
-
-            '.full-start-new__buttons > *:first-child,' +
-            '.full-start-new__buttons > *.tml-primary-button{' +
-                'background:#fff !important;' +
-                'color:#111 !important;' +
-                'border-color:#fff !important;' +
-            '}' +
-
-            '.full-start-new__buttons > *:first-child svg,' +
-            '.full-start-new__buttons > *:first-child i{' +
-                'color:#111 !important;' +
-                'fill:#111 !important;' +
-            '}' +
-
-            '.full-start-new__buttons .selector svg{' +
-                'max-width:1.25em;' +
-                'max-height:1.25em;' +
-            '}' +
-
-            '.full-start-new__buttons .selector.focus,' +
-            '.full-start-new__buttons .selector.focused,' +
-            '.full-start-new__buttons .selector:focus,' +
-            '.full-start-new__buttons > *.focus,' +
-            '.full-start-new__buttons > *.focused{' +
-                'transform:scale(1.055);' +
-                'border-color:rgba(255,255,255,.95) !important;' +
-                'box-shadow:0 0 0 2px rgba(255,255,255,.8) !important;' +
-                'z-index:3;' +
-            '}' +
-
-            '.full-start-new__buttons > *:first-child.focus,' +
-            '.full-start-new__buttons > *:first-child.focused{' +
-                'background:#f0f0f0 !important;' +
-                'color:#111 !important;' +
-            '}' +
-
-            '.full-start-new__buttons .selector:active{' +
-                'transform:scale(.98);' +
+                'padding:0;' +
             '}' +
 
             /*
-             * Hide reactions and duplicate description
+             * Hide reactions and separate details
              */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
@@ -536,26 +690,6 @@
             '.full-start__descr,' +
             '.full-description{' +
                 'display:none !important;' +
-            '}' +
-
-            /*
-             * Slideshow overlay
-             */
-            '.tml-backdrop-layer{' +
-                'position:absolute !important;' +
-                'inset:0 !important;' +
-                'width:100% !important;' +
-                'height:100% !important;' +
-                'object-fit:cover !important;' +
-                'object-position:center center !important;' +
-                'opacity:0 !important;' +
-                'transition:opacity 1.5s ease-in-out !important;' +
-                'pointer-events:none !important;' +
-                'z-index:0 !important;' +
-            '}' +
-
-            '.tml-backdrop-layer.tml-backdrop-visible{' +
-                'opacity:1 !important;' +
             '}';
 
         document.head.appendChild(css);
@@ -610,30 +744,9 @@
     }
 
     /*
-     * Get outer activity root
+     * Prepare studio logo
      */
-    function getActivityRoot(ev) {
-        try {
-            if (
-                !ev ||
-                !ev.object ||
-                !ev.object.activity ||
-                typeof ev.object.activity.render !== 'function'
-            ) {
-                return $();
-            }
-
-            return ev.object.activity.render();
-
-        } catch (e) {
-            return $();
-        }
-    }
-
-    /*
-     * Studio logo placement
-     */
-    function prepareStudioLogo(root, card, token) {
+    function prepareStudioLogo(root, card, type, token) {
         if (!root || !root.length) return;
 
         var title = root.find(
@@ -644,22 +757,24 @@
 
         root.find('.tml-studio-logo').remove();
 
-        ensureStudioLogo(card, function (studio) {
+        ensureStudioLogo(card, type, function (studio) {
             if (token !== currentToken) return;
             if (currentCard !== card) return;
 
             if (!studio || !studio.url) return;
 
-            var container = $(
-                '<div class="tml-studio-logo"></div>'
-            );
-
+            var container = $('<div class="tml-studio-logo"></div>');
             var image = $('<img alt="">');
+
+            currentStudio = container;
 
             image.attr('alt', studio.name || '');
 
             image.on('error', function () {
                 container.remove();
+                if (currentStudio === container) {
+                    currentStudio = null;
+                }
             });
 
             image.on('load', function () {
@@ -667,21 +782,21 @@
 
                 requestAnimationFrame(function () {
                     if (token !== currentToken) return;
+                    if (currentCard !== card) return;
 
                     container.addClass('tml-studio-visible');
                 });
             });
 
-            image.attr('src', studio.url);
-
             container.append(image);
-
             title.before(container);
+
+            image.attr('src', studio.url);
         });
     }
 
     /*
-     * Tagline position
+     * Prepare tagline position
      */
     function prepareTagline(root) {
         if (!root || !root.length) return;
@@ -700,7 +815,7 @@
     }
 
     /*
-     * Metadata row
+     * Prepare metadata row
      */
     function prepareMetadata(root, card) {
         if (!root || !root.length) return;
@@ -751,7 +866,7 @@
     }
 
     /*
-     * Description
+     * Prepare cinematic description
      */
     function prepareDescription(root, card) {
         if (!root || !root.length) return;
@@ -773,6 +888,7 @@
 
         if (!description.length) {
             description = $('<div class="tml-cinematic-description"></div>');
+
             description.insertAfter(metadata);
         }
 
@@ -780,233 +896,21 @@
     }
 
     /*
-     * Stop slideshow
-     */
-    function stopSlideshow() {
-        if (slideshowTimer) {
-            clearInterval(slideshowTimer);
-            slideshowTimer = null;
-        }
-
-        slideshowToken++;
-
-        slideshowImages.forEach(function (image) {
-            if (image && image.length) {
-                image.off('load error');
-                image.remove();
-            }
-        });
-
-        slideshowImages = [];
-        slideshowRoot = null;
-    }
-
-    /*
-     * Start slideshow
-     *
-     * 1. First overlay duplicates native backdrop.
-     * 2. It becomes visible without changing the picture.
-     * 3. After 10 seconds, the first additional TMDB backdrop appears.
-     * 4. Further images crossfade every 10 seconds.
-     */
-    function startSlideshow(activityRoot, card, type, token) {
-        stopSlideshow();
-
-        if (!activityRoot || !activityRoot.length) return;
-        if (!card || !card.id || !card.backdrop_path) return;
-
-        var nativeBackground = activityRoot.find(
-            '.full-start__background'
-        ).first();
-
-        if (!nativeBackground.length) return;
-
-        var nativeSrc =
-            nativeBackground.attr('src') ||
-            nativeBackground[0].src ||
-            '';
-
-        if (!nativeSrc) return;
-
-        var slideshowId = slideshowToken;
-
-        slideshowRoot = activityRoot;
-
-        cached(card, 'tml_backdrops', function (done) {
-            var lang = Lampa.Storage.field('tmdb_lang');
-            var langs = (lang || 'en') + ',en,null';
-
-            tmdb.get(
-                type + '/' + card.id + '/images',
-                {
-                    filter: {
-                        include_image_language: langs
-                    }
-                },
-                function (json) {
-                    var backdrops = json && json.backdrops
-                        ? json.backdrops
-                        : [];
-
-                    var paths = [];
-                    var original = card.backdrop_path;
-
-                    backdrops.forEach(function (item) {
-                        if (
-                            item.file_path &&
-                            item.file_path !== original &&
-                            paths.indexOf(item.file_path) === -1
-                        ) {
-                            paths.push(item.file_path);
-                        }
-                    });
-
-                    done(paths);
-                },
-                function () {
-                    done([]);
-                }
-            );
-        }, function (paths) {
-            if (token !== currentToken) return;
-            if (slideshowId !== slideshowToken) return;
-            if (!slideshowRoot || !slideshowRoot.length) return;
-            if (!nativeBackground.closest('body').length) return;
-            if (!paths || paths.length < 1) return;
-
-            var urls = paths.map(function (path) {
-                return Lampa.Api.img(path, 'w1280');
-            });
-
-            /*
-             * Create two layers using native background geometry.
-             */
-            var first = nativeBackground.clone(false);
-            var second = nativeBackground.clone(false);
-
-            first
-                .removeClass('loaded dim')
-                .removeAttr('id')
-                .removeAttr('src')
-                .addClass('tml-backdrop-layer');
-
-            second
-                .removeClass('loaded dim')
-                .removeAttr('id')
-                .removeAttr('src')
-                .addClass('tml-backdrop-layer');
-
-            nativeBackground.after(first);
-            first.after(second);
-
-            var layers = [first, second];
-
-            slideshowImages = layers;
-
-            var active = 0;
-            var nextIndex = 0;
-            var loading = false;
-
-            /*
-             * First layer:
-             * use exactly the same image as the native Lampa backdrop.
-             */
-            first.on('load', function () {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-
-                requestAnimationFrame(function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    first.addClass('tml-backdrop-visible');
-                });
-            });
-
-            first.on('error', function () {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-            });
-
-            first.attr('src', nativeSrc);
-
-            /*
-             * Load and display the next additional backdrop.
-             */
-            function showNext() {
-                if (token !== currentToken) return;
-                if (slideshowId !== slideshowToken) return;
-                if (!slideshowRoot || !slideshowRoot.length) return;
-                if (loading || !urls.length) return;
-
-                loading = true;
-
-                var target = 1 - active;
-                var image = layers[target];
-
-                image
-                    .removeClass('tml-backdrop-visible')
-                    .off('load error');
-
-                image.on('load', function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    loading = false;
-
-                    requestAnimationFrame(function () {
-                        if (token !== currentToken) return;
-                        if (slideshowId !== slideshowToken) return;
-
-                        image.addClass('tml-backdrop-visible');
-
-                        layers[active].removeClass(
-                            'tml-backdrop-visible'
-                        );
-
-                        active = target;
-                    });
-                });
-
-                image.on('error', function () {
-                    if (token !== currentToken) return;
-                    if (slideshowId !== slideshowToken) return;
-
-                    loading = false;
-
-                    nextIndex = (nextIndex + 1) % urls.length;
-                });
-
-                image.attr('src', urls[nextIndex]);
-
-                nextIndex = (nextIndex + 1) % urls.length;
-            }
-
-            /*
-             * IMPORTANT:
-             * Do not start the timer immediately.
-             * The original backdrop remains on screen for 10 seconds.
-             */
-            slideshowTimer = setInterval(
-                showNext,
-                SLIDESHOW_INTERVAL
-            );
-        });
-    }
-
-    /*
-     * Clear current card state
+     * Clear previous card state
      */
     function clearCurrent() {
-        stopSlideshow();
-
         if (currentImage) {
             currentImage.off('error');
+        }
+
+        if (currentStudio) {
+            currentStudio.find('img').off('load error');
         }
 
         currentCard = null;
         currentTitle = null;
         currentImage = null;
+        currentStudio = null;
     }
 
     /*
@@ -1068,11 +972,9 @@
 
         if (!card || !card.id) return;
 
-        var activityRoot = getActivityRoot(ev);
         var titleBlock = getTitleBlock(ev);
         var root = getCardRoot(ev);
 
-        if (!activityRoot.length) return;
         if (!titleBlock.length || !root.length) return;
 
         clearCurrent();
@@ -1084,16 +986,16 @@
         currentTitle = titleBlock;
 
         /*
-         * Cinematic information
+         * Position tagline and build information
          */
         prepareTagline(root);
         prepareMetadata(root, card);
         prepareDescription(root, card);
 
         /*
-         * Production studio logo
+         * Studio logo above movie logo
          */
-        prepareStudioLogo(root, card, token);
+        prepareStudioLogo(root, card, type, token);
 
         /*
          * TMDB movie logo
@@ -1124,11 +1026,6 @@
                 token
             );
         });
-
-        /*
-         * TMDB backdrop slideshow
-         */
-        startSlideshow(activityRoot, card, type, token);
     }
 
     /*
