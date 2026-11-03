@@ -3,44 +3,50 @@
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.0.0
+     * TMDB MOVIE LOGOS 1.0.1
      *
      * Lampa / Android TV / Mobile
      *
+     * Independent plugin for standard Lampa FULL card.
+     *
      * FEATURES:
-     * - Standard Lampa Full Card
-     * - TMDB movie and TV logos
-     * - Language priority: Lampa > English > No language
-     * - W500 logo quality
-     * - Logo cache
-     * - Smooth fade-in animation
+     * - Replaces movie/TV title with TMDB logo
+     * - TMDB language priority
+     * - English fallback
+     * - Logo without language fallback
+     * - W500 image quality
+     * - Persistent cache
+     * - Smooth fade-in
      * - Original title fallback
-     * - Safe asynchronous loading
-     * - No modifications to other card elements
+     * - Activity and FULL event detection
+     * - DOM observer for dynamic rendering
+     * - No NewCard dependency
+     * - No modifications to other interface elements
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_ready) return;
+    if (window.tmdb_movie_logos_v101_ready) return;
 
-    window.tmdb_movie_logos_ready = true;
+    window.tmdb_movie_logos_v101_ready = true;
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.0.1';
 
-    var CACHE_KEY = 'tmdb_movie_logos_cache_v100';
-
+    var CACHE_KEY = 'tmdb_movie_logos_cache_v101';
     var CACHE_LIMIT = 500;
+    var REQUEST_TIMEOUT = 15000;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
-    var memoryCache = {};
+    var cache = {};
+    var pending = {};
 
     var currentCard = null;
     var currentRequest = 0;
 
     var observer = null;
-    var styleElement = null;
-
     var started = false;
+
+    var scanTimer = null;
 
     // --------------------------------------------------
     // CSS
@@ -48,44 +54,40 @@
 
     var css = '' +
 
-        '.tml-title-host{' +
+        '.tml-logo-host{' +
             'position:relative !important;' +
-            'transition:color .35s ease;' +
-        '}' +
-
-        '.tml-title-host.tml-logo-active{' +
             'color:transparent !important;' +
             'text-shadow:none !important;' +
         '}' +
 
-        '.tml-title-host .tml-logo-image{' +
-            'position:absolute;' +
-            'left:0;' +
-            'top:50%;' +
-            'display:block;' +
-            'width:auto;' +
-            'height:auto;' +
-            'max-width:min(85vw, 30em);' +
-            'max-height:2.2em;' +
-            'object-fit:contain;' +
-            'object-position:left center;' +
-            'opacity:0;' +
-            'transform:translateY(-46%);' +
-            'transition:opacity .4s ease;' +
-            'pointer-events:none;' +
+        '.tml-logo-host .tml-logo-image{' +
+            'position:absolute !important;' +
+            'left:0 !important;' +
+            'top:50% !important;' +
+            'display:block !important;' +
+            'width:auto !important;' +
+            'height:auto !important;' +
+            'max-width:min(85vw,30em) !important;' +
+            'max-height:2.2em !important;' +
+            'object-fit:contain !important;' +
+            'object-position:left center !important;' +
+            'opacity:0 !important;' +
+            'transform:translateY(-46%) !important;' +
+            'transition:opacity .4s ease !important;' +
+            'pointer-events:none !important;' +
             'filter:none !important;' +
             'box-shadow:none !important;' +
         '}' +
 
-        '.tml-title-host.tml-logo-active .tml-logo-image{' +
-            'opacity:1;' +
+        '.tml-logo-host.tml-logo-visible .tml-logo-image{' +
+            'opacity:1 !important;' +
         '}' +
 
         '@media screen and (max-width:768px){' +
 
-            '.tml-title-host .tml-logo-image{' +
-                'max-width:80vw;' +
-                'max-height:2em;' +
+            '.tml-logo-host .tml-logo-image{' +
+                'max-width:80vw !important;' +
+                'max-height:2em !important;' +
             '}' +
 
         '}';
@@ -98,7 +100,7 @@
         return Lampa.Storage.field('tmdb_lang') || 'en';
     }
 
-    function getMediaType(card) {
+    function getType(card) {
         if (!card) return '';
 
         var type =
@@ -114,10 +116,10 @@
         return '';
     }
 
-    function getCardId(card) {
-        if (!card || !card.id) return '';
-
-        return String(card.id);
+    function getId(card) {
+        return card && card.id
+            ? String(card.id)
+            : '';
     }
 
     function getTitle(card) {
@@ -132,43 +134,51 @@
         );
     }
 
-    function makeKey(type, id, lang) {
-        return type + '_' + id + '_' + lang;
+    function makeKey(card) {
+        return [
+            getType(card),
+            getId(card),
+            getLanguage()
+        ].join('_');
+    }
+
+    function validCard(card) {
+        return !!(
+            card &&
+            getId(card) &&
+            getType(card)
+        );
     }
 
     // --------------------------------------------------
     // CACHE
     // --------------------------------------------------
 
-    function getCache() {
-        var cache = {};
-
+    function loadCache() {
         try {
-            cache = Lampa.Storage.get(CACHE_KEY, {}) || {};
-        } catch (e) {}
+            var saved = Lampa.Storage.get(CACHE_KEY, {});
 
-        if (typeof cache !== 'object' || Array.isArray(cache)) {
+            if (
+                saved &&
+                typeof saved === 'object' &&
+                !Array.isArray(saved)
+            ) {
+                cache = saved;
+            }
+        } catch (e) {
             cache = {};
         }
-
-        return cache;
     }
 
     function saveCache(key, value) {
-        memoryCache[key] = value || false;
-
-        var cache = getCache();
-
         cache[key] = value || false;
 
         var keys = Object.keys(cache);
 
         if (keys.length > CACHE_LIMIT) {
-            keys = keys.slice(keys.length - CACHE_LIMIT);
-
             var limited = {};
 
-            keys.forEach(function (k) {
+            keys.slice(-CACHE_LIMIT).forEach(function (k) {
                 limited[k] = cache[k];
             });
 
@@ -180,33 +190,8 @@
         } catch (e) {}
     }
 
-    function readCache(key) {
-        if (memoryCache[key] !== undefined) {
-            return {
-                found: true,
-                value: memoryCache[key] || null
-            };
-        }
-
-        var cache = getCache();
-
-        if (Object.prototype.hasOwnProperty.call(cache, key)) {
-            memoryCache[key] = cache[key] || false;
-
-            return {
-                found: true,
-                value: cache[key] || null
-            };
-        }
-
-        return {
-            found: false,
-            value: null
-        };
-    }
-
     // --------------------------------------------------
-    // LOGO SELECTION
+    // LOGO LANGUAGE SELECTION
     // --------------------------------------------------
 
     function pickLogo(logos) {
@@ -236,50 +221,55 @@
     }
 
     // --------------------------------------------------
-    // TMDB REQUEST
+    // LOAD LOGO
     // --------------------------------------------------
 
     function loadLogo(card, callback) {
-        var type = getMediaType(card);
-        var id = getCardId(card);
+        var key = makeKey(card);
 
-        if (!type || !id || !tmdb) {
-            callback(null);
+        if (Object.prototype.hasOwnProperty.call(cache, key)) {
+            callback(cache[key] || null);
             return;
         }
 
-        var lang = getLanguage();
-        var key = makeKey(type, id, lang);
-
-        var cached = readCache(key);
-
-        if (cached.found) {
-            callback(cached.value);
+        if (pending[key]) {
+            pending[key].push(callback);
             return;
         }
+
+        pending[key] = [callback];
 
         var completed = false;
+
+        var timer = setTimeout(function () {
+            finish(null);
+        }, REQUEST_TIMEOUT);
 
         function finish(url) {
             if (completed) return;
 
             completed = true;
 
+            clearTimeout(timer);
+
             saveCache(key, url);
 
-            callback(url || null);
-        }
+            var callbacks = pending[key] || [];
 
-        var timeout = setTimeout(function () {
-            finish(null);
-        }, 15000);
+            delete pending[key];
 
-        function complete(url) {
-            clearTimeout(timeout);
-            finish(url);
+            callbacks.forEach(function (fn) {
+                try {
+                    fn(url || null);
+                } catch (e) {}
+            });
         }
 
         try {
+            var type = getType(card);
+            var id = getId(card);
+            var lang = getLanguage();
+
             tmdb.get(
                 type + '/' + id + '/images',
 
@@ -297,43 +287,55 @@
                     );
 
                     if (!logo || !logo.file_path) {
-                        complete(null);
+                        finish(null);
                         return;
                     }
 
-                    complete(
-                        Lampa.Api.img(
-                            logo.file_path,
-                            'w500'
-                        )
+                    var url = Lampa.Api.img(
+                        logo.file_path,
+                        'w500'
                     );
+
+                    finish(url);
                 },
 
                 function () {
-                    complete(null);
+                    finish(null);
                 }
             );
         } catch (e) {
-            complete(null);
+            finish(null);
         }
     }
 
     // --------------------------------------------------
-    // TITLE ELEMENT
+    // FIND STANDARD FULL TITLE
     // --------------------------------------------------
 
     function findTitle() {
         var selectors = [
             '.full-start__title',
-            '.full-start__name'
+            '.full-start__name',
+            '.full-start__title-text',
+            '.full-start h1',
+            '.full-start h2'
         ];
 
         for (var i = 0; i < selectors.length; i++) {
-            var element = document.querySelector(
-                '.full ' + selectors[i]
-            );
+            var elements = document.querySelectorAll(selectors[i]);
 
-            if (element) return $(element);
+            for (var j = 0; j < elements.length; j++) {
+                var el = elements[j];
+
+                if (!el || !el.isConnected) continue;
+
+                if (
+                    el.closest('.full-start') ||
+                    el.closest('.full')
+                ) {
+                    return $(el);
+                }
+            }
         }
 
         return $();
@@ -343,28 +345,18 @@
     // REMOVE LOGO
     // --------------------------------------------------
 
-    function removeLogo() {
+    function restoreTitle() {
         var title = findTitle();
 
         if (!title.length) return;
 
-        title.removeClass('tml-title-host tml-logo-active');
+        title.removeClass(
+            'tml-logo-host tml-logo-visible'
+        );
 
         title.find('.tml-logo-image').remove();
 
         title.removeAttr('data-tml-key');
-    }
-
-    // --------------------------------------------------
-    // RESTORE TITLE
-    // --------------------------------------------------
-
-    function restoreTitle(title) {
-        if (!title || !title.length) return;
-
-        title.removeClass('tml-logo-active');
-
-        title.find('.tml-logo-image').remove();
     }
 
     // --------------------------------------------------
@@ -373,32 +365,31 @@
 
     function displayLogo(card, url, requestId) {
         if (requestId !== currentRequest) return;
-
-        if (!currentCard || currentCard !== card) return;
+        if (currentCard !== card) return;
 
         var title = findTitle();
 
         if (!title.length) return;
 
         if (!url) {
-            restoreTitle(title);
+            restoreTitle();
             return;
         }
 
-        var key = makeKey(
-            getMediaType(card),
-            getCardId(card),
-            getLanguage()
-        );
+        var key = makeKey(card);
 
-        if (title.attr('data-tml-key') === key &&
-            title.hasClass('tml-logo-active')) {
+        if (
+            title.attr('data-tml-key') === key &&
+            title.find('.tml-logo-image').length
+        ) {
             return;
         }
 
-        restoreTitle(title);
+        title.find('.tml-logo-image').remove();
 
-        title.addClass('tml-title-host');
+        title.removeClass('tml-logo-visible');
+
+        title.addClass('tml-logo-host');
 
         title.attr('data-tml-key', key);
 
@@ -409,23 +400,26 @@
 
         image.on('load', function () {
             if (requestId !== currentRequest) return;
-
-            if (!currentCard || currentCard !== card) return;
+            if (currentCard !== card) return;
 
             if (!title.length || !title[0].isConnected) return;
 
-            title.addClass('tml-logo-active');
+            title.addClass('tml-logo-visible');
         });
 
         image.on('error', function () {
             if (requestId !== currentRequest) return;
 
-            restoreTitle(title);
+            title.removeClass(
+                'tml-logo-host tml-logo-visible'
+            );
+
+            image.remove();
         });
 
-        image.attr('src', url);
-
         title.append(image);
+
+        image.attr('src', url);
     }
 
     // --------------------------------------------------
@@ -433,35 +427,18 @@
     // --------------------------------------------------
 
     function processCard(card) {
-        if (!card) return;
-
-        var type = getMediaType(card);
-        var id = getCardId(card);
-
-        if (!type || !id) return;
+        if (!validCard(card)) return;
 
         var title = findTitle();
 
         if (!title.length) return;
 
-        var key = makeKey(
-            type,
-            id,
-            getLanguage()
-        );
+        var key = makeKey(card);
 
         if (
+            currentCard === card &&
             title.attr('data-tml-key') === key &&
-            title.hasClass('tml-logo-active')
-        ) {
-            return;
-        }
-
-        if (
-            currentCard &&
-            getMediaType(currentCard) === type &&
-            getCardId(currentCard) === id &&
-            currentCard === card
+            title.find('.tml-logo-image').length
         ) {
             return;
         }
@@ -470,7 +447,7 @@
 
         var requestId = ++currentRequest;
 
-        restoreTitle(title);
+        restoreTitle();
 
         loadLogo(card, function (url) {
             displayLogo(card, url, requestId);
@@ -478,33 +455,27 @@
     }
 
     // --------------------------------------------------
-    // EXTRACT CARD FROM FULL EVENT
+    // EXTRACT CARD
     // --------------------------------------------------
 
-    function extractCard(event) {
-        if (!event) return null;
-
-        var object = event.object || event;
-
+    function extractCard(object) {
         if (!object) return null;
 
         var candidates = [
-            object.movie,
             object.card,
+            object.movie,
             object.data,
-            object,
-            object.activity && object.activity.card
+            object.activity && object.activity.card,
+            object.activity && object.activity.object,
+            object.object,
+            object
         ];
 
         for (var i = 0; i < candidates.length; i++) {
-            var card = candidates[i];
+            var candidate = candidates[i];
 
-            if (
-                card &&
-                card.id &&
-                getMediaType(card)
-            ) {
-                return card;
+            if (validCard(candidate)) {
+                return candidate;
             }
         }
 
@@ -512,21 +483,27 @@
     }
 
     // --------------------------------------------------
-    // FULL COMPONENT LISTENER
+    // ACTIVITY EVENT
     // --------------------------------------------------
 
-    function onFullEvent(event) {
-        if (!event) return;
+    function onActivity(event) {
+        if (!event || event.component !== 'full') return;
 
-        if (event.type === 'complite') {
-            var card = extractCard(event);
+        if (
+            event.type === 'init' ||
+            event.type === 'create' ||
+            event.type === 'start'
+        ) {
+            var card = extractCard(event.object);
 
             if (card) {
-                currentCard = null;
+                currentCard = card;
+
+                currentRequest++;
 
                 setTimeout(function () {
                     processCard(card);
-                }, 100);
+                }, 150);
             }
         }
 
@@ -534,6 +511,34 @@
             currentRequest++;
 
             currentCard = null;
+
+            clearTimeout(scanTimer);
+        }
+    }
+
+    // --------------------------------------------------
+    // FULL EVENT
+    // --------------------------------------------------
+
+    function onFull(event) {
+        if (!event) return;
+
+        var card = extractCard(event.object);
+
+        if (!card) {
+            card = extractCard(event);
+        }
+
+        if (card) {
+            currentCard = card;
+
+            var requestId = ++currentRequest;
+
+            setTimeout(function () {
+                if (requestId !== currentRequest) return;
+
+                processCard(card);
+            }, 100);
         }
     }
 
@@ -541,21 +546,17 @@
     // DOM OBSERVER
     // --------------------------------------------------
 
-    function startObserver() {
-        if (observer || !document.body) return;
+    function scheduleScan() {
+        clearTimeout(scanTimer);
 
-        observer = new MutationObserver(function () {
+        scanTimer = setTimeout(function () {
             if (!currentCard) return;
 
             var title = findTitle();
 
             if (!title.length) return;
 
-            var key = makeKey(
-                getMediaType(currentCard),
-                getCardId(currentCard),
-                getLanguage()
-            );
+            var key = makeKey(currentCard);
 
             if (
                 title.attr('data-tml-key') !== key ||
@@ -563,6 +564,16 @@
             ) {
                 processCard(currentCard);
             }
+        }, 100);
+    }
+
+    function startObserver() {
+        if (observer || !document.body) return;
+
+        observer = new MutationObserver(function () {
+            if (!currentCard) return;
+
+            scheduleScan();
         });
 
         observer.observe(document.body, {
@@ -580,16 +591,19 @@
 
         started = true;
 
-        styleElement = document.createElement('style');
+        loadCache();
 
-        styleElement.id = 'tmdb-movie-logos-style-v100';
+        var style = document.createElement('style');
 
-        styleElement.textContent = css;
+        style.id = 'tmdb-movie-logos-v101-style';
 
-        document.head.appendChild(styleElement);
+        style.textContent = css;
+
+        document.head.appendChild(style);
 
         if (Lampa.Listener && Lampa.Listener.follow) {
-            Lampa.Listener.follow('full', onFullEvent);
+            Lampa.Listener.follow('activity', onActivity);
+            Lampa.Listener.follow('full', onFull);
         }
 
         startObserver();
