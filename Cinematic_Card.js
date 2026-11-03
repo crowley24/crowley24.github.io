@@ -1,18 +1,21 @@
+
 (function () {
     'use strict';
 
     /*
      * @name NEWCARD
-     * @version 3.3.1
+     * @version 3.3.2
      * @author Crowley24
-     * @description Modern TV interface with native Lampa ratings
+     * @description Modern TV interface with integrated TMDB metadata and rating
      * @platforms Lampa | Android TV
      *
-     * 3.3.1 CHANGES:
-     * - Added verified CSS selectors to hide original Lampa description
-     * - Custom TMDB description always enabled
-     * - Native Lampa rating placed inside metadata row
-     * - Removed description toggle from settings
+     * 3.3.2 CHANGES:
+     * - Rating integrated directly into metadata row
+     * - Rating format: ★ 8.7
+     * - Metadata order: Year / Country / Runtime / Rating / Genres
+     * - Strict single-line metadata layout
+     * - Metadata animation removed
+     * - TMDB details fallback when metadata is incomplete
      * - Preserved background, slideshow, logos, studios and buttons
      */
 
@@ -24,7 +27,7 @@
     let currentInterval = null;
     let logoRequestId = 0;
     let logoRequests = {};
-    let debounceTimer;
+    let debounceTimer = null;
 
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
@@ -39,6 +42,10 @@
         'settings_cas_show_studios': 'Показувати студії',
         'settings_cas_show_tagline': 'Показувати слоган'
     };
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
 
     function debounce(func, delay) {
         return function () {
@@ -65,12 +72,73 @@
     }
 
     function formatTime(mins) {
+        mins = parseInt(mins) || 0;
+
         if (!mins) return '';
 
         const h = Math.floor(mins / 60);
         const m = mins % 60;
 
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
+
+    function getRating(data) {
+        if (!data) return 0;
+
+        let rating = parseFloat(data.vote_average);
+
+        if (!rating && data.rating) {
+            rating = parseFloat(data.rating);
+        }
+
+        if (!isFinite(rating) || rating <= 0) return 0;
+
+        return Math.min(rating, 10);
+    }
+
+    function getYear(data) {
+        const date = data.release_date || data.first_air_date;
+
+        if (!date) return '';
+
+        const year = parseInt(String(date).substring(0, 4));
+
+        return year > 1800 ? year : '';
+    }
+
+    function getCountry(data) {
+        if (
+            data.production_countries &&
+            data.production_countries.length
+        ) {
+            return data.production_countries
+                .map(item => item.name)
+                .filter(Boolean)
+                .slice(0, 2)
+                .join(', ');
+        }
+
+        if (
+            data.origin_country &&
+            data.origin_country.length
+        ) {
+            return data.origin_country.join(', ');
+        }
+
+        return '';
+    }
+
+    function getRuntime(data) {
+        if (data.runtime) return data.runtime;
+
+        if (
+            data.episode_run_time &&
+            data.episode_run_time.length
+        ) {
+            return data.episode_run_time[0];
+        }
+
+        return 0;
     }
 
     function initializePlugin() {
@@ -223,19 +291,12 @@
 
         const currentCard = $('.full-start-new.left-title');
 
-        if (currentCard.length > 0) {
+        if (currentCard.length) {
             currentCard
                 .removeClass('cas-anim-slide cas-anim-spring')
                 .addClass('cas-anim-' + animStyle);
 
             const showTag = !!Lampa.Storage.get('cas_show_tagline');
-
-            currentCard.find('.cas-description').each(function () {
-                const el = $(this);
-                const text = el.text().trim();
-
-                el.css('display', text ? '-webkit-box' : 'none');
-            });
 
             currentCard.find('.cas-tagline').toggle(showTag);
 
@@ -246,23 +307,19 @@
             stopSlideshow();
 
             if (Lampa.Storage.get('cas_slideshow_enabled')) {
-                const bg = currentCard.find(
-                    '.full-start__background img, img.full-start__background'
-                );
+                const movieData = currentCard.data('movie');
 
-                if (bg.length && bg.attr('src')) {
-                    const movieData = currentCard.data('movie');
+                if (movieData && movieData.id) {
+                    const cached = getCachedData(
+                        'tmdb_' + movieData.id
+                    );
 
-                    if (movieData && movieData.id) {
-                        const cached = getCachedData('tmdb_' + movieData.id);
-
-                        if (cached && cached.backdrops?.length > 1) {
-                            startSlideshow(
-                                currentCard,
-                                cached.backdrops,
-                                Lampa.Storage.get('tmdb_lang') || 'uk'
-                            );
-                        }
+                    if (cached && cached.backdrops?.length > 1) {
+                        startSlideshow(
+                            currentCard,
+                            cached.backdrops,
+                            Lampa.Storage.get('tmdb_lang') || 'uk'
+                        );
                     }
                 }
             }
@@ -274,7 +331,8 @@
     // =====================================================
 
     function addCustomTemplate() {
-        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const animStyle =
+            Lampa.Storage.get('cas_animation_style') || 'slide';
 
         const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
             <div class="full-start-new__body">
@@ -297,9 +355,6 @@
 
                         <div class="cas-meta-line">
                             <div class="cas-meta-info"></div>
-                            <div class="cas-native-rating">
-                                <div class="full-start-new__rate-line"></div>
-                            </div>
                         </div>
 
                         <div class="cas-description"></div>
@@ -362,7 +417,7 @@
 
                 <div class="full-start__button view--torrent hide">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24">
-                        <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
+                        <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
                     </svg>
                     <span>#{full_torrents}</span>
                 </div>
@@ -458,8 +513,6 @@
 
         .cas-tagline,
         .cas-studios-row,
-        .cas-meta-info,
-        .cas-native-rating,
         .cas-description,
         .cas-details-wrapper,
         .full-start-new__buttons {
@@ -505,8 +558,6 @@
         }
 
         /* LAYOUT */
-
-        /* Hide original Lampa details and original description. */
 
         .full-start-new__details,
         .full-start-new__description,
@@ -598,54 +649,84 @@
             text-align: left !important;
         }
 
-        /* METADATA + NATIVE RATING */
+        /* SINGLE-LINE METADATA */
 
         .cas-meta-line {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            white-space: nowrap !important;
+            gap: 0 !important;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            margin-bottom: 8px;
+            opacity: 0.82 !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
         }
 
         .cas-meta-info {
-            margin-right: 0;
-            display: flex;
-            align-items: center;
+            display: flex !important;
+            align-items: center !important;
             justify-content: flex-start !important;
-            gap: 8px;
+            flex-wrap: nowrap !important;
+            white-space: nowrap !important;
+            gap: 0 !important;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            font-size: var(--cas-meta-size);
             font-weight: 400;
-            font-size: var(--cas-meta-size);
+            line-height: 1.4;
+            color: rgba(255,255,255,0.82);
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
         }
 
-        .cas-native-rating {
-            display: flex !important;
+        .cas-meta-item {
+            display: inline-block;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .cas-meta-separator {
+            display: inline-block;
+            flex: 0 0 auto;
+            margin: 0 9px;
+            color: rgba(255,255,255,0.45);
+        }
+
+        .cas-wave-rating {
+            display: inline-flex;
             align-items: center;
-            justify-content: flex-start !important;
-            font-size: var(--cas-meta-size);
+            flex: 0 0 auto;
+            white-space: nowrap;
+            color: rgba(255,255,255,0.95);
+            font-weight: 600;
         }
 
-        .full-start-new__rate-line {
-            display: flex !important;
-            align-items: center;
-            justify-content: flex-start !important;
-            position: relative !important;
-            left: auto !important;
-            right: auto !important;
-            bottom: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: auto !important;
-            min-height: 0;
-            font-size: var(--cas-meta-size);
+        .cas-wave-rating-star {
+            margin-right: 4px;
+            font-size: 0.95em;
         }
 
-        .full-start-new__rate-line:empty {
-            display: none !important;
+        .cas-wave-rating-value {
+            font-weight: 600;
         }
 
-        /* DESCRIPTION — ALWAYS ENABLED */
+        .cas-wave-genre {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        /* DESCRIPTION */
 
         .cas-description {
             font-size: var(--cas-meta-size) !important;
@@ -704,8 +785,6 @@
 
         .cas-anim-slide .cas-tagline,
         .cas-anim-slide .cas-studios-row,
-        .cas-anim-slide .cas-meta-info,
-        .cas-anim-slide .cas-native-rating,
         .cas-anim-slide .cas-description,
         .cas-anim-slide .cas-details-wrapper,
         .cas-anim-slide .full-start-new__buttons {
@@ -727,13 +806,6 @@
             transition-delay: 0.06s;
         }
 
-        .cas-anim-slide.cas-animated .cas-meta-info,
-        .cas-anim-slide.cas-animated .cas-native-rating {
-            opacity: 0.9 !important;
-            transform: translate3d(0,0,0);
-            transition-delay: 0.09s;
-        }
-
         .cas-anim-slide.cas-animated .cas-description {
             opacity: 0.75 !important;
             transform: translate3d(0,0,0);
@@ -750,8 +822,6 @@
 
         .cas-anim-spring .cas-tagline,
         .cas-anim-spring .cas-studios-row,
-        .cas-anim-spring .cas-meta-info,
-        .cas-anim-spring .cas-native-rating,
         .cas-anim-spring .cas-description,
         .cas-anim-spring .cas-details-wrapper,
         .cas-anim-spring .full-start-new__buttons {
@@ -773,13 +843,6 @@
             transition-delay: 0.06s;
         }
 
-        .cas-anim-spring.cas-animated .cas-meta-info,
-        .cas-anim-spring.cas-animated .cas-native-rating {
-            opacity: 0.9 !important;
-            transform: scale3d(1,1,1) translate3d(0,0,0);
-            transition-delay: 0.09s;
-        }
-
         .cas-anim-spring.cas-animated .cas-description {
             opacity: 0.75 !important;
             transform: scale3d(1,1,1) translate3d(0,0,0);
@@ -799,6 +862,7 @@
         </style>`;
 
         Lampa.Template.add('left_title_css', styles);
+
         $('body').append(
             Lampa.Template.get('left_title_css', {}, true)
         );
@@ -885,11 +949,11 @@
 
         let finalBackdrops = [].concat(noLangBackdrops);
 
-        if (finalBackdrops.length < 3 && langBackdrops.length > 0) {
+        if (finalBackdrops.length < 3 && langBackdrops.length) {
             finalBackdrops = finalBackdrops.concat(langBackdrops);
         }
 
-        if (finalBackdrops.length < 3 && otherBackdrops.length > 0) {
+        if (finalBackdrops.length < 3 && otherBackdrops.length) {
             otherBackdrops.sort(
                 (a, b) => (b.vote_average || 0) - (a.vote_average || 0)
             );
@@ -1045,7 +1109,11 @@
     function getLogoUrl(logo) {
         if (!logo || !logo.file_path) return '';
 
-        return Lampa.TMDB.image('/t/p/w500' + logo.file_path);
+        const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
+
+        return Lampa.TMDB.image(
+            '/t/p/' + quality + logo.file_path
+        );
     }
 
     function showLogoFallback(render, data, requestId) {
@@ -1301,6 +1369,288 @@
     }
 
     // =====================================================
+    // METADATA RENDERER
+    // =====================================================
+
+    function appendMetaItem(container, value, className) {
+        if (!value) return;
+
+        if (container.children().length) {
+            container.append(
+                '<span class="cas-meta-separator">·</span>'
+            );
+        }
+
+        const item = $('<span></span>')
+            .addClass('cas-meta-item')
+            .addClass(className || '')
+            .text(value);
+
+        container.append(item);
+    }
+
+    function renderMetadata(render, data) {
+        const container = render.find('.cas-meta-info');
+
+        container.empty();
+
+        const year = getYear(data);
+        const country = getCountry(data);
+        const runtime = formatTime(getRuntime(data));
+        const rating = getRating(data);
+
+        const genres = (data.genres || [])
+            .map(g => g.name)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(', ');
+
+        // 1. YEAR
+
+        appendMetaItem(
+            container,
+            year,
+            'cas-wave-year'
+        );
+
+        // 2. COUNTRY
+
+        appendMetaItem(
+            container,
+            country,
+            'cas-wave-country'
+        );
+
+        // 3. RUNTIME
+
+        appendMetaItem(
+            container,
+            runtime,
+            'cas-wave-time'
+        );
+
+        // 4. RATING
+
+        if (rating > 0) {
+            if (container.children().length) {
+                container.append(
+                    '<span class="cas-meta-separator">·</span>'
+                );
+            }
+
+            const ratingElement = $(`
+                <span class="cas-meta-item cas-wave-rating">
+                    <span class="cas-wave-rating-star">★</span>
+                    <span class="cas-wave-rating-value"></span>
+                </span>
+            `);
+
+            ratingElement
+                .find('.cas-wave-rating-value')
+                .text(rating.toFixed(1));
+
+            container.append(ratingElement);
+        }
+
+        // 5. GENRES
+
+        appendMetaItem(
+            container,
+            genres,
+            'cas-wave-genre'
+        );
+
+        container.css('display', 'flex');
+    }
+
+    // =====================================================
+    // TMDB DETAILS FALLBACK
+    // =====================================================
+
+    const detailsRequests = {};
+
+    function needsDetails(data) {
+        return !getCountry(data) ||
+            !getRuntime(data) ||
+            !(data.genres && data.genres.length) ||
+            !getRating(data);
+    }
+
+    function loadTMDBDetails(data) {
+        return new Promise(resolve => {
+            if (!data || !data.id) {
+                resolve(null);
+                return;
+            }
+
+            const type = data.name ? 'tv/' : 'movie/';
+            const requestId = type + data.id;
+
+            if (detailsRequests[requestId]) {
+                detailsRequests[requestId].then(resolve);
+                return;
+            }
+
+            const url = Lampa.TMDB.api(
+                type + data.id + '?api_key=' +
+                Lampa.TMDB.key() +
+                '&language=' +
+                (Lampa.Storage.get('tmdb_lang') || 'uk')
+            );
+
+            const request = new Promise(done => {
+                let completed = false;
+
+                const timeout = setTimeout(() => {
+                    if (completed) return;
+
+                    completed = true;
+                    done(null);
+                }, 12000);
+
+                $.getJSON(url, result => {
+                    if (completed) return;
+
+                    completed = true;
+                    clearTimeout(timeout);
+                    done(result || null);
+
+                }).fail(() => {
+                    if (completed) return;
+
+                    completed = true;
+                    clearTimeout(timeout);
+                    done(null);
+                });
+            });
+
+            detailsRequests[requestId] = request;
+
+            request.then(result => {
+                delete detailsRequests[requestId];
+                resolve(result);
+            });
+        });
+    }
+
+    // =====================================================
+    // MOVIE METADATA + DESCRIPTION
+    // =====================================================
+
+    async function loadMovieDataOptimized(render, data) {
+        if (!data) return;
+
+        // TAGLINE
+
+        if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
+            render.find('.cas-tagline')
+                .text('«' + data.tagline + '»')
+                .show();
+        } else {
+            render.find('.cas-tagline').hide();
+        }
+
+        // DESCRIPTION
+
+        const description = String(data.overview || '').trim();
+
+        render.find('.cas-description')
+            .text(description)
+            .css('display', description ? '-webkit-box' : 'none');
+
+        // INITIAL METADATA
+
+        renderMetadata(render, data);
+
+        // DETAILS FALLBACK
+
+        if (needsDetails(data)) {
+            const details = await loadTMDBDetails(data);
+
+            if (details) {
+                // Merge only missing fields.
+                const merged = Object.assign({}, data);
+
+                if (!getRating(merged)) {
+                    merged.vote_average = details.vote_average;
+                }
+
+                if (!getCountry(merged)) {
+                    merged.production_countries =
+                        details.production_countries;
+
+                    if (!merged.origin_country) {
+                        merged.origin_country = details.origin_country;
+                    }
+                }
+
+                if (!getRuntime(merged)) {
+                    merged.runtime = details.runtime;
+                    merged.episode_run_time = details.episode_run_time;
+                }
+
+                if (!(merged.genres && merged.genres.length)) {
+                    merged.genres = details.genres;
+                }
+
+                if (!merged.overview && details.overview) {
+                    merged.overview = details.overview;
+
+                    render.find('.cas-description')
+                        .text(String(details.overview).trim())
+                        .css(
+                            'display',
+                            details.overview ? '-webkit-box' : 'none'
+                        );
+                }
+
+                if (!merged.tagline && details.tagline) {
+                    merged.tagline = details.tagline;
+
+                    if (Lampa.Storage.get('cas_show_tagline')) {
+                        render.find('.cas-tagline')
+                            .text('«' + details.tagline + '»')
+                            .show();
+                    }
+                }
+
+                renderMetadata(render, merged);
+
+                // Update studios if missing in the original data.
+
+                if (
+                    Lampa.Storage.get('cas_show_studios') &&
+                    (
+                        !data.production_companies ||
+                        !data.production_companies.length
+                    ) &&
+                    details.production_companies
+                ) {
+                    renderStudioLogosWithColorAnalysis(
+                        render.find('.cas-studios-row'),
+                        details
+                    );
+                }
+            }
+        }
+
+        // STUDIOS
+
+        if (Lampa.Storage.get('cas_show_studios')) {
+            renderStudioLogosWithColorAnalysis(
+                render.find('.cas-studios-row'),
+                data
+            );
+        } else {
+            render.find('.cas-studios-row').empty();
+        }
+    }
+
+    const debouncedLoadMovieData = debounce((render, data) => {
+        loadMovieDataOptimized(render, data).catch(() => {});
+    }, 150);
+
+    // =====================================================
     // IMAGE PROCESSING
     // =====================================================
 
@@ -1331,117 +1681,6 @@
     }
 
     // =====================================================
-    // MOVIE METADATA + DESCRIPTION
-    // =====================================================
-
-    async function loadMovieDataOptimized(render, data) {
-        const tasks = [];
-
-        // TAGLINE
-
-        if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
-            render.find('.cas-tagline')
-                .text('«' + data.tagline + '»')
-                .show();
-        } else {
-            render.find('.cas-tagline').hide();
-        }
-
-        // DESCRIPTION — ALWAYS ENABLED
-
-        const description = String(data.overview || '').trim();
-
-        render.find('.cas-description')
-            .text(description)
-            .css('display', description ? '-webkit-box' : 'none');
-
-        // METADATA
-
-        tasks.push(
-            Promise.resolve().then(() => {
-                const year = data.release_date
-                    ? new Date(data.release_date).getFullYear()
-                    : (
-                        data.first_air_date
-                            ? new Date(data.first_air_date).getFullYear()
-                            : ''
-                    );
-
-                const country = (
-                    data.production_countries &&
-                    data.production_countries.length > 0
-                )
-                    ? data.production_countries[0].name
-                    : '';
-
-                const time = formatTime(
-                    data.runtime ||
-                    (data.episode_run_time
-                        ? data.episode_run_time[0]
-                        : 0)
-                );
-
-                const genres = (data.genres || [])
-                    .map(g => g.name)
-                    .join(', ');
-
-                const metaParts = [];
-
-                if (year) {
-                    metaParts.push(
-                        `<span class="cas-wave-year">${year}</span>`
-                    );
-                }
-
-                if (country) {
-                    metaParts.push(
-                        `<span class="cas-wave-country">${country}</span>`
-                    );
-                }
-
-                if (time) {
-                    metaParts.push(
-                        `<span class="cas-wave-time">${time}</span>`
-                    );
-                }
-
-                if (genres) {
-                    metaParts.push(
-                        `<span class="cas-wave-genre">${genres}</span>`
-                    );
-                }
-
-                render.find('.cas-meta-info').html(
-                    metaParts.join(' &bull; ')
-                );
-            })
-        );
-
-        // STUDIOS
-
-        if (Lampa.Storage.get('cas_show_studios')) {
-            tasks.push(
-                Promise.resolve().then(() => {
-                    renderStudioLogosWithColorAnalysis(
-                        render.find('.cas-studios-row'),
-                        data
-                    );
-                })
-            );
-        } else {
-            render.find('.cas-studios-row').empty();
-        }
-
-        await Promise.all(tasks);
-    }
-
-    const debouncedLoadMovieData = debounce((render, data) => {
-        try {
-            loadMovieDataOptimized(render, data);
-        } catch (error) {}
-    }, 250);
-
-    // =====================================================
     // LAMPA EVENT LISTENER
     // =====================================================
 
@@ -1460,13 +1699,15 @@
 
             cardRoot.removeClass('cas-animated');
 
-            // Reset custom fields before loading the next card.
+            // RESET
 
             render.find('.cas-description').empty().hide();
             render.find('.cas-meta-info').empty();
             render.find('.cas-logo').empty();
+            render.find('.cas-tagline').empty().hide();
+            render.find('.cas-studios-row').empty();
 
-            // Hide original Lampa description elements.
+            // HIDE ORIGINAL DESCRIPTION
 
             render.find(
                 '.full-start-new__details, ' +
@@ -1534,6 +1775,8 @@
                     });
                 }
 
+                // METADATA LOAD
+
                 debouncedLoadMovieData(render, data);
 
             } else {
@@ -1542,7 +1785,7 @@
                 });
             }
 
-            // Initial focus
+            // INITIAL FOCUS
 
             setTimeout(() => {
                 const firstButton = render.find(
@@ -1570,7 +1813,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.1 initialized successfully'
+                'NewCard 3.3.2 initialized successfully'
             );
 
         } catch (error) {
