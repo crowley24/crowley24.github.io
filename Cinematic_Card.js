@@ -1,29 +1,30 @@
-
 (function () {
     'use strict';
 
     /*
-     * TMDB MOVIE LOGOS 1.4.5 — CINEMATIC MODE
+     * TMDB MOVIE LOGOS 1.4.6 — CINEMATIC NETFLIX MODE
      *
      * Lampa / Android TV
      *
-     * CHANGES 1.4.5:
-     * - Seamless slideshow startup
-     * - First slideshow frame duplicates native backdrop
-     * - No visual jump when opening a movie card
-     * - First additional backdrop appears after 10 seconds
-     * - Smooth 1.5s crossfade
-     * - Full slideshow cleanup on card destroy
+     * CHANGES 1.4.6:
+     * - Netflix-style media buttons
+     * - White primary Play button
+     * - Dark translucent secondary buttons
+     * - Smooth remote-control focus animation
+     * - Small production studio logo above movie title logo
+     * - Studio logo loaded from TMDB production_companies
+     * - Original 1.4.5 seamless backdrop slideshow preserved
+     * - Original Lampa button actions preserved
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.tmdb_movie_logos_v145_ready) return;
+    if (window.tmdb_movie_logos_v146_ready) return;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
     if (!tmdb) return;
 
-    window.tmdb_movie_logos_v145_ready = true;
+    window.tmdb_movie_logos_v146_ready = true;
 
     var currentCard = null;
     var currentTitle = null;
@@ -38,7 +39,7 @@
     var CACHE_TIMEOUT = 20000;
     var SLIDESHOW_INTERVAL = 10000;
 
-    var CSS_ID = 'tmdb_movie_logos_v145_css';
+    var CSS_ID = 'tmdb_movie_logos_v146_css';
 
     /*
      * TMDB logo selection
@@ -109,7 +110,7 @@
     }
 
     /*
-     * TMDB logo request
+     * TMDB movie logo request
      */
     function ensureLogo(item, type, cb) {
         cached(item, 'tml_logo', function (done) {
@@ -140,6 +141,34 @@
                     done(null);
                 }
             );
+        }, cb);
+    }
+
+    /*
+     * Production studio logo
+     *
+     * Uses production_companies from TMDB card data.
+     * Selects the first available studio logo.
+     */
+    function ensureStudioLogo(item, cb) {
+        cached(item, 'tml_studio_logo', function (done) {
+            var companies = item.production_companies || [];
+
+            var studio = companies.filter(function (company) {
+                return company &&
+                    company.logo_path &&
+                    company.logo_path.length;
+            })[0];
+
+            if (!studio) {
+                done(null);
+                return;
+            }
+
+            done({
+                url: Lampa.Api.img(studio.logo_path, 'w300'),
+                name: studio.name || ''
+            });
         }, cb);
     }
 
@@ -271,6 +300,45 @@
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Studio logo
+             */
+            '.tml-studio-logo{' +
+                'display:flex;' +
+                'align-items:center;' +
+                'justify-content:flex-start;' +
+                'width:100%;' +
+                'max-width:100%;' +
+                'height:1.55em;' +
+                'margin:0 0 0.45em 0;' +
+                'padding:0;' +
+                'overflow:hidden;' +
+                'box-sizing:border-box;' +
+                'opacity:0;' +
+                'transform:translateY(4px);' +
+                'transition:opacity .45s ease, transform .45s ease;' +
+            '}' +
+
+            '.tml-studio-logo.tml-studio-visible{' +
+                'opacity:.9;' +
+                'transform:translateY(0);' +
+            '}' +
+
+            '.tml-studio-logo img{' +
+                'display:block;' +
+                'width:auto;' +
+                'height:auto;' +
+                'max-width:8em;' +
+                'max-height:1.35em;' +
+                'object-fit:contain;' +
+                'object-position:left center;' +
+                'margin:0;' +
+                'padding:0;' +
+                'border:0;' +
+                'box-shadow:none;' +
+                'filter:none;' +
+            '}' +
+
             '.full-start-new__title{' +
                 'display:flex;' +
                 'align-items:flex-start;' +
@@ -322,6 +390,9 @@
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Metadata
+             */
             '.tml-cinematic-meta{' +
                 'display:flex;' +
                 'align-items:center;' +
@@ -364,6 +435,9 @@
                 'display:none !important;' +
             '}' +
 
+            /*
+             * Description
+             */
             '.tml-cinematic-description{' +
                 'display:-webkit-box;' +
                 'width:100%;' +
@@ -379,16 +453,80 @@
                 'line-clamp:3;' +
             '}' +
 
+            /*
+             * Netflix-style media buttons
+             */
             '.full-start-new__buttons{' +
                 'display:flex;' +
                 'align-items:center;' +
                 'flex-wrap:wrap;' +
-                'gap:0.45em;' +
+                'gap:0.55em;' +
                 'width:100%;' +
                 'margin:0;' +
-                'padding:0;' +
+                'padding:0.25em 0.15em;' +
+                'box-sizing:border-box;' +
             '}' +
 
+            '.full-start-new__buttons > *,' +
+            '.full-start-new__buttons .selector{' +
+                'display:inline-flex !important;' +
+                'align-items:center !important;' +
+                'justify-content:center !important;' +
+                'min-height:2.9em;' +
+                'padding:0 1.15em !important;' +
+                'border:1px solid rgba(255,255,255,.13) !important;' +
+                'border-radius:.35em !important;' +
+                'background:rgba(38,38,38,.88) !important;' +
+                'color:#fff !important;' +
+                'box-shadow:none !important;' +
+                'font-weight:600;' +
+                'text-shadow:none !important;' +
+                'box-sizing:border-box;' +
+                'transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;' +
+            '}' +
+
+            '.full-start-new__buttons > *:first-child,' +
+            '.full-start-new__buttons > *.tml-primary-button{' +
+                'background:#fff !important;' +
+                'color:#111 !important;' +
+                'border-color:#fff !important;' +
+            '}' +
+
+            '.full-start-new__buttons > *:first-child svg,' +
+            '.full-start-new__buttons > *:first-child i{' +
+                'color:#111 !important;' +
+                'fill:#111 !important;' +
+            '}' +
+
+            '.full-start-new__buttons .selector svg{' +
+                'max-width:1.25em;' +
+                'max-height:1.25em;' +
+            '}' +
+
+            '.full-start-new__buttons .selector.focus,' +
+            '.full-start-new__buttons .selector.focused,' +
+            '.full-start-new__buttons .selector:focus,' +
+            '.full-start-new__buttons > *.focus,' +
+            '.full-start-new__buttons > *.focused{' +
+                'transform:scale(1.055);' +
+                'border-color:rgba(255,255,255,.95) !important;' +
+                'box-shadow:0 0 0 2px rgba(255,255,255,.8) !important;' +
+                'z-index:3;' +
+            '}' +
+
+            '.full-start-new__buttons > *:first-child.focus,' +
+            '.full-start-new__buttons > *:first-child.focused{' +
+                'background:#f0f0f0 !important;' +
+                'color:#111 !important;' +
+            '}' +
+
+            '.full-start-new__buttons .selector:active{' +
+                'transform:scale(.98);' +
+            '}' +
+
+            /*
+             * Hide reactions and duplicate description
+             */
             '.full-start-new__reactions{' +
                 'display:none !important;' +
             '}' +
@@ -490,6 +628,56 @@
         } catch (e) {
             return $();
         }
+    }
+
+    /*
+     * Studio logo placement
+     */
+    function prepareStudioLogo(root, card, token) {
+        if (!root || !root.length) return;
+
+        var title = root.find(
+            '.full-start-new__title'
+        ).first();
+
+        if (!title.length) return;
+
+        root.find('.tml-studio-logo').remove();
+
+        ensureStudioLogo(card, function (studio) {
+            if (token !== currentToken) return;
+            if (currentCard !== card) return;
+
+            if (!studio || !studio.url) return;
+
+            var container = $(
+                '<div class="tml-studio-logo"></div>'
+            );
+
+            var image = $('<img alt="">');
+
+            image.attr('alt', studio.name || '');
+
+            image.on('error', function () {
+                container.remove();
+            });
+
+            image.on('load', function () {
+                if (token !== currentToken) return;
+
+                requestAnimationFrame(function () {
+                    if (token !== currentToken) return;
+
+                    container.addClass('tml-studio-visible');
+                });
+            });
+
+            image.attr('src', studio.url);
+
+            container.append(image);
+
+            title.before(container);
+        });
     }
 
     /*
@@ -738,11 +926,6 @@
             first.on('error', function () {
                 if (token !== currentToken) return;
                 if (slideshowId !== slideshowToken) return;
-
-                /*
-                 * If duplicate loading fails, native backdrop
-                 * remains visible underneath.
-                 */
             });
 
             first.attr('src', nativeSrc);
@@ -791,9 +974,6 @@
 
                     loading = false;
 
-                    /*
-                     * Skip a failed image.
-                     */
                     nextIndex = (nextIndex + 1) % urls.length;
                 });
 
@@ -911,7 +1091,12 @@
         prepareDescription(root, card);
 
         /*
-         * TMDB logo
+         * Production studio logo
+         */
+        prepareStudioLogo(root, card, token);
+
+        /*
+         * TMDB movie logo
          */
         var elements = prepareLogo(titleBlock);
 
