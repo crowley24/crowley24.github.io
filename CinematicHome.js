@@ -2,24 +2,22 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.5.9 — RIGHT CINEMATIC HERO
+     * INTERFACE+ 1.6.0 — FULLSCREEN CINEMATIC HERO
      * TMDB ONLY
      *
-     * 1.5.9 CHANGES:
-     * - Replaced fullscreen backdrop with right-side cinematic image
-     * - Image positioned in the upper-right corner
-     * - Image width: approximately 46vw
-     * - Image height: approximately 43vh
-     * - Uses TMDB original backdrop quality
-     * - Removed artificial blur and scaling
-     * - Added soft edge fading on all sides
-     * - Bottom edge fades before the card row
-     * - Hero information remains in its original position
+     * 1.6.0 CHANGES:
+     * - Restored fullscreen background image
+     * - Background remains independently attached to document.body
+     * - Image focal point shifted upward
+     * - Removed right-side image sizing
+     * - Removed radial masking
+     * - Added smooth bottom gradient fading into black
+     * - Background fully disappears before the card rows
      * - Preserved TMDB logo engine, cache and settings
      */
 
-    var VERSION = '1.5.9';
-    var READY_KEY = 'interface_plus_tmdb_only_159';
+    var VERSION = '1.6.0';
+    var READY_KEY = 'interface_plus_tmdb_only_160';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -786,7 +784,7 @@
     }
 
     /* =========================
-       RIGHT CINEMATIC BACKGROUND
+       FULLSCREEN CINEMATIC BACKGROUND
     ========================= */
 
     function ensureScreenBackground() {
@@ -848,12 +846,12 @@
     }
 
     /* =========================
-       CSS — RIGHT CINEMATIC HERO
+       CSS — FULLSCREEN HERO
     ========================= */
 
     var CSS = [
 
-        /* Main background layer */
+        /* Independent fullscreen background */
 
         '#interface-plus-screen-background{' +
             'position:fixed;' +
@@ -864,83 +862,53 @@
             'pointer-events:none;' +
             'z-index:0;' +
             'display:none;' +
+            'background:#000;' +
         '}',
 
-        /* Right-side image */
+        /* Fullscreen image */
 
         '.banner-screen-bg__image{' +
             'position:absolute;' +
-            'top:0;' +
-            'right:0;' +
-            'width:46vw;' +
-            'height:43vh;' +
-            'background-position:center top;' +
+            'inset:0;' +
+            'width:100%;' +
+            'height:100%;' +
+            'background-position:center 65%;' +
             'background-repeat:no-repeat;' +
             'background-size:cover;' +
             'opacity:0;' +
             'filter:none;' +
             'transform:none;' +
-            'transform-origin:center center;' +
-            'transition:opacity .3s ease;' +
-
-            /* Soft fading around the entire image */
-
-            '-webkit-mask-image:radial-gradient(' +
-                'ellipse at center,' +
-                '#000 0%,' +
-                '#000 43%,' +
-                'rgba(0,0,0,.92) 57%,' +
-                'rgba(0,0,0,.55) 70%,' +
-                'transparent 100%' +
-            ');' +
-
-            'mask-image:radial-gradient(' +
-                'ellipse at center,' +
-                '#000 0%,' +
-                '#000 43%,' +
-                'rgba(0,0,0,.92) 57%,' +
-                'rgba(0,0,0,.55) 70%,' +
-                'transparent 100%' +
-            ');' +
+            'transition:opacity .35s ease;' +
         '}',
 
         '.banner-screen-bg__image.show{' +
             'opacity:1;' +
         '}',
 
-        /* Additional subtle cinematic shading */
+        /*
+         * Bottom cinematic gradient.
+         * The image gradually disappears into black
+         * before the card rows begin.
+         */
 
         '.banner-screen-bg__vignette{' +
             'position:absolute;' +
-            'top:0;' +
-            'right:0;' +
-            'width:46vw;' +
-            'height:43vh;' +
+            'inset:0;' +
+            'width:100%;' +
+            'height:100%;' +
             'z-index:1;' +
             'pointer-events:none;' +
             'background:' +
-                'radial-gradient(' +
-                    'ellipse at center,' +
-                    'transparent 38%,' +
-                    'rgba(0,0,0,.12) 70%,' +
-                    'rgba(0,0,0,.28) 100%' +
+                'linear-gradient(' +
+                    'to bottom,' +
+                    'rgba(0,0,0,0) 0vh,' +
+                    'rgba(0,0,0,0) 16vh,' +
+                    'rgba(0,0,0,.12) 24vh,' +
+                    'rgba(0,0,0,.38) 31vh,' +
+                    'rgba(0,0,0,.72) 37vh,' +
+                    '#000 44vh,' +
+                    '#000 100%' +
                 ');' +
-            '-webkit-mask-image:radial-gradient(' +
-                'ellipse at center,' +
-                '#000 0%,' +
-                '#000 43%,' +
-                'rgba(0,0,0,.92) 57%,' +
-                'rgba(0,0,0,.55) 70%,' +
-                'transparent 100%' +
-            ');' +
-            'mask-image:radial-gradient(' +
-                'ellipse at center,' +
-                '#000 0%,' +
-                '#000 43%,' +
-                'rgba(0,0,0,.92) 57%,' +
-                'rgba(0,0,0,.55) 70%,' +
-                'transparent 100%' +
-            ');' +
         '}',
 
         /* Hero container */
@@ -1073,6 +1041,7 @@
         /* Mobile */
 
         '@media(max-width:480px){' +
+
             '.interface-plus-card-logo{' +
                 'max-height:75px;' +
             '}' +
@@ -1086,15 +1055,15 @@
                 'max-height:5em;' +
             '}' +
 
+            /*
+             * Keep the same fullscreen background
+             * on mobile. Only adjust focal position.
+             */
+
             '.banner-screen-bg__image{' +
-                'width:55vw;' +
-                'height:32vh;' +
+                'background-position:center 60%;' +
             '}' +
 
-            '.banner-screen-bg__vignette{' +
-                'width:55vw;' +
-                'height:32vh;' +
-            '}' +
         '}'
 
     ].join('\n');
@@ -1238,11 +1207,7 @@
         p.bg.classList.remove('show');
         p.bg.style.backgroundImage = 'none';
 
-        /*
-         * Use original TMDB image.
-         * The smaller display area allows the image
-         * to retain much better visual clarity.
-         */
+        /* Fullscreen original TMDB backdrop */
 
         if (d.backdrop_path) {
             var bg = imageURL(d.backdrop_path, 'original');
@@ -2100,7 +2065,7 @@
             }
         });
 
-        log('Right cinematic hero initialized');
+        log('Fullscreen cinematic hero initialized');
     }
 
     /* =========================
