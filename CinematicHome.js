@@ -1,26 +1,24 @@
+
 (function () {
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.6 — KINOTRAYLERY LOGO ENGINE
+     * INTERFACE+ 1.6.7 — KINOTRAYLERY LOGO ENGINE
      * TMDB ONLY
      *
-     * 1.6.6 CHANGES:
-     * - Adaptive logo sizing based on image proportions
-     * - Compact logos are enlarged
-     * - Wide logos are kept under control
+     * 1.6.7 CHANGES:
+     * - Revised adaptive logo sizing
+     * - Wide and medium logos are no longer reduced
+     * - Compact logos receive moderate enlargement
      * - Original logo proportions preserved
-     * - New premium metadata row
-     * - Gold rating star without colored background
-     * - Genre replaces Movie / TV label
-     * - Ukrainian genre names with TMDB genre ID fallback
-     * - Maximum two genres displayed
+     * - Increased spacing between Hero logo and metadata
+     * - Preserved premium metadata row
      * - Preserved 1.6.5 cinematic vignette
      * - Preserved 1.6.4 Hero restoration engine
      */
 
-    var VERSION = '1.6.6';
-    var READY_KEY = 'interface_plus_tmdb_only_166';
+    var VERSION = '1.6.7';
+    var READY_KEY = 'interface_plus_tmdb_only_167';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -328,10 +326,6 @@
         var result = [];
         var source = d.genres;
 
-        /*
-         * First use genre names returned by TMDB.
-         */
-
         if (Array.isArray(source) && source.length) {
             source.forEach(function (genre) {
                 var name = '';
@@ -351,11 +345,6 @@
                 }
             });
         }
-
-        /*
-         * If TMDB returned only genre_ids,
-         * use the local Ukrainian genre dictionary.
-         */
 
         if (!result.length) {
             var ids = d.genre_ids || d.genres_ids || [];
@@ -414,26 +403,28 @@
         var ratio = img.naturalWidth / img.naturalHeight;
 
         /*
-         * Wide logos receive a smaller height.
-         * Compact logos receive a larger height.
+         * 1.6.7:
+         * Wide logos are no longer reduced.
+         * Medium logos keep their natural base size.
+         * Only compact logos receive enlargement.
          */
 
         var factor = 1;
 
         if (ratio >= 3.5) {
-            factor = 0.70;
-        } else if (ratio >= 3.0) {
-            factor = 0.76;
-        } else if (ratio >= 2.5) {
-            factor = 0.84;
-        } else if (ratio >= 2.0) {
-            factor = 0.92;
-        } else if (ratio >= 1.5) {
             factor = 1.00;
+        } else if (ratio >= 3.0) {
+            factor = 1.00;
+        } else if (ratio >= 2.5) {
+            factor = 1.02;
+        } else if (ratio >= 2.0) {
+            factor = 1.04;
+        } else if (ratio >= 1.5) {
+            factor = 1.07;
         } else if (ratio >= 1.1) {
-            factor = 1.08;
+            factor = 1.12;
         } else {
-            factor = 1.15;
+            factor = 1.16;
         }
 
         if (mode === 'hero') {
@@ -1076,6 +1067,7 @@
             'height:auto;' +
             'max-width:100%;' +
             'max-height:none;' +
+            'margin-bottom:1em;' +
             'object-fit:contain;' +
             'object-position:left center;' +
             'opacity:0;' +
@@ -1210,6 +1202,7 @@
 
             '.banner-hero__logo{' +
                 'max-height:none;' +
+                'margin-bottom:1em;' +
             '}' +
 
             '.banner-hero__meta{' +
