@@ -20,14 +20,13 @@
         '.card-tbg{position:absolute;left:0;top:0;width:100%;height:100%;background-size:cover;background-position:center;z-index:0;opacity:0;transition:opacity .5s ease;transform:scale(1.01)}' +
         '.card-tbg--visible{opacity:1}' +
         '.card-tbg-grad{position:absolute;left:0;top:0;width:100%;height:100%;background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);z-index:1;pointer-events:none}' +
-        // Стилізація логотипу в картці замість стандартного заголовка, якщо він є
         '.full__center .full__title-logo{display:block;max-width:28em;max-height:7em;object-fit:contain;object-position:left center;margin-bottom:.5em}' +
     '';
 
     $('head').append('<style>' + css + '</style>');
 
     // --------------------------------------------------
-    Listeners / Hook
+    // Listeners / Hook
     // --------------------------------------------------
 
     function pickLogo(logos) {
@@ -55,7 +54,6 @@
             if (data.backdrop_path) {
                 var bgUrl = Lampa.Api.img(data.backdrop_path, 'w1280');
                 
-                // Знаходимо стандартний контейнер фону картки та замінюємо/доповнюємо його
                 var headBackground = render.find('.full__background');
                 if (headBackground.length) {
                     headBackground.css('background-image', 'url(' + bgUrl + ')');
@@ -75,7 +73,6 @@
                     if (logo && logo.file_path) {
                         var logoUrl = Lampa.Api.img(logo.file_path, 'w500');
                         
-                        // Створюємо або знаходимо img для логотипу
                         var logoImg = titleContainer.find('.full__title-logo');
                         if (!logoImg.length) {
                             logoImg = $('<img class="full__title-logo">');
