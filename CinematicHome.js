@@ -892,24 +892,26 @@
          */
 
         '.banner-screen-bg__vignette{' +
-            'position:absolute;' +
-            'inset:0;' +
-            'width:100%;' +
-            'height:100%;' +
-            'z-index:1;' +
-            'pointer-events:none;' +
-            'background:' +
-                'linear-gradient(' +
-                    'to bottom,' +
-                    'rgba(0,0,0,0) 0vh,' +
-                    'rgba(0,0,0,0) 16vh,' +
-                    'rgba(0,0,0,.12) 24vh,' +
-                    'rgba(0,0,0,.38) 31vh,' +
-                    'rgba(0,0,0,.72) 37vh,' +
-                    '#000 44vh,' +
-                    '#000 100%' +
-                ');' +
-        '}',
+    'position:absolute;' +
+    'inset:0;' +
+    'width:100%;' +
+    'height:100%;' +
+    'z-index:1;' +
+    'pointer-events:none;' +
+    'background:' +
+        'linear-gradient(' +
+            'to bottom,' +
+            'rgba(0,0,0,0) 0vh,' +
+            'rgba(0,0,0,0) 35vh,' +
+            'rgba(0,0,0,.04) 40vh,' +
+            'rgba(0,0,0,.12) 45vh,' +
+            'rgba(0,0,0,.30) 50vh,' +
+            'rgba(0,0,0,.60) 55vh,' +
+            'rgba(0,0,0,.88) 59vh,' +
+            '#000 63vh,' +
+            '#000 100%' +
+        ');' +
+'}',
 
         /* Hero container */
 
