@@ -2,21 +2,20 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.4 — KINOTRAYLERY LOGO ENGINE
+     * INTERFACE+ 1.6.5 — KINOTRAYLERY LOGO ENGINE
      * TMDB ONLY
      *
-     * 1.6.4 CHANGES:
-     * - Fixed black Hero backdrop after returning from Full card
-     * - Restores the currently focused movie
-     * - Force redraw even when movie identity is unchanged
-     * - Keeps last movie data as restoration fallback
-     * - Resets stale focus key when opening Full card
-     * - Delayed Hero restoration after Full activity destroy
-     * - Preserved 1.6.3 logo engine and all settings
+     * 1.6.5 CHANGES:
+     * - Added cinematic left-side vignette
+     * - Added subtle top vignette
+     * - Preserved existing bottom gradient
+     * - Independent gradient layers
+     * - Preserved 1.6.4 Hero restoration engine
+     * - Preserved TMDB logo engine and all settings
      */
 
-    var VERSION = '1.6.4';
-    var READY_KEY = 'interface_plus_tmdb_only_164';
+    var VERSION = '1.6.5';
+    var READY_KEY = 'interface_plus_tmdb_only_165';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -827,6 +826,15 @@
             'opacity:1;' +
         '}',
 
+        /*
+         * 1.6.5 CINEMATIC VIGNETTE
+         *
+         * Three independent gradients:
+         * - Left edge
+         * - Top edge
+         * - Existing bottom fade
+         */
+
         '.banner-screen-bg__vignette{' +
             'position:absolute;' +
             'inset:0;' +
@@ -835,6 +843,27 @@
             'z-index:1;' +
             'pointer-events:none;' +
             'background:' +
+
+                /* LEFT VIGNETTE */
+                'linear-gradient(' +
+                    'to right,' +
+                    'rgba(0,0,0,.48) 0%,' +
+                    'rgba(0,0,0,.36) 12%,' +
+                    'rgba(0,0,0,.20) 25%,' +
+                    'rgba(0,0,0,.08) 35%,' +
+                    'rgba(0,0,0,0) 45%' +
+                '),' +
+
+                /* TOP VIGNETTE */
+                'linear-gradient(' +
+                    'to bottom,' +
+                    'rgba(0,0,0,.28) 0%,' +
+                    'rgba(0,0,0,.16) 8vh,' +
+                    'rgba(0,0,0,.07) 16vh,' +
+                    'rgba(0,0,0,0) 22vh' +
+                '),' +
+
+                /* EXISTING BOTTOM GRADIENT */
                 'linear-gradient(' +
                     'to bottom,' +
                     'rgba(0,0,0,0) 0vh,' +
