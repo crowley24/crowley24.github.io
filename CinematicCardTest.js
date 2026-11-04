@@ -2,16 +2,17 @@
     'use strict';
 
     /*
-     * CARD TRAILER INTERFACE OVERLAY PLUGIN v3.0 (Native Component Hook)
+     * CARD TRAILER INTERFACE OVERLAY PLUGIN (Apple TV / Trailers Style for Full Card)
      */
 
     if (!window.Lampa || !window.$) return;
-    if (window.card_tfeed_interface_plugin) return;
+    if (window.card_trailers_full_plugin) return;
 
-    window.card_tfeed_interface_plugin = true;
+    window.card_trailers_full_plugin = true;
 
     var tmdb = Lampa.Api.sources.tmdb;
 
+    // Стилі, адаптовані під повну картку Lampa з урахуванням дизайну КіноТрейлерів
     var css = '' +
         '.full.view--full .full__background{' +
             'position:absolute!important;left:0!important;top:0!important;width:100%!important;height:100%!important;' +
@@ -22,20 +23,19 @@
             'background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%)!important;' +
             'pointer-events:none;z-index:1;' +
         '}' +
-        '.full.view--full .full__title, .full.view--full .full__info, .full.view--full .full__descr {' +
+        '.full.view--full .full__title, .full.view--full .full__info, .full.view--full .full__descr, .full.view--full .full__left {' +
             'display:none!important;' +
         '}' +
         '.card-tfeed-info{' +
             'position:absolute!important;left:0!important;right:0!important;bottom:0!important;' +
-            'padding:5em 10em 2.5em 3em!important;z-index:10!important;pointer-events:none;' +
+            'padding:5em 10em 2.5em 3em!important;z-index:10!important;' +
         '}' +
         '.card-tfeed-logo{' +
-            'display:block;max-width:28em;max-height:7em;margin-bottom:.5em;' +
+            'display:block;max-width:30em;max-height:8em;margin-bottom:.5em;' +
             'object-fit:contain;object-position:left center;' +
         '}' +
         '.card-tfeed-title{' +
-            'font-size:2.6em;font-weight:700;text-shadow:0 2px 12px #000;' +
-            'color:#fff;line-height:1.1;margin-bottom:.3em;' +
+            'font-size:2.6em;font-weight:700;text-shadow:0 2px 12px #000;color:#fff;line-height:1.1;margin-bottom:.3em;' +
         '}' +
         '.card-tfeed-meta{' +
             'font-size:1.25em;opacity:.82;margin-top:.4em;color:#fff;' +
@@ -58,7 +58,7 @@
         return logos[0] || null;
     }
 
-    // Перехоплюємо стандартний конструктор full через розширення прототипу/компонента
+    // Перехоплюємо стандартний компонент повної картки 'full'
     var OrigFull = Lampa.Component.get('full');
 
     if (OrigFull) {
@@ -68,10 +68,10 @@
 
             comp.create = function () {
                 var render = superCreate.apply(this, arguments);
-                var data = object;
+                var data = object.card || object;
 
                 if (data && data.id) {
-                    // 1. Фон
+                    // 1. Встановлюємо фонове зображення з високою якістю (backdrop)
                     if (data.backdrop_path) {
                         var bgUrl = Lampa.Api.img(data.backdrop_path, 'w1280');
                         setTimeout(function() {
@@ -79,13 +79,15 @@
                         }, 10);
                     }
 
-                    // 2. Дані
+                    // 2. Формуємо метадані (Рік, Рейтинг, Жанри)
                     var date = data.release_date || data.first_air_date || '';
-                    var method = (data.name || data.media_type === 'tv') ? 'tv' : 'movie';
+                    var method = (data.name || data.media_type === 'tv' || object.method === 'tv') ? 'tv' : 'movie';
                     
                     var genresNames = [];
                     if (tmdb.genres && tmdb.genres[method] && data.genre_ids) {
                         genresNames = tmdb.getGenresNameFromIds(method, data.genre_ids).slice(0, 3);
+                    } else if (data.genres && Array.isArray(data.genres)) {
+                        genresNames = data.genres.map(function(g) { return g.name; }).slice(0, 3);
                     }
 
                     var metaText = [
@@ -97,6 +99,7 @@
                     var movieTitle = data.title || data.name || data.original_title || data.original_name || '';
                     var overviewText = data.overview || '';
 
+                    // 3. Інжектуємо блок інформації в стилі КіноТрейлерів всередину .full__center
                     setTimeout(function() {
                         var centerBlock = render.find('.full__center');
                         if (!centerBlock.length) return;
@@ -117,6 +120,7 @@
                         var logoEl = infoHtml.find('.card-tfeed-logo');
                         var titleEl = infoHtml.find('.card-tfeed-title');
 
+                        // 4. Підвантажуємо якісний логотип (з урахуванням пріоритету UA/EN)
                         if (tmdb && tmdb.get) {
                             var lang = (Lampa.Storage.field('tmdb_lang') || 'uk') + ',en,null';
                             tmdb.get(method + '/' + data.id + '/images', {
