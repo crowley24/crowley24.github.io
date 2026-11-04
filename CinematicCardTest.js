@@ -3,30 +3,31 @@
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.6
+     * CINEMATIC FULL 1.0.7
      *
      * Lampa / Android TV / Mobile
      *
-     * CHANGES 1.0.6:
-     * - Main movie logo dimensions exactly match Trailer Feed 2.3
-     * - Desktop: max-width 30em, max-height 8em
-     * - Mobile: max-width 80%, max-height 5em
-     * - Preserved original logo aspect ratio
+     * CHANGES 1.0.7:
+     * - Information block moved closer to the left screen edge
+     * - Desktop left padding reduced to 1.5em
+     * - Mobile right padding reduced to 1.5em
+     * - Media buttons aligned to the left
+     * - Reactions moved to the right of media buttons
+     * - Media buttons and reactions displayed in one row
      *
      * BASE:
-     * - CINEMATIC FULL 1.0.5
+     * - CINEMATIC FULL 1.0.6
      *
      * PRESERVED:
-     * - One main production studio logo
+     * - Exact movie logo dimensions from Trailer Feed 2.3
+     * - Single production studio logo
      * - Original studio logo colors
-     * - Black monochrome logos converted to white
-     * - No empty space when studio logo is unavailable
-     * - Automatic studio logo loading from TMDB
+     * - Black monochrome studio logos converted to white
      * - Original Trailer Feed gradient
      * - Fixed viewport gradient
      * - Gradient height adjustment: -150px
      * - Original metadata and description
-     * - Native Lampa media buttons
+     * - Native Lampa media buttons and reactions
      */
 
     if (!window.Lampa || !window.$) return;
@@ -130,6 +131,10 @@
             'background:transparent!important;' +
         '}' +
 
+        /*
+         * INFORMATION BLOCK
+         */
+
         '.cf-info{' +
             'position:absolute;' +
             'left:0;' +
@@ -137,7 +142,7 @@
             'bottom:0;' +
             'width:100%;' +
             'box-sizing:border-box;' +
-            'padding:7em 12em 2.5em 3em;' +
+            'padding:7em 3em 2.5em 1.5em;' +
             'z-index:5;' +
             'background:transparent!important;' +
         '}' +
@@ -239,7 +244,8 @@
         '}' +
 
         /*
-         * NATIVE MEDIA BUTTONS
+         * MEDIA BUTTONS + REACTIONS
+         * One horizontal row
          */
 
         '.cf-actions{' +
@@ -247,15 +253,36 @@
             'z-index:10;' +
             'margin-top:1.25em;' +
             'width:100%;' +
+            'display:flex;' +
+            'flex-direction:row;' +
+            'align-items:center;' +
+            'justify-content:space-between;' +
+            'gap:1.5em;' +
         '}' +
 
         '.cf-actions .full-start-new__buttons,' +
         '.cf-actions .full-start__buttons{' +
             'display:flex;' +
+            'flex:1 1 auto;' +
             'flex-wrap:wrap;' +
             'align-items:center;' +
             'position:relative;' +
             'margin:0;' +
+            'min-width:0;' +
+        '}' +
+
+        /*
+         * REACTIONS ON THE RIGHT
+         */
+
+        '.cf-actions .full-start-new__reactions{' +
+            'display:flex;' +
+            'flex:0 0 auto;' +
+            'align-items:center;' +
+            'justify-content:flex-end;' +
+            'position:relative;' +
+            'margin:0 0 0 auto;' +
+            'width:auto;' +
         '}' +
 
         /*
@@ -298,7 +325,7 @@
             '}' +
 
             '.cf-info{' +
-                'padding:4em 8em 12.5em 1.5em;' +
+                'padding:4em 1.5em 12.5em 1.5em;' +
                 'right:0;' +
             '}' +
 
@@ -326,6 +353,17 @@
 
             '.cf-actions{' +
                 'margin-top:1em;' +
+                'gap:.75em;' +
+            '}' +
+
+            '.cf-actions .full-start-new__buttons,' +
+            '.cf-actions .full-start__buttons{' +
+                'flex:1 1 auto;' +
+            '}' +
+
+            '.cf-actions .full-start-new__reactions{' +
+                'flex:0 0 auto;' +
+                'margin-left:auto;' +
             '}' +
 
         '}';
@@ -896,6 +934,12 @@
         if (buttons.length) {
             moveNativeElement(buttons, actions);
         }
+
+        /*
+         * Move native reactions separately.
+         * Flex layout places them on the right
+         * at the same vertical level as the buttons.
+         */
 
         var reactions = root.find(
             '.full-start-new__reactions'
