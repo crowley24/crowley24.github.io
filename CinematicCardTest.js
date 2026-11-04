@@ -516,7 +516,7 @@
         var newHeight = Math.ceil(height);
 
         if (gradient.data('cf-height') !== newHeight) {
-            gradient.css('height', newHeight + 'px');
+            gradient.css('height', (newHeight + 100) + 'px');
             gradient.data('cf-height', newHeight);
         }
     }
