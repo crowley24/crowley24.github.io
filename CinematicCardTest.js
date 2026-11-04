@@ -1,23 +1,25 @@
-
 (function () {
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.2
+     * CINEMATIC FULL 1.0.3
      *
      * Lampa / Android TV / Mobile
      *
-     * FIXES 1.0.2:
-     * - Fullscreen fixed gradient overlay
-     * - Gradient covers entire viewport
-     * - Gradient does not move while scrolling
-     * - Gradient reaches all screen edges
-     * - Background remains fixed
-     * - Reliable background and shade cleanup
-     * - Native media buttons are restored on cleanup
+     * FIXES 1.0.3:
+     * - Original Trailer Feed gradient preserved exactly
+     * - Gradient is now rendered on a fixed viewport layer
+     * - Fixed gradient remains stationary while scrolling
+     * - Gradient height matches original .cf-info height
+     * - No fullscreen gradient stretching
+     * - No additional darkening of the upper background
+     * - Gradient automatically recalculates on resize
+     *
+     * BASE:
+     * - CINEMATIC FULL 1.0.1
      *
      * DESIGN:
-     * - Original КіноТрейлери 2.3 gradient values
+     * - Original КіноТрейлери 2.3 spacing
      * - Original logo dimensions
      * - Original metadata dimensions
      * - Original description dimensions
@@ -45,9 +47,21 @@
     var cardActive = false;
     var cleaning = false;
 
+    var gradientResizeHandler = null;
+
     var isMobile =
         (Lampa.Platform && Lampa.Platform.is('mobile')) ||
         /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+    // --------------------------------------------------
+    // ORIGINAL GRADIENT
+    // --------------------------------------------------
+
+    var ORIGINAL_GRADIENT =
+        'linear-gradient(to top,' +
+        'rgba(0,0,0,.94) 0%,' +
+        'rgba(0,0,0,.65) 48%,' +
+        'transparent 100%)';
 
     // --------------------------------------------------
     // CSS
@@ -56,12 +70,13 @@
     var css = '' +
 
         /*
-         * FIXED BACKGROUND
+         * SINGLE FIXED BACKGROUND
          */
 
         '.cf-background{' +
             'position:fixed;' +
-            'inset:0;' +
+            'left:0;' +
+            'top:0;' +
             'width:100%;' +
             'height:100%;' +
             'background-color:#000;' +
@@ -74,20 +89,26 @@
         '}' +
 
         /*
-         * FULLSCREEN FIXED GRADIENT
+         * FIXED GRADIENT
          *
-         * Original Trailer Feed gradient.
-         * Exact original values.
+         * The gradient uses the exact original
+         * Trailer Feed gradient.
+         *
+         * Its height is calculated from .cf-info.
+         * It stays fixed at the bottom of the screen.
          */
 
-        '.cf-shade{' +
+        '.cf-gradient-fixed{' +
             'position:fixed;' +
-            'inset:0;' +
+            'left:0;' +
+            'right:0;' +
+            'bottom:0;' +
             'width:100%;' +
-            'height:100%;' +
-            'pointer-events:none;' +
+            'height:0;' +
+            'background:' + ORIGINAL_GRADIENT + ';' +
             'z-index:1;' +
-            'background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);' +
+            'pointer-events:none;' +
+            'contain:layout paint;' +
         '}' +
 
         /*
@@ -132,8 +153,11 @@
         /*
          * INFO
          *
-         * Gradient is no longer here.
-         * It is now a separate fullscreen layer.
+         * The original gradient is displayed
+         * by .cf-gradient-fixed.
+         *
+         * This element remains transparent so
+         * the gradient is not duplicated.
          */
 
         '.cf-info{' +
@@ -440,14 +464,13 @@
     }
 
     // --------------------------------------------------
-    // BACKGROUND + FULLSCREEN SHADE
+    // BACKGROUND
     // --------------------------------------------------
 
     function createBackground(movie) {
-        $('.cf-background, .cf-shade').remove();
+        $('.cf-background').remove();
 
         var background = $('<div class="cf-background"></div>');
-        var shade = $('<div class="cf-shade"></div>');
 
         if (movie.backdrop_path) {
             background.css(
@@ -457,23 +480,71 @@
         }
 
         $('body').append(background);
-        $('body').append(shade);
     }
 
     // --------------------------------------------------
-    // METADATA
+    // FIXED GRADIENT
     // --------------------------------------------------
 
-    function createMetadata(movie, method) {
-        var date = getDate(movie);
-        var genres = getGenres(movie, method);
-        var rating = Number(movie.vote_average) || 0;
+    function createFixedGradient() {
+        $('.cf-gradient-fixed').remove();
 
-        return [
-            date.slice(0, 4),
-            rating ? '★ ' + rating.toFixed(1) : '',
-            genres
-        ].filter(Boolean).join(' · ');
+        var gradient = $('<div class="cf-gradient-fixed"></div>');
+
+        $('body').append(gradient);
+
+        syncFixedGradient();
+
+        return gradient;
+    }
+
+    function syncFixedGradient() {
+        if (!cardActive || !currentRoot || !currentRoot.length) return;
+
+        var info = currentRoot.find('.cf-info').first();
+
+        if (!info.length) return;
+
+        var height = info.outerHeight();
+
+        if (!height || !isFinite(height)) return;
+
+        var gradient = $('.cf-gradient-fixed');
+
+        if (!gradient.length) return;
+
+        var newHeight = Math.ceil(height);
+
+        if (gradient.data('cf-height') !== newHeight) {
+            gradient.css('height', newHeight + 'px');
+            gradient.data('cf-height', newHeight);
+        }
+    }
+
+    function bindGradientResize() {
+        unbindGradientResize();
+
+        gradientResizeHandler = function () {
+            syncFixedGradient();
+        };
+
+        window.addEventListener(
+            'resize',
+            gradientResizeHandler,
+            false
+        );
+    }
+
+    function unbindGradientResize() {
+        if (!gradientResizeHandler) return;
+
+        window.removeEventListener(
+            'resize',
+            gradientResizeHandler,
+            false
+        );
+
+        gradientResizeHandler = null;
     }
 
     // --------------------------------------------------
@@ -518,6 +589,22 @@
         });
 
         movedElements = [];
+    }
+
+    // --------------------------------------------------
+    // METADATA
+    // --------------------------------------------------
+
+    function createMetadata(movie, method) {
+        var date = getDate(movie);
+        var genres = getGenres(movie, method);
+        var rating = Number(movie.vote_average) || 0;
+
+        return [
+            date.slice(0, 4),
+            rating ? '★ ' + rating.toFixed(1) : '',
+            genres
+        ].filter(Boolean).join(' · ');
     }
 
     // --------------------------------------------------
@@ -655,10 +742,7 @@
 
         if (!node || !document.body.contains(node)) return false;
 
-        if (
-            typeof currentRoot.is === 'function' &&
-            !currentRoot.is(':visible')
-        ) {
+        if (typeof currentRoot.is === 'function' && !currentRoot.is(':visible')) {
             return false;
         }
 
@@ -691,6 +775,8 @@
             observer = null;
         }
 
+        unbindGradientResize();
+
         /*
          * Restore native controls before removing hero.
          */
@@ -698,10 +784,11 @@
         restoreNativeElements();
 
         /*
-         * Remove both fixed visual layers.
+         * Remove custom background and fixed gradient.
          */
 
-        $('.cf-background, .cf-shade').remove();
+        $('.cf-background').remove();
+        $('.cf-gradient-fixed').remove();
 
         /*
          * Restore original Lampa root.
@@ -752,6 +839,9 @@
             if (observerTimer) clearTimeout(observerTimer);
 
             observerTimer = setTimeout(function () {
+                if (!cardActive || cleaning) return;
+
+                syncFixedGradient();
                 checkActivity();
             }, 350);
         });
@@ -805,6 +895,10 @@
 
         if (!root || !root.length) return;
 
+        /*
+         * Clean previous card before creating another.
+         */
+
         cleanup();
 
         var myRequest = requestId;
@@ -818,8 +912,11 @@
         installCSS();
 
         /*
-         * Create one background and one fullscreen gradient.
+         * Remove stale backgrounds before adding one.
          */
+
+        $('.cf-background').remove();
+        $('.cf-gradient-fixed').remove();
 
         createBackground(movie);
 
@@ -827,7 +924,25 @@
 
         createHero(root, movie, method);
 
+        /*
+         * Create fixed gradient after .cf-info exists.
+         */
+
         cardActive = true;
+
+        createFixedGradient();
+
+        /*
+         * Recalculate after layout has settled.
+         */
+
+        setTimeout(function () {
+            if (cardActive && currentId === movie.id) {
+                syncFixedGradient();
+            }
+        }, 100);
+
+        bindGradientResize();
 
         startObserver();
 
@@ -848,8 +963,12 @@
     // ACTIVITY EVENTS
     // --------------------------------------------------
 
-    Lampa.Listener.follow('activity', function () {
+    Lampa.Listener.follow('activity', function (event) {
         if (!cardActive) return;
+
+        /*
+         * Give Lampa time to switch activities.
+         */
 
         if (cleanupTimer) clearTimeout(cleanupTimer);
 
