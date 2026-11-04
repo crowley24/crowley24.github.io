@@ -2,7 +2,7 @@
     'use strict';
 
     /*
-     * CARD TRAILER BACKGROUND & LOGO PLUGIN
+     * CARD TRAILER BACKGROUND & LOGO PLUGIN v1.1
      * Переносить стиль оформлення з КіноТрейлерів у повну картку Lampa
      */
 
@@ -14,21 +14,37 @@
     var tmdb = Lampa.Api.sources.tmdb;
 
     // --------------------------------------------------
-    // CSS СТИЛІ (аналогічні tfeed)
+    // CSS СТИЛІ
     // --------------------------------------------------
     var css = '' +
-        '.card-tbg{position:absolute;left:0;top:0;width:100%;height:100%;background-size:cover;background-position:center;z-index:0;opacity:0;transition:opacity .5s ease;transform:scale(1.01)}' +
-        '.card-tbg--visible{opacity:1}' +
-        '.card-tbg-grad{position:absolute;left:0;top:0;width:100%;height:100%;background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);z-index:1;pointer-events:none}' +
-        '.full__center .full__title-logo{display:block;max-width:28em;max-height:7em;object-fit:contain;object-position:left center;margin-bottom:.5em}' +
+        '.full.view--full .full__background {' +
+            'background-size: cover !important;' +
+            'background-position: center !important;' +
+            'opacity: 1 !important;' +
+        '}' +
+        '.full.view--full .full__background::after {' +
+            'content: "";' +
+            'position: absolute;' +
+            'left: 0; top: 0; width: 100%; height: 100%;' +
+            'background: linear-gradient(to top, rgba(0,0,0,.94) 0%, rgba(0,0,0,.65) 48%, transparent 100%) !important;' +
+            'pointer-events: none;' +
+            'z-index: 1;' +
+        '}' +
+        '.full__center .full__title-logo {' +
+            'display: block;' +
+            'max-width: 28em;' +
+            'max-height: 7em;' +
+            'object-fit: contain;' +
+            'object-position: left center;' +
+            'margin-bottom: .5em;' +
+        '}' +
     '';
 
     $('head').append('<style>' + css + '</style>');
 
     // --------------------------------------------------
-    // Listeners / Hook
+    // ФУНКЦІЇ ВИБОРУ ЛОГОТИПУ
     // --------------------------------------------------
-
     function pickLogo(logos) {
         var lang = Lampa.Storage.field('tmdb_lang') || 'uk';
         var order = [lang, 'en', null];
@@ -42,28 +58,32 @@
         return logos[0] || null;
     }
 
-    // Слухаємо створення компонента повній картці (full)
+    // --------------------------------------------------
+    // СЛУХАЧ ПОДІЙ КАРТКИ
+    // --------------------------------------------------
     Lampa.Listener.follow('full', function (e) {
-        if (e.type === 'complite') {
+        if (e.type === 'complite' || e.type === 'start') {
             var render = e.object.render();
             var data = e.data;
 
             if (!data || !data.id) return;
 
-            // 1. Налаштування фону (backdrop) з розмиттям/градієнтом
+            // 1. Примусове встановлення якісного фону (backdrop)
             if (data.backdrop_path) {
                 var bgUrl = Lampa.Api.img(data.backdrop_path, 'w1280');
                 
-                var headBackground = render.find('.full__background');
-                if (headBackground.length) {
-                    headBackground.css('background-image', 'url(' + bgUrl + ')');
-                }
+                setTimeout(function() {
+                    var bgBlock = render.find('.full__background');
+                    if (bgBlock.length) {
+                        bgBlock.css('background-image', 'url(' + bgUrl + ')');
+                    }
+                }, 50);
             }
 
-            // 2. Завантаження та підстановка якісного логотипу TMDB замість звичайного тексту
+            // 2. Завантаження та підстановка логотипу TMDB
             var titleContainer = render.find('.full__title');
             if (titleContainer.length && tmdb && tmdb.get) {
-                var method = data.name ? 'tv' : 'movie';
+                var method = (data.name || data.media_type === 'tv') ? 'tv' : 'movie';
                 var lang = (Lampa.Storage.field('tmdb_lang') || 'uk') + ',en,null';
 
                 tmdb.get(method + '/' + data.id + '/images', {
