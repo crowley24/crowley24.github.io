@@ -4,36 +4,34 @@
 
     /*
      * @name CINEMATIC HOME
-     * @version 1.0.1
+     * @version 1.0.2
      * @author Crowley24
      * @description Full Bleed Cinematic Home Screen
      * @platforms Lampa | Android TV | Mobile
      *
-     * FULL BLEED 1.0.1
+     * BACK RESTORE FIX 1.0.2
      *
-     * - Independent fixed backdrop layer
-     * - Backdrop extends behind Lampa top toolbar
-     * - Transparent home header
-     * - Smooth backdrop crossfade
-     * - Automatic first card detection
-     * - Hero changes on focused card
-     * - TMDB movie and TV logos
+     * - Restores Hero after returning from full movie card
+     * - Detects restored home activity without activity:start
+     * - Document-level lightweight activity observer
+     * - Restores currently focused card
+     * - Falls back to first card in first catalog
+     * - Prevents duplicate Hero and backdrop layers
+     * - Full Bleed fixed backdrop behind toolbar
+     * - TMDB backdrop and movie logos
      * - Production studio logos
      * - Dark monochrome studio logo detection
-     * - TMDB metadata and overview
-     * - Language priority: Lampa > English > no language
+     * - Metadata and overview
      * - Request token protection
-     * - Request deduplication
-     * - Separate caches
+     * - Request deduplication and caches
      * - Native Lampa catalogs preserved
-     * - Android TV and Mobile support
      */
 
     var PLUGIN_NAME = 'CINEMATIC HOME';
-    var VERSION = '1.0.1';
+    var VERSION = '1.0.2';
 
-    if (window.cinematicHome101) return;
-    window.cinematicHome101 = true;
+    if (window.cinematicHome102) return;
+    window.cinematicHome102 = true;
 
     if (
         !window.Lampa ||
@@ -47,9 +45,9 @@
 
     var tmdb = Lampa.Api.sources.tmdb;
 
-    /* =======================================================
+    /* =====================================================
        CONFIGURATION
-    ======================================================= */
+    ===================================================== */
 
     var CONFIG = {
         enabled: true,
@@ -71,6 +69,7 @@
 
         focusDelay: 100,
         initialDelay: 350,
+        restoreDelay: 180,
 
         backdropFade: 500,
         logoFade: 300,
@@ -82,22 +81,25 @@
         debug: false
     };
 
-    /* =======================================================
+    /* =====================================================
        STATE
-    ======================================================= */
+    ===================================================== */
 
     var state = {
         active: false,
 
         root: null,
         content: null,
+
         hero: null,
         backdropLayer: null,
 
         observer: null,
+        documentObserver: null,
 
         focusTimer: null,
         initialTimer: null,
+        reconcileTimer: null,
 
         requestToken: 0,
 
@@ -118,28 +120,27 @@
         rootFocusHandler: null,
         rootMouseHandler: null,
 
-        activityListener: null,
-        focusListener: null,
-        controllerListener: null,
-
         bodyClassAdded: false
     };
 
-    var STYLE_ID = 'cinematic-home-101-style';
+    var STYLE_ID = 'cinematic-home-102-style';
 
-    /* =======================================================
-       UTILITIES
-    ======================================================= */
+    /* =====================================================
+       LOGGING
+    ===================================================== */
 
     function log() {
         if (!CONFIG.debug) return;
 
         var args = Array.prototype.slice.call(arguments);
-
         args.unshift('[' + PLUGIN_NAME + ']');
 
         console.log.apply(console, args);
     }
+
+    /* =====================================================
+       BASIC UTILITIES
+    ===================================================== */
 
     function safeString(value) {
         return value === undefined || value === null
@@ -173,7 +174,6 @@
         var result = [];
 
         if (lang) result.push(lang);
-
         if (lang !== 'en') result.push('en');
 
         result.push(null);
@@ -185,7 +185,6 @@
         if (!item) return 'movie';
 
         if (item.media_type === 'tv') return 'tv';
-
         if (item.media_type === 'movie') return 'movie';
 
         if (
@@ -281,15 +280,13 @@
         cache.set(key, value);
 
         while (cache.size > limit) {
-            var first = cache.keys().next().value;
-            cache.delete(first);
+            cache.delete(cache.keys().next().value);
         }
     }
 
-    /*
-     * Deduplicates identical requests.
-     * All callbacks receive the same result.
-     */
+    /* =====================================================
+       REQUEST DEDUPLICATION
+    ===================================================== */
 
     function requestOnce(key, callback) {
         if (state.pending.has(key)) {
@@ -314,9 +311,9 @@
         };
     }
 
-    /* =======================================================
+    /* =====================================================
        TMDB DETAILS
-    ======================================================= */
+    ===================================================== */
 
     function getDetails(item, callback) {
         var key = getItemKey(item);
@@ -330,11 +327,9 @@
 
         if (!finish) return;
 
-        var method = getMediaType(item);
-
         try {
             tmdb.get(
-                method + '/' + getItemId(item),
+                getMediaType(item) + '/' + getItemId(item),
                 {},
                 function (response) {
                     response = response || null;
@@ -356,9 +351,9 @@
         }
     }
 
-    /* =======================================================
-       MOVIE LOGOS
-    ======================================================= */
+    /* =====================================================
+       TMDB MOVIE / TV LOGOS
+    ===================================================== */
 
     function chooseLogo(images) {
         if (!images || !Array.isArray(images.logos)) {
@@ -397,11 +392,9 @@
 
         if (!finish) return;
 
-        var method = getMediaType(item);
-
         try {
             tmdb.get(
-                method + '/' + getItemId(item) + '/images',
+                getMediaType(item) + '/' + getItemId(item) + '/images',
                 {
                     filter: {
                         include_image_language: getLanguageList()
@@ -432,9 +425,9 @@
         }
     }
 
-    /* =======================================================
-       STUDIO LOGOS
-    ======================================================= */
+    /* =====================================================
+       STUDIO LOGO COLOR DETECTION
+    ===================================================== */
 
     function isBlackStudioLogo(imageURL, callback) {
         if (!imageURL) {
@@ -482,10 +475,12 @@
 
                     if (brightness < 105) dark++;
 
-                    var max = Math.max(r, g, b);
-                    var min = Math.min(r, g, b);
-
-                    if (max - min > 35) colored++;
+                    if (
+                        Math.max(r, g, b) -
+                        Math.min(r, g, b) > 35
+                    ) {
+                        colored++;
+                    }
                 }
 
                 if (!total) {
@@ -493,12 +488,9 @@
                     return;
                 }
 
-                var darkRatio = dark / total;
-                var colorRatio = colored / total;
-
                 callback(
-                    darkRatio > 0.70 &&
-                    colorRatio < 0.12
+                    dark / total > 0.70 &&
+                    colored / total < 0.12
                 );
             } catch (e) {
                 callback(false);
@@ -544,10 +536,7 @@
 
             var result = {
                 name: selected.name || '',
-                url: getImageURL(
-                    selected.logo_path,
-                    'w300'
-                ),
+                url: getImageURL(selected.logo_path, 'w300'),
                 white: false
             };
 
@@ -570,15 +559,14 @@
             Array.isArray(item.production_companies)
         ) {
             processDetails(item);
-            return;
+        } else {
+            getDetails(item, processDetails);
         }
-
-        getDetails(item, processDetails);
     }
 
-    /* =======================================================
+    /* =====================================================
        STYLES
-    ======================================================= */
+    ===================================================== */
 
     function installStyles() {
         if (document.getElementById(STYLE_ID)) return;
@@ -588,11 +576,6 @@
         style.id = STYLE_ID;
 
         style.textContent = `
-            /*
-             * Full bleed backdrop is fixed to the Lampa viewport.
-             * It is independent from the catalog scroll container.
-             */
-
             .cinematic-home-backdrop-layer {
                 position: fixed;
                 top: 0;
@@ -646,11 +629,6 @@
                     );
             }
 
-            /*
-             * Only the home activity becomes transparent.
-             * Native cards and catalog structure are untouched.
-             */
-
             .cinematic-home-root {
                 position: relative;
                 z-index: 1;
@@ -662,10 +640,6 @@
                 background: transparent !important;
             }
 
-            /*
-             * Lampa top toolbar remains above the backdrop.
-             */
-
             body.cinematic-home-active .head {
                 position: relative;
                 z-index: 5;
@@ -675,10 +649,6 @@
             body.cinematic-home-active .head__body {
                 background: transparent !important;
             }
-
-            /*
-             * Hero placeholder remains in normal document flow.
-             */
 
             .cinematic-home {
                 position: relative;
@@ -879,11 +849,21 @@
         document.head.appendChild(style);
     }
 
-    /* =======================================================
+    /* =====================================================
        BACKDROP LAYER
-    ======================================================= */
+    ===================================================== */
 
     function createBackdropLayer() {
+        if (state.backdropLayer) return;
+
+        var existing = document.querySelector(
+            '.cinematic-home-backdrop-layer'
+        );
+
+        if (existing) {
+            existing.parentNode.removeChild(existing);
+        }
+
         var layer = document.createElement('div');
 
         layer.className = 'cinematic-home-backdrop-layer';
@@ -920,9 +900,9 @@
         state.backgroundIndex = 0;
     }
 
-    /* =======================================================
-       HERO ELEMENT
-    ======================================================= */
+    /* =====================================================
+       HERO
+    ===================================================== */
 
     function createHero() {
         var hero = document.createElement('div');
@@ -931,7 +911,6 @@
 
         hero.innerHTML = `
             <div class="cinematic-home__content">
-
                 <div class="cinematic-home__studio"></div>
 
                 <div class="cinematic-home__logo-wrap">
@@ -942,7 +921,6 @@
                 <div class="cinematic-home__meta"></div>
 
                 <div class="cinematic-home__overview"></div>
-
             </div>
         `;
 
@@ -951,9 +929,9 @@
         return hero;
     }
 
-    /* =======================================================
+    /* =====================================================
        BACKDROP RENDERING
-    ======================================================= */
+    ===================================================== */
 
     function setBackdrop(url, token) {
         if (
@@ -1000,15 +978,15 @@
         };
 
         image.onerror = function () {
-            log('Backdrop loading failed:', url);
+            log('Backdrop loading failed');
         };
 
         image.src = url;
     }
 
-    /* =======================================================
+    /* =====================================================
        LOGO RENDERING
-    ======================================================= */
+    ===================================================== */
 
     function setLogo(url, token, title) {
         if (!state.hero) return;
@@ -1081,9 +1059,9 @@
         image.src = url;
     }
 
-    /* =======================================================
+    /* =====================================================
        STUDIO RENDERING
-    ======================================================= */
+    ===================================================== */
 
     function setStudio(studio, token) {
         if (!state.hero) return;
@@ -1109,7 +1087,6 @@
             }
 
             element.innerHTML = '';
-
             element.appendChild(image);
 
             if (studio.white) {
@@ -1124,9 +1101,9 @@
         image.src = studio.url;
     }
 
-    /* =======================================================
+    /* =====================================================
        METADATA
-    ======================================================= */
+    ===================================================== */
 
     function setMetadata(item) {
         if (!state.hero) return;
@@ -1170,9 +1147,9 @@
         overview.textContent = getOverview(item);
     }
 
-    /* =======================================================
-       HERO UPDATE
-    ======================================================= */
+    /* =====================================================
+       UPDATE HERO
+    ===================================================== */
 
     function updateHero(item) {
         if (
@@ -1213,11 +1190,7 @@
                 return;
             }
 
-            setLogo(
-                logoURL,
-                token,
-                getTitle(item)
-            );
+            setLogo(logoURL, token, getTitle(item));
         });
 
         ensureStudioLogo(item, function (studio) {
@@ -1285,9 +1258,9 @@
         });
     }
 
-    /* =======================================================
+    /* =====================================================
        CARD DATA
-    ======================================================= */
+    ===================================================== */
 
     function getCardData(card) {
         if (!card) return null;
@@ -1301,15 +1274,10 @@
         ];
 
         for (var i = 0; i < candidates.length; i++) {
-            var item = candidates[i];
-
-            if (isValidItem(item)) return item;
+            if (isValidItem(candidates[i])) {
+                return candidates[i];
+            }
         }
-
-        /*
-         * Some Lampa builds keep card data on the
-         * nearest card wrapper or nested object.
-         */
 
         var nested = card.querySelector &&
             card.querySelector('[data-card]');
@@ -1346,21 +1314,16 @@
         return null;
     }
 
-    /* =======================================================
-       FOCUS TRACKING
-    ======================================================= */
+    /* =====================================================
+       FOCUS
+    ===================================================== */
 
     function processFocusedCard(card) {
         card = getCardElement(card);
 
-        if (!card || !state.active) return;
+        if (!card || !state.active || !state.root) return;
 
-        if (
-            state.root &&
-            !state.root.contains(card)
-        ) {
-            return;
-        }
+        if (!state.root.contains(card)) return;
 
         var item = getCardData(card);
 
@@ -1371,16 +1334,11 @@
         }
 
         state.focusTimer = setTimeout(function () {
-            if (!state.active) return;
+            if (!state.active || !state.root) return;
 
             var focused = state.root.querySelector(
                 '.card.focus, .card.hover, .card:focus'
             );
-
-            /*
-             * If another card received focus during
-             * the delay, use the currently focused card.
-             */
 
             if (focused && focused !== card) {
                 var focusedItem = getCardData(focused);
@@ -1397,9 +1355,9 @@
         }, CONFIG.focusDelay);
     }
 
-    /* =======================================================
-       FIRST CARD DETECTION
-    ======================================================= */
+    /* =====================================================
+       INITIAL CARD
+    ===================================================== */
 
     function findFirstCard() {
         if (!state.content) return null;
@@ -1423,10 +1381,6 @@
     function initializeFirstCard() {
         if (!state.active || !state.root) return;
 
-        /*
-         * First priority: currently focused card.
-         */
-
         var focused = state.root.querySelector(
             '.card.focus, .card.hover, .card:focus'
         );
@@ -1440,26 +1394,18 @@
             }
         }
 
-        /*
-         * Second priority: first valid card
-         * in the first available catalog row.
-         */
-
         var first = findFirstCard();
 
         if (first) {
             updateHero(first.item);
 
-            log(
-                'Initial card:',
-                getTitle(first.item)
-            );
+            log('Initial card:', getTitle(first.item));
         }
     }
 
-    /* =======================================================
+    /* =====================================================
        ACTIVITY DETECTION
-    ======================================================= */
+    ===================================================== */
 
     function getActivityName(event) {
         var candidates = [];
@@ -1494,9 +1440,7 @@
             }
 
             if (candidate.name) {
-                return String(
-                    candidate.name
-                ).toLowerCase();
+                return String(candidate.name).toLowerCase();
             }
 
             if (
@@ -1512,17 +1456,41 @@
         return '';
     }
 
+    function isElementVisible(element) {
+        if (!element || !element.isConnected) return false;
+
+        if (element.offsetWidth || element.offsetHeight) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function hasVisibleFullCard() {
+        var fullCards = document.querySelectorAll(
+            '.full-start, .full-start-new'
+        );
+
+        for (var i = 0; i < fullCards.length; i++) {
+            if (isElementVisible(fullCards[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function getMainActivity() {
         var activities = document.querySelectorAll('.activity');
 
         for (var i = activities.length - 1; i >= 0; i--) {
             var activity = activities[i];
 
-            if (!activity.offsetParent) continue;
+            if (!isElementVisible(activity)) continue;
 
             if (
                 activity.querySelector('.full-start') ||
-                activity.querySelector('.modal')
+                activity.querySelector('.full-start-new')
             ) {
                 continue;
             }
@@ -1538,20 +1506,6 @@
         return null;
     }
 
-    function isHomeActivity(event) {
-        var name = getActivityName(event);
-
-        if (name) {
-            return (
-                name === 'main' ||
-                name === 'home' ||
-                name === 'index'
-            );
-        }
-
-        return !!getMainActivity();
-    }
-
     function findContent(root) {
         if (!root) return null;
 
@@ -1562,9 +1516,151 @@
         );
     }
 
-    /* =======================================================
-       OBSERVER
-    ======================================================= */
+    /* =====================================================
+       MOUNT HERO
+    ===================================================== */
+
+    function mountHero(root) {
+        if (!root) return;
+
+        if (
+            state.active &&
+            state.root === root &&
+            state.hero &&
+            state.hero.isConnected &&
+            state.backdropLayer &&
+            state.backdropLayer.isConnected
+        ) {
+            return;
+        }
+
+        if (state.active) {
+            stopHome();
+        }
+
+        state.active = true;
+        state.root = root;
+        state.content = findContent(root);
+
+        if (!state.content) {
+            state.active = false;
+            return;
+        }
+
+        installStyles();
+
+        root.classList.add('cinematic-home-root');
+
+        document.body.classList.add(
+            'cinematic-home-active'
+        );
+
+        state.bodyClassAdded = true;
+
+        createBackdropLayer();
+
+        var hero = createHero();
+
+        state.content.insertBefore(
+            hero,
+            state.content.firstChild
+        );
+
+        attachFocusTracking();
+
+        /*
+         * Restore the current focused card first.
+         * If focus is not ready, use first catalog card.
+         */
+
+        state.initialTimer = setTimeout(function () {
+            initializeFirstCard();
+        }, CONFIG.initialDelay);
+
+        log('Hero mounted');
+    }
+
+    /* =====================================================
+       STOP HOME
+    ===================================================== */
+
+    function stopHome() {
+        state.active = false;
+
+        state.requestToken++;
+
+        if (state.focusTimer) {
+            clearTimeout(state.focusTimer);
+            state.focusTimer = null;
+        }
+
+        if (state.initialTimer) {
+            clearTimeout(state.initialTimer);
+            state.initialTimer = null;
+        }
+
+        if (state.observer) {
+            state.observer.disconnect();
+            state.observer = null;
+        }
+
+        if (state.root && state.rootFocusHandler) {
+            state.root.removeEventListener(
+                'focusin',
+                state.rootFocusHandler,
+                true
+            );
+        }
+
+        if (state.root && state.rootMouseHandler) {
+            state.root.removeEventListener(
+                'mouseover',
+                state.rootMouseHandler,
+                true
+            );
+        }
+
+        if (state.root) {
+            state.root.classList.remove(
+                'cinematic-home-root'
+            );
+        }
+
+        if (
+            state.hero &&
+            state.hero.parentNode
+        ) {
+            state.hero.parentNode.removeChild(
+                state.hero
+            );
+        }
+
+        removeBackdropLayer();
+
+        if (state.bodyClassAdded) {
+            document.body.classList.remove(
+                'cinematic-home-active'
+            );
+
+            state.bodyClassAdded = false;
+        }
+
+        state.hero = null;
+        state.root = null;
+        state.content = null;
+
+        state.currentKey = '';
+        state.currentItem = null;
+
+        state.rootFocusHandler = null;
+        state.rootMouseHandler = null;
+
+        log('Home stopped');
+    }
+
+    /* =====================================================
+       FOCUS TRACKING
+    ===================================================== */
 
     function attachFocusTracking() {
         if (!state.root) return;
@@ -1611,7 +1707,7 @@
                         }
                     });
 
-                    if (shouldCheckFocus) {
+                    if (shouldCheckFocus && state.root) {
                         var focused = state.root.querySelector(
                             '.card.focus, .card.hover, .card:focus'
                         );
@@ -1623,7 +1719,8 @@
 
                     if (
                         shouldCheckInitial &&
-                        !state.currentKey
+                        !state.currentKey &&
+                        state.active
                     ) {
                         if (state.initialTimer) {
                             clearTimeout(state.initialTimer);
@@ -1646,170 +1743,137 @@
         }
     }
 
-    /* =======================================================
-       HOME START
-    ======================================================= */
+    /* =====================================================
+       RESTORE CONTROLLER
+    ===================================================== */
 
-    function startHome() {
+    function scheduleReconcile(delay) {
+        if (state.reconcileTimer) {
+            clearTimeout(state.reconcileTimer);
+        }
+
+        state.reconcileTimer = setTimeout(
+            reconcileHome,
+            typeof delay === 'number' ? delay : CONFIG.restoreDelay
+        );
+    }
+
+    function reconcileHome() {
+        state.reconcileTimer = null;
+
         if (!CONFIG.enabled) return;
+
+        /*
+         * A full movie card has priority.
+         * Do not show the home backdrop over it.
+         */
+
+        if (hasVisibleFullCard()) {
+            if (state.active) {
+                stopHome();
+            }
+
+            return;
+        }
 
         var root = getMainActivity();
 
         if (!root) {
-            log('Home activity not found');
+            if (state.active) {
+                stopHome();
+            }
+
             return;
         }
+
+        /*
+         * Home may have been restored without
+         * receiving activity:start.
+         */
 
         if (
-            state.active &&
-            state.root === root
+            !state.active ||
+            state.root !== root ||
+            !state.hero ||
+            !state.hero.isConnected ||
+            !state.backdropLayer ||
+            !state.backdropLayer.isConnected
         ) {
+            log('Home restore detected');
+
+            mountHero(root);
             return;
         }
 
-        stopHome();
+        /*
+         * Recover if another plugin removed Hero.
+         */
 
-        state.active = true;
-        state.root = root;
-        state.content = findContent(root);
+        if (!state.hero.isConnected) {
+            state.hero = null;
 
-        if (!state.content) {
-            state.active = false;
-            return;
+            var hero = createHero();
+
+            state.content.insertBefore(
+                hero,
+                state.content.firstChild
+            );
+
+            initializeFirstCard();
         }
-
-        installStyles();
-
-        root.classList.add('cinematic-home-root');
-
-        document.body.classList.add(
-            'cinematic-home-active'
-        );
-
-        state.bodyClassAdded = true;
-
-        /*
-         * Backdrop is attached to body, not to the
-         * scrolling catalog container.
-         */
-
-        createBackdropLayer();
-
-        /*
-         * Hero placeholder occupies normal layout space.
-         */
-
-        var hero = createHero();
-
-        state.content.insertBefore(
-            hero,
-            state.content.firstChild
-        );
-
-        attachFocusTracking();
-
-        state.initialTimer = setTimeout(
-            initializeFirstCard,
-            CONFIG.initialDelay
-        );
-
-        log('Home started');
     }
 
-    /* =======================================================
-       HOME STOP / CLEANUP
-    ======================================================= */
+    function installDocumentObserver() {
+        if (!window.MutationObserver || !document.body) return;
 
-    function stopHome() {
-        state.active = false;
-
-        /*
-         * Invalidate all pending visual callbacks.
-         */
-
-        state.requestToken++;
-
-        if (state.focusTimer) {
-            clearTimeout(state.focusTimer);
-            state.focusTimer = null;
+        if (state.documentObserver) {
+            state.documentObserver.disconnect();
         }
 
-        if (state.initialTimer) {
-            clearTimeout(state.initialTimer);
-            state.initialTimer = null;
-        }
+        state.documentObserver = new MutationObserver(
+            function (mutations) {
+                var relevant = false;
 
-        if (state.observer) {
-            state.observer.disconnect();
-            state.observer = null;
-        }
+                for (var i = 0; i < mutations.length; i++) {
+                    var mutation = mutations[i];
 
-        if (
-            state.root &&
-            state.rootFocusHandler
-        ) {
-            state.root.removeEventListener(
-                'focusin',
-                state.rootFocusHandler,
-                true
-            );
-        }
+                    if (mutation.type === 'childList') {
+                        relevant = true;
+                        break;
+                    }
 
-        if (
-            state.root &&
-            state.rootMouseHandler
-        ) {
-            state.root.removeEventListener(
-                'mouseover',
-                state.rootMouseHandler,
-                true
-            );
-        }
+                    if (
+                        mutation.type === 'attributes' &&
+                        mutation.target &&
+                        mutation.target.classList &&
+                        (
+                            mutation.target.classList.contains('activity') ||
+                            mutation.target.classList.contains('full-start') ||
+                            mutation.target.classList.contains('full-start-new')
+                        )
+                    ) {
+                        relevant = true;
+                        break;
+                    }
+                }
 
-        if (
-            state.root &&
-            state.root.classList
-        ) {
-            state.root.classList.remove(
-                'cinematic-home-root'
-            );
-        }
+                if (relevant) {
+                    scheduleReconcile(180);
+                }
+            }
+        );
 
-        if (
-            state.hero &&
-            state.hero.parentNode
-        ) {
-            state.hero.parentNode.removeChild(
-                state.hero
-            );
-        }
-
-        removeBackdropLayer();
-
-        if (state.bodyClassAdded) {
-            document.body.classList.remove(
-                'cinematic-home-active'
-            );
-
-            state.bodyClassAdded = false;
-        }
-
-        state.hero = null;
-        state.root = null;
-        state.content = null;
-
-        state.currentKey = '';
-        state.currentItem = null;
-
-        state.rootFocusHandler = null;
-        state.rootMouseHandler = null;
-
-        log('Home stopped');
+        state.documentObserver.observe(document.body, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
     }
 
-    /* =======================================================
-       LAMPA LISTENERS
-    ======================================================= */
+    /* =====================================================
+       LAMPA EVENTS
+    ===================================================== */
 
     function installListeners() {
         if (state.listenersInstalled) return;
@@ -1820,32 +1884,19 @@
             Lampa.Listener &&
             Lampa.Listener.follow
         ) {
-            state.activityListener = function (event) {
+            Lampa.Listener.follow('activity', function (event) {
                 if (!event) return;
 
                 if (event.type === 'start') {
-                    if (isHomeActivity(event)) {
-                        setTimeout(function () {
-                            startHome();
-                        }, 120);
-                    } else {
-                        stopHome();
-                    }
+                    scheduleReconcile(120);
                 }
 
                 if (event.type === 'destroy') {
-                    if (state.active) {
-                        stopHome();
-                    }
+                    scheduleReconcile(200);
                 }
-            };
+            });
 
-            Lampa.Listener.follow(
-                'activity',
-                state.activityListener
-            );
-
-            state.focusListener = function (event) {
+            Lampa.Listener.follow('focus', function (event) {
                 if (!state.active || !event) return;
 
                 if (
@@ -1863,12 +1914,7 @@
                         processFocusedCard(card);
                     }
                 }
-            };
-
-            Lampa.Listener.follow(
-                'focus',
-                state.focusListener
-            );
+            });
         }
 
         if (
@@ -1876,7 +1922,7 @@
             Lampa.Controller.listener &&
             Lampa.Controller.listener.follow
         ) {
-            state.controllerListener = function (event) {
+            Lampa.Controller.listener.follow('hover', function (event) {
                 if (!state.active || !event) return;
 
                 var card = getCardElement(
@@ -1889,29 +1935,22 @@
                 if (card) {
                     processFocusedCard(card);
                 }
-            };
-
-            Lampa.Controller.listener.follow(
-                'hover',
-                state.controllerListener
-            );
+            });
         }
     }
 
-    /* =======================================================
+    /* =====================================================
        INITIALIZATION
-    ======================================================= */
+    ===================================================== */
 
     function init() {
         installStyles();
 
         installListeners();
 
-        setTimeout(function () {
-            if (isHomeActivity(null)) {
-                startHome();
-            }
-        }, 600);
+        installDocumentObserver();
+
+        scheduleReconcile(600);
 
         log(
             PLUGIN_NAME +
