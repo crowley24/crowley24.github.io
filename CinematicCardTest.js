@@ -3,25 +3,25 @@
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.0
+     * CINEMATIC FULL 1.0.1
      *
      * Lampa / Android TV / Mobile
      *
-     * BASE:
-     * - Native Lampa Full component
-     * - Cinema layout based on КіноТрейлери 2.3
+     * FIXES 1.0.1:
+     * - Removed duplicate fullscreen shade
+     * - Original Trailer Feed gradient moved to .cf-info
+     * - Hide native Lampa backdrop to prevent double background
+     * - Reliable background cleanup when leaving Full
+     * - MutationObserver for activity transitions
+     * - Native media buttons are restored during cleanup
+     * - Fixed background remains stationary while scrolling
+     * - No logo shadow
      *
-     * FEATURES:
-     * - Fixed cinematic backdrop
-     * - Original Trailer Feed gradient
-     * - Original Trailer Feed logo selection
-     * - Original metadata layout
-     * - Original description layout
-     * - Native Lampa media buttons
-     * - Native Lampa information section
-     * - Background remains fixed while scrolling
-     * - TMDB logo cache
-     * - Mobile responsive layout
+     * DESIGN:
+     * - Original КіноТрейлери 2.3 spacing
+     * - Original logo dimensions
+     * - Original metadata dimensions
+     * - Original description dimensions
      */
 
     if (!window.Lampa || !window.$) return;
@@ -31,14 +31,20 @@
 
     var tmdb = Lampa.Api.sources.tmdb;
 
-    var PREFIX = 'cinematic-full-';
-
     var currentId = 0;
     var currentRoot = null;
     var currentMovie = null;
     var requestId = 0;
 
     var logoCache = {};
+    var movedElements = [];
+
+    var observer = null;
+    var observerTimer = null;
+    var cleanupTimer = null;
+
+    var cardActive = false;
+    var cleaning = false;
 
     var isMobile =
         (Lampa.Platform && Lampa.Platform.is('mobile')) ||
@@ -51,7 +57,7 @@
     var css = '' +
 
         /*
-         * FIXED BACKGROUND
+         * SINGLE FIXED BACKGROUND
          */
 
         '.cf-background{' +
@@ -64,29 +70,9 @@
             'background-size:cover;' +
             'background-position:center;' +
             'background-repeat:no-repeat;' +
+            'transform:scale(1.01);' +
             'z-index:0;' +
             'pointer-events:none;' +
-        '}' +
-
-        /*
-         * ORIGINAL TRAILER FEED GRADIENT
-         * Do not modify these values.
-         */
-
-        '.cf-shade{' +
-            'position:fixed;' +
-            'left:0;' +
-            'right:0;' +
-            'bottom:0;' +
-            'height:100%;' +
-            'pointer-events:none;' +
-            'z-index:1;' +
-            'background:linear-gradient(' +
-                'to top,' +
-                'rgba(0,0,0,.94) 0%,' +
-                'rgba(0,0,0,.65) 48%,' +
-                'transparent 100%' +
-            ');' +
         '}' +
 
         /*
@@ -97,37 +83,58 @@
             'position:relative;' +
             'z-index:2;' +
             'background:transparent!important;' +
+            'background-image:none!important;' +
         '}' +
+
+        /*
+         * REMOVE NATIVE BACKDROP
+         */
+
+        '.cf-active .full-start-new__background,' +
+        '.cf-active .full-start__background,' +
+        '.cf-active .full-start-new__bg,' +
+        '.cf-active .full-start__bg,' +
+        '.cf-active .full-start-new__backdrop,' +
+        '.cf-active .full-start__backdrop{' +
+            'display:none!important;' +
+            'background:none!important;' +
+            'background-image:none!important;' +
+        '}' +
+
+        /*
+         * HERO
+         */
 
         '.cf-hero{' +
             'position:relative;' +
             'width:100%;' +
             'height:100vh;' +
             'min-height:600px;' +
-            'display:flex;' +
-            'flex-direction:column;' +
-            'justify-content:flex-end;' +
             'box-sizing:border-box;' +
-            'background:transparent;' +
+            'background:transparent!important;' +
         '}' +
 
         /*
-         * ORIGINAL TRAILER FEED INFO POSITION
+         * ORIGINAL TRAILER FEED INFO
+         *
+         * Original gradient values.
+         * Original spacing.
          */
 
         '.cf-info{' +
-            'position:relative;' +
+            'position:absolute;' +
             'left:0;' +
             'right:0;' +
+            'bottom:0;' +
             'width:100%;' +
             'box-sizing:border-box;' +
             'padding:7em 12em 2.5em 3em;' +
             'z-index:5;' +
+            'background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);' +
         '}' +
 
         /*
          * LOGO
-         * Original Trailer Feed dimensions.
          */
 
         '.cf-logo{' +
@@ -139,6 +146,9 @@
             'object-position:left center;' +
             'opacity:0;' +
             'transition:opacity .4s ease;' +
+            'filter:none!important;' +
+            'box-shadow:none!important;' +
+            'text-shadow:none!important;' +
         '}' +
 
         '.cf-logo.cf-logo--visible{' +
@@ -164,7 +174,6 @@
 
         /*
          * METADATA
-         * Original Trailer Feed dimensions.
          */
 
         '.cf-meta{' +
@@ -177,7 +186,6 @@
 
         /*
          * DESCRIPTION
-         * Original Trailer Feed dimensions.
          */
 
         '.cf-description{' +
@@ -214,8 +222,7 @@
         '}' +
 
         /*
-         * ORIGINAL FULL ELEMENTS
-         * Remove duplicate visual elements.
+         * HIDE DUPLICATE NATIVE ELEMENTS
          */
 
         '.cf-active .full-start-new__head,' +
@@ -227,16 +234,12 @@
             'display:none!important;' +
         '}' +
 
-        '.cf-active .full-start__background{' +
-            'display:none!important;' +
-        '}' +
-
         '.cf-active .full-descr__text{' +
             'display:none!important;' +
         '}' +
 
         /*
-         * ORIGINAL INFORMATION
+         * NATIVE INFORMATION SECTION
          */
 
         '.cf-active .full-descr,' +
@@ -248,7 +251,6 @@
 
         /*
          * MOBILE
-         * Exact Trailer Feed spacing.
          */
 
         '@media screen and (max-width:768px){' +
@@ -327,11 +329,7 @@
     }
 
     function getDate(movie) {
-        return (
-            movie.release_date ||
-            movie.first_air_date ||
-            ''
-        );
+        return movie.release_date || movie.first_air_date || '';
     }
 
     function getGenres(movie, method) {
@@ -361,17 +359,12 @@
 
     // --------------------------------------------------
     // LOGO SELECTION
-    // Same selection logic as Trailer Feed 2.3.
     // --------------------------------------------------
 
     function pickLogo(logos) {
         var lang = Lampa.Storage.field('tmdb_lang');
 
-        var order = [
-            lang,
-            'en',
-            null
-        ];
+        var order = [lang, 'en', null];
 
         for (var i = 0; i < order.length; i++) {
             var found = logos.filter(function (logo) {
@@ -396,23 +389,25 @@
             return;
         }
 
-        var lang = Lampa.Storage.field('tmdb_lang');
+        if (!tmdb || typeof tmdb.get !== 'function') {
+            callback(null);
+            return;
+        }
 
+        var lang = Lampa.Storage.field('tmdb_lang');
         var langs = (lang || 'en') + ',en,null';
 
         tmdb.get(
             method + '/' + movie.id + '/images',
-
             {
                 filter: {
                     include_image_language: langs
                 }
             },
-
             function (json) {
-                var logo = json.logos && json.logos.length
-                    ? pickLogo(json.logos)
-                    : null;
+                var logos = json && json.logos ? json.logos : [];
+
+                var logo = logos.length ? pickLogo(logos) : null;
 
                 var url = logo
                     ? Lampa.Api.img(logo.file_path, 'w500')
@@ -422,10 +417,8 @@
 
                 callback(url);
             },
-
             function () {
                 logoCache[key] = null;
-
                 callback(null);
             }
         );
@@ -436,47 +429,82 @@
     // --------------------------------------------------
 
     function createBackground(movie) {
-        $('.cf-background, .cf-shade').remove();
+        $('.cf-background').remove();
 
         var background = $('<div class="cf-background"></div>');
-        var shade = $('<div class="cf-shade"></div>');
 
         if (movie.backdrop_path) {
             background.css(
                 'background-image',
-                'url("' +
-                Lampa.Api.img(movie.backdrop_path, 'w1280') +
-                '")'
+                'url("' + Lampa.Api.img(movie.backdrop_path, 'w1280') + '")'
             );
         }
 
         $('body').append(background);
-        $('body').append(shade);
+    }
+
+    // --------------------------------------------------
+    // NATIVE ELEMENT RESTORATION
+    // --------------------------------------------------
+
+    function moveNativeElement(element, destination) {
+        if (!element || !element.length || !destination || !destination.length) {
+            return;
+        }
+
+        var node = element[0];
+
+        if (!node.parentNode) return;
+
+        var placeholder = document.createComment('cinematic-full-placeholder');
+
+        node.parentNode.insertBefore(placeholder, node);
+
+        movedElements.push({
+            node: node,
+            placeholder: placeholder
+        });
+
+        destination.append(node);
+    }
+
+    function restoreNativeElements() {
+        movedElements.forEach(function (item) {
+            if (
+                item.placeholder &&
+                item.placeholder.parentNode &&
+                item.node
+            ) {
+                item.placeholder.parentNode.insertBefore(
+                    item.node,
+                    item.placeholder
+                );
+
+                item.placeholder.parentNode.removeChild(item.placeholder);
+            }
+        });
+
+        movedElements = [];
     }
 
     // --------------------------------------------------
     // METADATA
-    // Same structure as Trailer Feed 2.3.
     // --------------------------------------------------
 
     function createMetadata(movie, method) {
         var date = getDate(movie);
-
         var genres = getGenres(movie, method);
-
         var rating = Number(movie.vote_average) || 0;
 
-        var meta = [
+        return [
             date.slice(0, 4),
             rating ? '★ ' + rating.toFixed(1) : '',
             genres
         ].filter(Boolean).join(' · ');
-
-        return meta;
     }
 
     // --------------------------------------------------
-    // HERO CREATION
+    // HERO
     // --------------------------------------------------
 
     function createHero(root, movie, method) {
@@ -485,23 +513,18 @@
         var hero = $(
             '<div class="cf-hero">' +
                 '<div class="cf-info">' +
-
                     '<img class="cf-logo" alt="">' +
-
                     '<div class="cf-title"></div>' +
-
                     '<div class="cf-meta"></div>' +
-
                     '<div class="cf-description"></div>' +
-
                     '<div class="cf-actions"></div>' +
-
                 '</div>' +
             '</div>'
         );
 
         var logo = hero.find('.cf-logo');
         var title = hero.find('.cf-title');
+        var actions = hero.find('.cf-actions');
 
         var movieTitle = getTitle(movie);
 
@@ -514,7 +537,8 @@
         );
 
         /*
-         * Native buttons are moved, not recreated.
+         * Move native Lampa buttons.
+         * Original nodes and handlers are preserved.
          */
 
         var buttons = root.find(
@@ -524,12 +548,8 @@
         }).first();
 
         if (buttons.length) {
-            hero.find('.cf-actions').append(buttons);
+            moveNativeElement(buttons, actions);
         }
-
-        /*
-         * Native reactions, when present.
-         */
 
         var reactions = root.find(
             '.full-start-new__reactions'
@@ -538,11 +558,11 @@
         }).first();
 
         if (reactions.length) {
-            hero.find('.cf-actions').append(reactions);
+            moveNativeElement(reactions, actions);
         }
 
         /*
-         * Insert hero before the native information body.
+         * Insert hero before native information body.
          */
 
         var body = root.find('.full-start-new__body').first();
@@ -552,10 +572,6 @@
         } else {
             root.prepend(hero);
         }
-
-        /*
-         * TMDB logo.
-         */
 
         title.text(movieTitle);
 
@@ -582,10 +598,6 @@
                     title.addClass('cf-title--visible');
                 });
 
-                /*
-                 * Handle images already in browser cache.
-                 */
-
                 if (logo[0].complete && logo[0].naturalWidth) {
                     logo.addClass('cf-logo--visible');
                 }
@@ -599,41 +611,145 @@
     }
 
     // --------------------------------------------------
+    // ACTIVITY HELPERS
+    // --------------------------------------------------
+
+    function getActiveComponent() {
+        try {
+            if (
+                Lampa.Activity &&
+                typeof Lampa.Activity.active === 'function'
+            ) {
+                var active = Lampa.Activity.active();
+
+                return active && active.component
+                    ? active.component
+                    : null;
+            }
+        } catch (e) {}
+
+        return null;
+    }
+
+    function isRootVisible() {
+        if (!currentRoot || !currentRoot.length) return false;
+
+        var node = currentRoot[0];
+
+        if (!node || !document.body.contains(node)) return false;
+
+        if (typeof currentRoot.is === 'function' && !currentRoot.is(':visible')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // --------------------------------------------------
     // CLEANUP
     // --------------------------------------------------
 
     function cleanup() {
+        if (cleaning) return;
+
+        cleaning = true;
+
         requestId++;
 
-        $('.cf-background, .cf-shade').remove();
+        if (observerTimer) {
+            clearTimeout(observerTimer);
+            observerTimer = null;
+        }
+
+        if (cleanupTimer) {
+            clearTimeout(cleanupTimer);
+            cleanupTimer = null;
+        }
+
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+
+        /*
+         * Restore native controls before removing hero.
+         */
+
+        restoreNativeElements();
+
+        /*
+         * Remove the only custom background.
+         */
+
+        $('.cf-background').remove();
+
+        /*
+         * Restore original Lampa root.
+         */
 
         if (currentRoot && currentRoot.length) {
             currentRoot.removeClass('cf-active');
-
             currentRoot.find('.cf-hero').remove();
         }
 
         currentRoot = null;
         currentMovie = null;
         currentId = 0;
+
+        cardActive = false;
+
+        cleaning = false;
+    }
+
+    // --------------------------------------------------
+    // OBSERVER
+    // --------------------------------------------------
+
+    function checkActivity() {
+        if (!cardActive || cleaning) return;
+
+        var activeComponent = getActiveComponent();
+
+        if (activeComponent && activeComponent !== 'full') {
+            cleanup();
+            return;
+        }
+
+        if (!isRootVisible()) {
+            cleanup();
+        }
+    }
+
+    function startObserver() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+
+        if (!document.body || !window.MutationObserver) return;
+
+        observer = new MutationObserver(function () {
+            if (observerTimer) clearTimeout(observerTimer);
+
+            observerTimer = setTimeout(function () {
+                checkActivity();
+            }, 350);
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
     }
 
     // --------------------------------------------------
     // APPLY INTERFACE
     // --------------------------------------------------
 
-    function applyInterface(event) {
-        if (!event || !event.data || !event.data.movie) return;
-
-        var movie = event.data.movie;
-
-        if (!movie.id) return;
-
+    function findFullRoot(event) {
         var root = null;
-
-        /*
-         * Prefer the actual activity DOM.
-         */
 
         try {
             if (
@@ -648,10 +764,30 @@
         if (!root || !root.length) {
             root = $('.full-start-new').first();
         } else {
-            root = $(root).find('.full-start-new').first();
+            root = $(root);
+
+            if (!root.is('.full-start-new')) {
+                root = root.find('.full-start-new').first();
+            }
         }
 
-        if (!root.length) return;
+        return root;
+    }
+
+    function applyInterface(event) {
+        if (!event || !event.data || !event.data.movie) return;
+
+        var movie = event.data.movie;
+
+        if (!movie.id) return;
+
+        var root = findFullRoot(event);
+
+        if (!root || !root.length) return;
+
+        /*
+         * Clean previous card before creating another.
+         */
 
         cleanup();
 
@@ -666,22 +802,20 @@
         installCSS();
 
         /*
-         * Background remains outside the scrolling content.
+         * Remove stale backgrounds before adding one.
          */
+
+        $('.cf-background').remove();
 
         createBackground(movie);
 
         root.addClass('cf-active');
 
-        /*
-         * Build cinematic hero.
-         */
-
         createHero(root, movie, method);
 
-        /*
-         * Protect against stale activity callbacks.
-         */
+        cardActive = true;
+
+        startObserver();
 
         if (myRequest !== requestId) return;
     }
@@ -697,22 +831,33 @@
     });
 
     // --------------------------------------------------
-    // ACTIVITY CLEANUP
+    // ACTIVITY EVENTS
     // --------------------------------------------------
 
     Lampa.Listener.follow('activity', function (event) {
-        if (
-            event.type === 'back' ||
-            event.type === 'destroy'
-        ) {
+        if (!cardActive) return;
+
+        /*
+         * Give Lampa time to switch activities.
+         */
+
+        if (cleanupTimer) clearTimeout(cleanupTimer);
+
+        cleanupTimer = setTimeout(function () {
+            var activeComponent = getActiveComponent();
+
             if (
-                !Lampa.Activity.active ||
-                !Lampa.Activity.active() ||
-                Lampa.Activity.active().component !== 'full'
+                activeComponent &&
+                activeComponent !== 'full'
             ) {
                 cleanup();
+                return;
             }
-        }
+
+            if (!isRootVisible()) {
+                cleanup();
+            }
+        }, 250);
     });
 
     // --------------------------------------------------
