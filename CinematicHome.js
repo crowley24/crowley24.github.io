@@ -1,15 +1,15 @@
-
 (function () {
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.7 — KINOTRAYLERY LOGO ENGINE
+     * INTERFACE+ 1.6.8 — KINOTRAYLERY LOGO ENGINE
      * TMDB ONLY
      *
-     * 1.6.7 CHANGES:
-     * - Revised adaptive logo sizing
-     * - Wide and medium logos are no longer reduced
-     * - Compact logos receive moderate enlargement
+     * 1.6.8 CHANGES:
+     * - Increased adaptive vertical logo scaling
+     * - Wide logos keep their original base size
+     * - Medium logos receive moderate enlargement
+     * - Compact logos receive stronger enlargement
      * - Original logo proportions preserved
      * - Increased spacing between Hero logo and metadata
      * - Preserved premium metadata row
@@ -17,8 +17,8 @@
      * - Preserved 1.6.4 Hero restoration engine
      */
 
-    var VERSION = '1.6.7';
-    var READY_KEY = 'interface_plus_tmdb_only_167';
+    var VERSION = '1.6.8';
+    var READY_KEY = 'interface_plus_tmdb_only_168';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -403,10 +403,11 @@
         var ratio = img.naturalWidth / img.naturalHeight;
 
         /*
-         * 1.6.7:
-         * Wide logos are no longer reduced.
-         * Medium logos keep their natural base size.
-         * Only compact logos receive enlargement.
+         * 1.6.8:
+         * - Wide logos keep their original base size.
+         * - Medium logos receive moderate enlargement.
+         * - Compact logos receive stronger enlargement.
+         * - Original logo proportions are preserved.
          */
 
         var factor = 1;
@@ -414,17 +415,17 @@
         if (ratio >= 3.5) {
             factor = 1.00;
         } else if (ratio >= 3.0) {
-            factor = 1.00;
-        } else if (ratio >= 2.5) {
-            factor = 1.02;
-        } else if (ratio >= 2.0) {
             factor = 1.04;
-        } else if (ratio >= 1.5) {
-            factor = 1.07;
-        } else if (ratio >= 1.1) {
+        } else if (ratio >= 2.5) {
+            factor = 1.08;
+        } else if (ratio >= 2.0) {
             factor = 1.12;
-        } else {
+        } else if (ratio >= 1.5) {
             factor = 1.16;
+        } else if (ratio >= 1.1) {
+            factor = 1.21;
+        } else {
+            factor = 1.26;
         }
 
         if (mode === 'hero') {
