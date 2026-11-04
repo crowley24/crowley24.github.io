@@ -3,26 +3,28 @@
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.5
+     * CINEMATIC FULL 1.0.6
      *
      * Lampa / Android TV / Mobile
      *
-     * CHANGES 1.0.5:
+     * CHANGES 1.0.6:
+     * - Main movie logo dimensions exactly match Trailer Feed 2.3
+     * - Desktop: max-width 30em, max-height 8em
+     * - Mobile: max-width 80%, max-height 5em
+     * - Preserved original logo aspect ratio
+     *
+     * BASE:
+     * - CINEMATIC FULL 1.0.5
+     *
+     * PRESERVED:
      * - One main production studio logo
-     * - Studio logo displayed above movie logo
-     * - Original studio logo colors preserved
+     * - Original studio logo colors
      * - Black monochrome logos converted to white
      * - No empty space when studio logo is unavailable
      * - Automatic studio logo loading from TMDB
-     *
-     * BASE:
-     * - CINEMATIC FULL 1.0.3
-     *
-     * PRESERVED:
      * - Original Trailer Feed gradient
      * - Fixed viewport gradient
      * - Gradient height adjustment: -150px
-     * - Original movie logo dimensions
      * - Original metadata and description
      * - Native Lampa media buttons
      */
@@ -169,6 +171,7 @@
 
         /*
          * MAIN MOVIE LOGO
+         * Exact sizing from Trailer Feed 2.3
          */
 
         '.cf-logo{' +
