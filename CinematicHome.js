@@ -4,78 +4,103 @@
 
     /*
      * @name CINEMATIC HOME
-     * @version 1.0.0
+     * @version 1.0.1
      * @author Crowley24
-     * @description Premium cinematic home screen for Lampa
+     * @description Full Bleed Cinematic Home Screen
      * @platforms Lampa | Android TV | Mobile
      *
-     * CORE 1.0.0
-     * - Independent cinematic Hero Banner
+     * FULL BLEED 1.0.1
+     *
+     * - Independent fixed backdrop layer
+     * - Backdrop extends behind Lampa top toolbar
+     * - Transparent home header
+     * - Smooth backdrop crossfade
      * - Automatic first card detection
-     * - Hero updates on focused card
-     * - TMDB backdrop and movie logo
-     * - Production studio logo when available
+     * - Hero changes on focused card
+     * - TMDB movie and TV logos
+     * - Production studio logos
+     * - Dark monochrome studio logo detection
      * - TMDB metadata and overview
-     * - Language priority: Lampa language > English > no language
+     * - Language priority: Lampa > English > no language
      * - Request token protection
      * - Request deduplication
-     * - Separate image and metadata caches
-     * - Lightweight CSS transitions
-     * - Native Lampa catalogs remain unchanged
+     * - Separate caches
+     * - Native Lampa catalogs preserved
+     * - Android TV and Mobile support
      */
 
     var PLUGIN_NAME = 'CINEMATIC HOME';
-    var VERSION = '1.0.0';
+    var VERSION = '1.0.1';
 
-    if (window.cinematicHomeCore100) return;
-    window.cinematicHomeCore100 = true;
+    if (window.cinematicHome101) return;
+    window.cinematicHome101 = true;
 
-    if (!window.Lampa || !Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {
+    if (
+        !window.Lampa ||
+        !Lampa.Api ||
+        !Lampa.Api.sources ||
+        !Lampa.Api.sources.tmdb
+    ) {
         console.warn('[' + PLUGIN_NAME + '] TMDB API unavailable');
         return;
     }
 
     var tmdb = Lampa.Api.sources.tmdb;
 
+    /* =======================================================
+       CONFIGURATION
+    ======================================================= */
+
     var CONFIG = {
         enabled: true,
 
         heroHeight: 52,
-        minHeight: 360,
+        topExtension: 64,
+
+        minHeight: 340,
         maxHeight: 650,
 
-        logoMaxWidth: 52,
+        logoMaxWidth: 58,
         logoMaxHeight: 115,
 
-        studioMaxWidth: 150,
-        studioMaxHeight: 38,
+        studioMaxWidth: 145,
+        studioMaxHeight: 36,
 
         backdropQuality: 'w1280',
         logoQuality: 'w500',
 
         focusDelay: 100,
-        initialDelay: 250,
+        initialDelay: 350,
 
-        backdropFade: 450,
-        logoFade: 280,
+        backdropFade: 500,
+        logoFade: 300,
 
         maxImageCache: 160,
+        maxStudioCache: 100,
         maxDetailsCache: 100,
 
         debug: false
     };
 
+    /* =======================================================
+       STATE
+    ======================================================= */
+
     var state = {
         active: false,
+
         root: null,
         content: null,
         hero: null,
+        backdropLayer: null,
 
         observer: null,
+
         focusTimer: null,
         initialTimer: null,
 
         requestToken: 0,
+
         currentKey: '',
         currentItem: null,
 
@@ -88,26 +113,38 @@
 
         pending: new Map(),
 
-        listenersInstalled: false
+        listenersInstalled: false,
+
+        rootFocusHandler: null,
+        rootMouseHandler: null,
+
+        activityListener: null,
+        focusListener: null,
+        controllerListener: null,
+
+        bodyClassAdded: false
     };
 
-    var STYLE_ID = 'cinematic-home-core-100-style';
+    var STYLE_ID = 'cinematic-home-101-style';
 
-    /* -------------------------------------------------------
+    /* =======================================================
        UTILITIES
-    ------------------------------------------------------- */
+    ======================================================= */
 
     function log() {
         if (!CONFIG.debug) return;
 
         var args = Array.prototype.slice.call(arguments);
+
         args.unshift('[' + PLUGIN_NAME + ']');
 
         console.log.apply(console, args);
     }
 
     function safeString(value) {
-        return value === undefined || value === null ? '' : String(value);
+        return value === undefined || value === null
+            ? ''
+            : String(value);
     }
 
     function escapeHTML(value) {
@@ -133,7 +170,6 @@
 
     function getLanguageList() {
         var lang = getLanguage();
-
         var result = [];
 
         if (lang) result.push(lang);
@@ -152,7 +188,11 @@
 
         if (item.media_type === 'movie') return 'movie';
 
-        if (item.first_air_date || item.name || item.original_name) {
+        if (
+            item.first_air_date ||
+            item.name ||
+            item.original_name
+        ) {
             return 'tv';
         }
 
@@ -172,11 +212,13 @@
     function getTitle(item) {
         if (!item) return '';
 
-        return item.title ||
+        return (
+            item.title ||
             item.name ||
             item.original_title ||
             item.original_name ||
-            '';
+            ''
+        );
     }
 
     function getYear(item) {
@@ -244,15 +286,20 @@
         }
     }
 
+    /*
+     * Deduplicates identical requests.
+     * All callbacks receive the same result.
+     */
+
     function requestOnce(key, callback) {
         if (state.pending.has(key)) {
             state.pending.get(key).push(callback);
-            return;
+            return null;
         }
 
         state.pending.set(key, [callback]);
 
-        function finish(result) {
+        return function (result) {
             var callbacks = state.pending.get(key) || [];
 
             state.pending.delete(key);
@@ -264,14 +311,12 @@
                     console.warn(e);
                 }
             });
-        }
-
-        return finish;
+        };
     }
 
-    /* -------------------------------------------------------
-       TMDB REQUESTS
-    ------------------------------------------------------- */
+    /* =======================================================
+       TMDB DETAILS
+    ======================================================= */
 
     function getDetails(item, callback) {
         var key = getItemKey(item);
@@ -281,35 +326,44 @@
             return;
         }
 
-        var pendingKey = 'details:' + key;
-        var finish = requestOnce(pendingKey, function (result) {
-            callback(result);
-        });
+        var finish = requestOnce('details:' + key, callback);
 
         if (!finish) return;
 
         var method = getMediaType(item);
 
         try {
-            tmdb.get(method + '/' + getItemId(item), {}, function (response) {
-                response = response || {};
+            tmdb.get(
+                method + '/' + getItemId(item),
+                {},
+                function (response) {
+                    response = response || null;
 
-                cacheSet(
-                    state.detailsCache,
-                    key,
-                    response,
-                    CONFIG.maxDetailsCache
-                );
+                    if (response) {
+                        cacheSet(
+                            state.detailsCache,
+                            key,
+                            response,
+                            CONFIG.maxDetailsCache
+                        );
+                    }
 
-                finish(response);
-            });
+                    finish(response);
+                }
+            );
         } catch (e) {
             finish(null);
         }
     }
 
+    /* =======================================================
+       MOVIE LOGOS
+    ======================================================= */
+
     function chooseLogo(images) {
-        if (!images || !Array.isArray(images.logos)) return null;
+        if (!images || !Array.isArray(images.logos)) {
+            return null;
+        }
 
         var logos = images.logos;
         var languages = getLanguageList();
@@ -318,7 +372,11 @@
             var lang = languages[i];
 
             var found = logos.find(function (logo) {
-                return logo.iso_639_1 === lang && logo.file_path;
+                return (
+                    logo &&
+                    logo.iso_639_1 === lang &&
+                    logo.file_path
+                );
             });
 
             if (found) return found;
@@ -335,29 +393,28 @@
             return;
         }
 
-        var pendingKey = 'logo:' + key;
-        var finish = requestOnce(pendingKey, function (result) {
-            callback(result);
-        });
+        var finish = requestOnce('logo:' + key, callback);
 
         if (!finish) return;
 
         var method = getMediaType(item);
-        var languages = getLanguageList();
 
         try {
             tmdb.get(
                 method + '/' + getItemId(item) + '/images',
                 {
                     filter: {
-                        include_image_language: languages
+                        include_image_language: getLanguageList()
                     }
                 },
                 function (response) {
                     var selected = chooseLogo(response);
 
                     var result = selected
-                        ? getImageURL(selected.file_path, CONFIG.logoQuality)
+                        ? getImageURL(
+                            selected.file_path,
+                            CONFIG.logoQuality
+                        )
                         : '';
 
                     cacheSet(
@@ -374,6 +431,10 @@
             finish('');
         }
     }
+
+    /* =======================================================
+       STUDIO LOGOS
+    ======================================================= */
 
     function isBlackStudioLogo(imageURL, callback) {
         if (!imageURL) {
@@ -474,7 +535,7 @@
                     state.studioCache,
                     key,
                     null,
-                    CONFIG.maxDetailsCache
+                    CONFIG.maxStudioCache
                 );
 
                 callback(null);
@@ -497,15 +558,17 @@
                     state.studioCache,
                     key,
                     result,
-                    CONFIG.maxDetailsCache
+                    CONFIG.maxStudioCache
                 );
 
                 callback(result);
             });
         }
 
-        if (item.production_companies &&
-            Array.isArray(item.production_companies)) {
+        if (
+            item.production_companies &&
+            Array.isArray(item.production_companies)
+        ) {
             processDetails(item);
             return;
         }
@@ -513,9 +576,9 @@
         getDetails(item, processDetails);
     }
 
-    /* -------------------------------------------------------
-       HERO HTML
-    ------------------------------------------------------- */
+    /* =======================================================
+       STYLES
+    ======================================================= */
 
     function installStyles() {
         if (document.getElementById(STYLE_ID)) return;
@@ -525,30 +588,27 @@
         style.id = STYLE_ID;
 
         style.textContent = `
-            .cinematic-home {
-                position: relative;
-                display: block;
-                width: 100%;
-                height: ${CONFIG.heroHeight}vh;
-                min-height: ${CONFIG.minHeight}px;
-                max-height: ${CONFIG.maxHeight}px;
+            /*
+             * Full bleed backdrop is fixed to the Lampa viewport.
+             * It is independent from the catalog scroll container.
+             */
+
+            .cinematic-home-backdrop-layer {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: calc(${CONFIG.heroHeight}vh + ${CONFIG.topExtension}px);
+                min-height: 400px;
+                max-height: 760px;
                 overflow: hidden;
-                margin: 0 0 1.2em 0;
+                pointer-events: none;
+                z-index: 0;
                 background: #101114;
                 isolation: isolate;
-                box-sizing: border-box;
-                pointer-events: none;
-                z-index: 1;
             }
 
-            .cinematic-home__background {
-                position: absolute;
-                inset: 0;
-                overflow: hidden;
-                z-index: -2;
-            }
-
-            .cinematic-home__backdrop {
+            .cinematic-home-backdrop-image {
                 position: absolute;
                 inset: 0;
                 width: 100%;
@@ -559,30 +619,80 @@
                 transition: opacity ${CONFIG.backdropFade}ms ease;
             }
 
-            .cinematic-home__backdrop.active {
+            .cinematic-home-backdrop-image.active {
                 opacity: 1;
             }
 
-            .cinematic-home__gradient {
+            .cinematic-home-backdrop-gradient {
                 position: absolute;
                 inset: 0;
-                z-index: -1;
+                z-index: 2;
                 background:
                     linear-gradient(
-                        90deg,
-                        rgba(12,13,16,0.98) 0%,
-                        rgba(12,13,16,0.88) 22%,
-                        rgba(12,13,16,0.58) 42%,
-                        rgba(12,13,16,0.12) 75%,
-                        rgba(12,13,16,0.05) 100%
+                        180deg,
+                        rgba(12,13,16,0.40) 0%,
+                        rgba(12,13,16,0.08) 17%,
+                        rgba(12,13,16,0.04) 48%,
+                        rgba(12,13,16,0.50) 75%,
+                        #101114 100%
                     ),
                     linear-gradient(
-                        0deg,
-                        rgba(12,13,16,1) 0%,
-                        rgba(12,13,16,0.72) 13%,
-                        rgba(12,13,16,0.12) 55%,
-                        rgba(12,13,16,0.04) 100%
+                        90deg,
+                        rgba(12,13,16,0.96) 0%,
+                        rgba(12,13,16,0.82) 24%,
+                        rgba(12,13,16,0.50) 43%,
+                        rgba(12,13,16,0.12) 72%,
+                        rgba(12,13,16,0.02) 100%
                     );
+            }
+
+            /*
+             * Only the home activity becomes transparent.
+             * Native cards and catalog structure are untouched.
+             */
+
+            .cinematic-home-root {
+                position: relative;
+                z-index: 1;
+                background: transparent !important;
+            }
+
+            .cinematic-home-root .activity__body,
+            .cinematic-home-root .scroll__body {
+                background: transparent !important;
+            }
+
+            /*
+             * Lampa top toolbar remains above the backdrop.
+             */
+
+            body.cinematic-home-active .head {
+                position: relative;
+                z-index: 5;
+                background: rgba(15,16,19,0.24) !important;
+            }
+
+            body.cinematic-home-active .head__body {
+                background: transparent !important;
+            }
+
+            /*
+             * Hero placeholder remains in normal document flow.
+             */
+
+            .cinematic-home {
+                position: relative;
+                display: block;
+                width: 100%;
+                height: ${CONFIG.heroHeight}vh;
+                min-height: ${CONFIG.minHeight}px;
+                max-height: ${CONFIG.maxHeight}px;
+                overflow: hidden;
+                margin: 0 0 1.2em 0;
+                background: transparent !important;
+                box-sizing: border-box;
+                pointer-events: none;
+                z-index: 2;
             }
 
             .cinematic-home__content {
@@ -669,7 +779,7 @@
                 flex-wrap: wrap;
                 gap: 10px;
                 margin-bottom: 12px;
-                color: rgba(255,255,255,0.85);
+                color: rgba(255,255,255,0.88);
                 font-size: 15px;
                 font-weight: 500;
                 line-height: 1.3;
@@ -687,7 +797,7 @@
             }
 
             .cinematic-home__overview {
-                color: rgba(255,255,255,0.84);
+                color: rgba(255,255,255,0.86);
                 font-size: 15px;
                 line-height: 1.48;
                 font-weight: 400;
@@ -698,11 +808,29 @@
                 overflow: hidden;
             }
 
-            .cinematic-home__empty {
-                display: none;
-            }
-
             @media (max-width: 800px) {
+                .cinematic-home-backdrop-layer {
+                    height: calc(48vh + ${CONFIG.topExtension}px);
+                    min-height: 350px;
+                }
+
+                .cinematic-home-backdrop-gradient {
+                    background:
+                        linear-gradient(
+                            180deg,
+                            rgba(12,13,16,0.38) 0%,
+                            rgba(12,13,16,0.10) 20%,
+                            rgba(12,13,16,0.30) 58%,
+                            #101114 100%
+                        ),
+                        linear-gradient(
+                            90deg,
+                            rgba(12,13,16,0.86) 0%,
+                            rgba(12,13,16,0.58) 42%,
+                            rgba(12,13,16,0.12) 100%
+                        );
+                }
+
                 .cinematic-home {
                     height: 48vh;
                     min-height: 300px;
@@ -737,26 +865,10 @@
                 .cinematic-home__logo-wrap {
                     min-height: 65px;
                 }
-
-                .cinematic-home__gradient {
-                    background:
-                        linear-gradient(
-                            90deg,
-                            rgba(12,13,16,0.85) 0%,
-                            rgba(12,13,16,0.42) 65%,
-                            rgba(12,13,16,0.15) 100%
-                        ),
-                        linear-gradient(
-                            0deg,
-                            rgba(12,13,16,1) 0%,
-                            rgba(12,13,16,0.65) 20%,
-                            transparent 100%
-                        );
-                }
             }
 
             @media (prefers-reduced-motion: reduce) {
-                .cinematic-home__backdrop,
+                .cinematic-home-backdrop-image,
                 .cinematic-home__logo,
                 .cinematic-home__studio {
                     transition: none;
@@ -767,20 +879,59 @@
         document.head.appendChild(style);
     }
 
+    /* =======================================================
+       BACKDROP LAYER
+    ======================================================= */
+
+    function createBackdropLayer() {
+        var layer = document.createElement('div');
+
+        layer.className = 'cinematic-home-backdrop-layer';
+
+        layer.innerHTML = `
+            <img class="cinematic-home-backdrop-image" />
+            <img class="cinematic-home-backdrop-image" />
+            <div class="cinematic-home-backdrop-gradient"></div>
+        `;
+
+        state.backdropLayer = layer;
+
+        state.backgroundImages = Array.prototype.slice.call(
+            layer.querySelectorAll('.cinematic-home-backdrop-image')
+        );
+
+        state.backgroundIndex = 0;
+
+        document.body.appendChild(layer);
+    }
+
+    function removeBackdropLayer() {
+        if (
+            state.backdropLayer &&
+            state.backdropLayer.parentNode
+        ) {
+            state.backdropLayer.parentNode.removeChild(
+                state.backdropLayer
+            );
+        }
+
+        state.backdropLayer = null;
+        state.backgroundImages = [];
+        state.backgroundIndex = 0;
+    }
+
+    /* =======================================================
+       HERO ELEMENT
+    ======================================================= */
+
     function createHero() {
         var hero = document.createElement('div');
 
         hero.className = 'cinematic-home';
 
         hero.innerHTML = `
-            <div class="cinematic-home__background">
-                <img class="cinematic-home__backdrop" />
-                <img class="cinematic-home__backdrop" />
-            </div>
-
-            <div class="cinematic-home__gradient"></div>
-
             <div class="cinematic-home__content">
+
                 <div class="cinematic-home__studio"></div>
 
                 <div class="cinematic-home__logo-wrap">
@@ -791,38 +942,55 @@
                 <div class="cinematic-home__meta"></div>
 
                 <div class="cinematic-home__overview"></div>
+
             </div>
         `;
-
-        state.backgroundImages = Array.prototype.slice.call(
-            hero.querySelectorAll('.cinematic-home__backdrop')
-        );
 
         state.hero = hero;
 
         return hero;
     }
 
-    /* -------------------------------------------------------
-       HERO RENDERING
-    ------------------------------------------------------- */
+    /* =======================================================
+       BACKDROP RENDERING
+    ======================================================= */
 
     function setBackdrop(url, token) {
-        if (!state.hero || !url) return;
+        if (
+            !state.backdropLayer ||
+            !url ||
+            !state.backgroundImages.length
+        ) {
+            return;
+        }
 
         var nextIndex = state.backgroundIndex === 0 ? 1 : 0;
+
         var nextImage = state.backgroundImages[nextIndex];
-        var currentImage = state.backgroundImages[state.backgroundIndex];
+
+        var currentImage = state.backgroundImages[
+            state.backgroundIndex
+        ];
 
         var image = new Image();
 
         image.onload = function () {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
             nextImage.src = url;
 
             requestAnimationFrame(function () {
-                if (token !== state.requestToken || !state.active) return;
+                if (
+                    token !== state.requestToken ||
+                    !state.active
+                ) {
+                    return;
+                }
 
                 nextImage.classList.add('active');
                 currentImage.classList.remove('active');
@@ -832,17 +1000,26 @@
         };
 
         image.onerror = function () {
-            log('Backdrop loading failed');
+            log('Backdrop loading failed:', url);
         };
 
         image.src = url;
     }
 
+    /* =======================================================
+       LOGO RENDERING
+    ======================================================= */
+
     function setLogo(url, token, title) {
         if (!state.hero) return;
 
-        var logo = state.hero.querySelector('.cinematic-home__logo');
-        var titleElement = state.hero.querySelector('.cinematic-home__title');
+        var logo = state.hero.querySelector(
+            '.cinematic-home__logo'
+        );
+
+        var titleElement = state.hero.querySelector(
+            '.cinematic-home__title'
+        );
 
         logo.classList.remove('visible');
         titleElement.classList.remove('visible');
@@ -856,13 +1033,30 @@
         var image = new Image();
 
         image.onload = function () {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
             logo.onload = function () {
-                if (token !== state.requestToken || !state.active) return;
+                if (
+                    token !== state.requestToken ||
+                    !state.active
+                ) {
+                    return;
+                }
 
                 logo.classList.add('visible');
                 titleElement.classList.remove('visible');
+            };
+
+            logo.onerror = function () {
+                if (token !== state.requestToken) return;
+
+                titleElement.textContent = title || '';
+                titleElement.classList.add('visible');
             };
 
             logo.src = url;
@@ -873,7 +1067,12 @@
         };
 
         image.onerror = function () {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
             titleElement.textContent = title || '';
             titleElement.classList.add('visible');
@@ -882,10 +1081,16 @@
         image.src = url;
     }
 
+    /* =======================================================
+       STUDIO RENDERING
+    ======================================================= */
+
     function setStudio(studio, token) {
         if (!state.hero) return;
 
-        var element = state.hero.querySelector('.cinematic-home__studio');
+        var element = state.hero.querySelector(
+            '.cinematic-home__studio'
+        );
 
         element.classList.remove('visible');
         element.classList.remove('white');
@@ -893,12 +1098,18 @@
 
         if (!studio || !studio.url) return;
 
-        var image = document.createElement('img');
+        var image = new Image();
 
         image.onload = function () {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
             element.innerHTML = '';
+
             element.appendChild(image);
 
             if (studio.white) {
@@ -913,11 +1124,20 @@
         image.src = studio.url;
     }
 
+    /* =======================================================
+       METADATA
+    ======================================================= */
+
     function setMetadata(item) {
         if (!state.hero) return;
 
-        var meta = state.hero.querySelector('.cinematic-home__meta');
-        var overview = state.hero.querySelector('.cinematic-home__overview');
+        var meta = state.hero.querySelector(
+            '.cinematic-home__meta'
+        );
+
+        var overview = state.hero.querySelector(
+            '.cinematic-home__overview'
+        );
 
         var parts = [];
 
@@ -926,7 +1146,9 @@
         var genres = getGenres(item);
 
         if (year) {
-            parts.push('<span>' + escapeHTML(year) + '</span>');
+            parts.push(
+                '<span>' + escapeHTML(year) + '</span>'
+            );
         }
 
         if (rating) {
@@ -938,7 +1160,9 @@
         }
 
         if (genres) {
-            parts.push('<span>' + escapeHTML(genres) + '</span>');
+            parts.push(
+                '<span>' + escapeHTML(genres) + '</span>'
+            );
         }
 
         meta.innerHTML = parts.join('<span>·</span>');
@@ -946,12 +1170,18 @@
         overview.textContent = getOverview(item);
     }
 
-    /* -------------------------------------------------------
+    /* =======================================================
        HERO UPDATE
-    ------------------------------------------------------- */
+    ======================================================= */
 
     function updateHero(item) {
-        if (!CONFIG.enabled || !state.active || !isValidItem(item)) return;
+        if (
+            !CONFIG.enabled ||
+            !state.active ||
+            !isValidItem(item)
+        ) {
+            return;
+        }
 
         var key = getItemKey(item);
 
@@ -962,7 +1192,7 @@
 
         var token = ++state.requestToken;
 
-        log('Update hero:', key, getTitle(item));
+        log('Hero update:', key, getTitle(item));
 
         setMetadata(item);
 
@@ -975,24 +1205,45 @@
             setBackdrop(directBackdrop, token);
         }
 
-        var directLogo = '';
-
         ensureLogo(item, function (logoURL) {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
-            setLogo(logoURL || directLogo, token, getTitle(item));
+            setLogo(
+                logoURL,
+                token,
+                getTitle(item)
+            );
         });
 
         ensureStudioLogo(item, function (studio) {
-            if (token !== state.requestToken || !state.active) return;
+            if (
+                token !== state.requestToken ||
+                !state.active
+            ) {
+                return;
+            }
 
             setStudio(studio, token);
         });
 
         getDetails(item, function (details) {
-            if (token !== state.requestToken || !state.active || !details) return;
+            if (
+                token !== state.requestToken ||
+                !state.active ||
+                !details
+            ) {
+                return;
+            }
 
-            if (!directBackdrop && details.backdrop_path) {
+            if (
+                !directBackdrop &&
+                details.backdrop_path
+            ) {
                 setBackdrop(
                     getImageURL(
                         details.backdrop_path,
@@ -1002,7 +1253,10 @@
                 );
             }
 
-            if (!getOverview(item) && details.overview) {
+            if (
+                !getOverview(item) &&
+                details.overview
+            ) {
                 var overview = state.hero.querySelector(
                     '.cinematic-home__overview'
                 );
@@ -1010,7 +1264,10 @@
                 overview.textContent = details.overview;
             }
 
-            if (!getGenres(item) && details.genres) {
+            if (
+                !getGenres(item) &&
+                details.genres
+            ) {
                 var genres = getGenres(details);
 
                 if (genres) {
@@ -1019,16 +1276,18 @@
                     );
 
                     var genreElement = document.createElement('span');
+
                     genreElement.textContent = genres;
+
                     meta.appendChild(genreElement);
                 }
             }
         });
     }
 
-    /* -------------------------------------------------------
+    /* =======================================================
        CARD DATA
-    ------------------------------------------------------- */
+    ======================================================= */
 
     function getCardData(card) {
         if (!card) return null;
@@ -1046,6 +1305,11 @@
 
             if (isValidItem(item)) return item;
         }
+
+        /*
+         * Some Lampa builds keep card data on the
+         * nearest card wrapper or nested object.
+         */
 
         var nested = card.querySelector &&
             card.querySelector('[data-card]');
@@ -1067,7 +1331,10 @@
         if (!element) return null;
 
         if (element.nodeType === 1) {
-            if (element.matches && element.matches('.card')) {
+            if (
+                element.matches &&
+                element.matches('.card')
+            ) {
                 return element;
             }
 
@@ -1079,10 +1346,21 @@
         return null;
     }
 
+    /* =======================================================
+       FOCUS TRACKING
+    ======================================================= */
+
     function processFocusedCard(card) {
         card = getCardElement(card);
 
         if (!card || !state.active) return;
+
+        if (
+            state.root &&
+            !state.root.contains(card)
+        ) {
+            return;
+        }
 
         var item = getCardData(card);
 
@@ -1095,21 +1373,33 @@
         state.focusTimer = setTimeout(function () {
             if (!state.active) return;
 
-            var currentCard = document.querySelector(
+            var focused = state.root.querySelector(
                 '.card.focus, .card.hover, .card:focus'
             );
 
-            if (currentCard && currentCard !== card) {
+            /*
+             * If another card received focus during
+             * the delay, use the currently focused card.
+             */
+
+            if (focused && focused !== card) {
+                var focusedItem = getCardData(focused);
+
+                if (isValidItem(focusedItem)) {
+                    updateHero(focusedItem);
+                }
+
                 return;
             }
 
             updateHero(item);
+
         }, CONFIG.focusDelay);
     }
 
-    /* -------------------------------------------------------
-       INITIAL CARD DETECTION
-    ------------------------------------------------------- */
+    /* =======================================================
+       FIRST CARD DETECTION
+    ======================================================= */
 
     function findFirstCard() {
         if (!state.content) return null;
@@ -1131,28 +1421,45 @@
     }
 
     function initializeFirstCard() {
-        if (!state.active) return;
+        if (!state.active || !state.root) return;
 
-        var focused = document.querySelector(
+        /*
+         * First priority: currently focused card.
+         */
+
+        var focused = state.root.querySelector(
             '.card.focus, .card.hover, .card:focus'
         );
 
-        if (focused && state.root && state.root.contains(focused)) {
-            processFocusedCard(focused);
-            return;
+        if (focused) {
+            var focusedItem = getCardData(focused);
+
+            if (isValidItem(focusedItem)) {
+                updateHero(focusedItem);
+                return;
+            }
         }
+
+        /*
+         * Second priority: first valid card
+         * in the first available catalog row.
+         */
 
         var first = findFirstCard();
 
         if (first) {
             updateHero(first.item);
-            log('Initial card:', getTitle(first.item));
+
+            log(
+                'Initial card:',
+                getTitle(first.item)
+            );
         }
     }
 
-    /* -------------------------------------------------------
-       HOME DETECTION
-    ------------------------------------------------------- */
+    /* =======================================================
+       ACTIVITY DETECTION
+    ======================================================= */
 
     function getActivityName(event) {
         var candidates = [];
@@ -1164,7 +1471,10 @@
         }
 
         try {
-            if (Lampa.Activity && Lampa.Activity.active) {
+            if (
+                Lampa.Activity &&
+                Lampa.Activity.active
+            ) {
                 var active = Lampa.Activity.active();
 
                 if (active) {
@@ -1184,11 +1494,15 @@
             }
 
             if (candidate.name) {
-                return String(candidate.name).toLowerCase();
+                return String(
+                    candidate.name
+                ).toLowerCase();
             }
 
-            if (candidate.component &&
-                candidate.component.name) {
+            if (
+                candidate.component &&
+                candidate.component.name
+            ) {
                 return String(
                     candidate.component.name
                 ).toLowerCase();
@@ -1235,22 +1549,106 @@
             );
         }
 
-        var root = getMainActivity();
-
-        return !!root;
+        return !!getMainActivity();
     }
-
-    /* -------------------------------------------------------
-       ACTIVITY INITIALIZATION
-    ------------------------------------------------------- */
 
     function findContent(root) {
         if (!root) return null;
 
-        return root.querySelector('.scroll__body') ||
+        return (
+            root.querySelector('.scroll__body') ||
             root.querySelector('.activity__body') ||
-            root;
+            root
+        );
     }
+
+    /* =======================================================
+       OBSERVER
+    ======================================================= */
+
+    function attachFocusTracking() {
+        if (!state.root) return;
+
+        state.rootFocusHandler = function (event) {
+            processFocusedCard(event.target);
+        };
+
+        state.rootMouseHandler = function (event) {
+            processFocusedCard(event.target);
+        };
+
+        state.root.addEventListener(
+            'focusin',
+            state.rootFocusHandler,
+            true
+        );
+
+        state.root.addEventListener(
+            'mouseover',
+            state.rootMouseHandler,
+            true
+        );
+
+        if (window.MutationObserver) {
+            state.observer = new MutationObserver(
+                function (mutations) {
+                    var shouldCheckFocus = false;
+                    var shouldCheckInitial = false;
+
+                    mutations.forEach(function (mutation) {
+                        if (mutation.type === 'attributes') {
+                            if (
+                                mutation.target &&
+                                mutation.target.classList &&
+                                mutation.target.classList.contains('card')
+                            ) {
+                                shouldCheckFocus = true;
+                            }
+                        }
+
+                        if (mutation.type === 'childList') {
+                            shouldCheckInitial = true;
+                        }
+                    });
+
+                    if (shouldCheckFocus) {
+                        var focused = state.root.querySelector(
+                            '.card.focus, .card.hover, .card:focus'
+                        );
+
+                        if (focused) {
+                            processFocusedCard(focused);
+                        }
+                    }
+
+                    if (
+                        shouldCheckInitial &&
+                        !state.currentKey
+                    ) {
+                        if (state.initialTimer) {
+                            clearTimeout(state.initialTimer);
+                        }
+
+                        state.initialTimer = setTimeout(
+                            initializeFirstCard,
+                            180
+                        );
+                    }
+                }
+            );
+
+            state.observer.observe(state.root, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
+        }
+    }
+
+    /* =======================================================
+       HOME START
+    ======================================================= */
 
     function startHome() {
         if (!CONFIG.enabled) return;
@@ -1258,11 +1656,16 @@
         var root = getMainActivity();
 
         if (!root) {
-            log('Main activity not found');
+            log('Home activity not found');
             return;
         }
 
-        if (state.active && state.root === root) return;
+        if (
+            state.active &&
+            state.root === root
+        ) {
+            return;
+        }
 
         stopHome();
 
@@ -1277,6 +1680,25 @@
 
         installStyles();
 
+        root.classList.add('cinematic-home-root');
+
+        document.body.classList.add(
+            'cinematic-home-active'
+        );
+
+        state.bodyClassAdded = true;
+
+        /*
+         * Backdrop is attached to body, not to the
+         * scrolling catalog container.
+         */
+
+        createBackdropLayer();
+
+        /*
+         * Hero placeholder occupies normal layout space.
+         */
+
         var hero = createHero();
 
         state.content.insertBefore(
@@ -1286,15 +1708,24 @@
 
         attachFocusTracking();
 
-        state.initialTimer = setTimeout(function () {
-            initializeFirstCard();
-        }, CONFIG.initialDelay);
+        state.initialTimer = setTimeout(
+            initializeFirstCard,
+            CONFIG.initialDelay
+        );
 
         log('Home started');
     }
 
+    /* =======================================================
+       HOME STOP / CLEANUP
+    ======================================================= */
+
     function stopHome() {
         state.active = false;
+
+        /*
+         * Invalidate all pending visual callbacks.
+         */
 
         state.requestToken++;
 
@@ -1313,114 +1744,90 @@
             state.observer = null;
         }
 
-        if (state.hero && state.hero.parentNode) {
-            state.hero.parentNode.removeChild(state.hero);
+        if (
+            state.root &&
+            state.rootFocusHandler
+        ) {
+            state.root.removeEventListener(
+                'focusin',
+                state.rootFocusHandler,
+                true
+            );
+        }
+
+        if (
+            state.root &&
+            state.rootMouseHandler
+        ) {
+            state.root.removeEventListener(
+                'mouseover',
+                state.rootMouseHandler,
+                true
+            );
+        }
+
+        if (
+            state.root &&
+            state.root.classList
+        ) {
+            state.root.classList.remove(
+                'cinematic-home-root'
+            );
+        }
+
+        if (
+            state.hero &&
+            state.hero.parentNode
+        ) {
+            state.hero.parentNode.removeChild(
+                state.hero
+            );
+        }
+
+        removeBackdropLayer();
+
+        if (state.bodyClassAdded) {
+            document.body.classList.remove(
+                'cinematic-home-active'
+            );
+
+            state.bodyClassAdded = false;
         }
 
         state.hero = null;
         state.root = null;
         state.content = null;
+
         state.currentKey = '';
         state.currentItem = null;
-        state.backgroundImages = [];
+
+        state.rootFocusHandler = null;
+        state.rootMouseHandler = null;
 
         log('Home stopped');
     }
 
-    /* -------------------------------------------------------
-       FOCUS TRACKING
-    ------------------------------------------------------- */
-
-    function attachFocusTracking() {
-        if (!state.root) return;
-
-        state.root.addEventListener(
-            'focusin',
-            function (event) {
-                processFocusedCard(event.target);
-            },
-            true
-        );
-
-        state.root.addEventListener(
-            'mouseover',
-            function (event) {
-                processFocusedCard(event.target);
-            },
-            true
-        );
-
-        if (window.MutationObserver) {
-            state.observer = new MutationObserver(function (mutations) {
-                var shouldCheckFocus = false;
-                var shouldCheckInitial = false;
-
-                mutations.forEach(function (mutation) {
-                    if (mutation.type === 'attributes') {
-                        if (
-                            mutation.target &&
-                            mutation.target.classList &&
-                            mutation.target.classList.contains('card')
-                        ) {
-                            shouldCheckFocus = true;
-                        }
-                    }
-
-                    if (mutation.type === 'childList') {
-                        shouldCheckInitial = true;
-                    }
-                });
-
-                if (shouldCheckFocus) {
-                    var focused = state.root.querySelector(
-                        '.card.focus, .card.hover, .card:focus'
-                    );
-
-                    if (focused) {
-                        processFocusedCard(focused);
-                    }
-                }
-
-                if (
-                    shouldCheckInitial &&
-                    !state.currentKey
-                ) {
-                    if (state.initialTimer) {
-                        clearTimeout(state.initialTimer);
-                    }
-
-                    state.initialTimer = setTimeout(
-                        initializeFirstCard,
-                        150
-                    );
-                }
-            });
-
-            state.observer.observe(state.root, {
-                subtree: true,
-                childList: true,
-                attributes: true,
-                attributeFilter: ['class']
-            });
-        }
-    }
-
-    /* -------------------------------------------------------
-       LAMPA EVENTS
-    ------------------------------------------------------- */
+    /* =======================================================
+       LAMPA LISTENERS
+    ======================================================= */
 
     function installListeners() {
         if (state.listenersInstalled) return;
 
         state.listenersInstalled = true;
 
-        if (Lampa.Listener && Lampa.Listener.follow) {
-            Lampa.Listener.follow('activity', function (event) {
+        if (
+            Lampa.Listener &&
+            Lampa.Listener.follow
+        ) {
+            state.activityListener = function (event) {
                 if (!event) return;
 
                 if (event.type === 'start') {
                     if (isHomeActivity(event)) {
-                        setTimeout(startHome, 100);
+                        setTimeout(function () {
+                            startHome();
+                        }, 120);
                     } else {
                         stopHome();
                     }
@@ -1431,9 +1838,14 @@
                         stopHome();
                     }
                 }
-            });
+            };
 
-            Lampa.Listener.follow('focus', function (event) {
+            Lampa.Listener.follow(
+                'activity',
+                state.activityListener
+            );
+
+            state.focusListener = function (event) {
                 if (!state.active || !event) return;
 
                 if (
@@ -1447,9 +1859,16 @@
                         event.object
                     );
 
-                    if (card) processFocusedCard(card);
+                    if (card) {
+                        processFocusedCard(card);
+                    }
                 }
-            });
+            };
+
+            Lampa.Listener.follow(
+                'focus',
+                state.focusListener
+            );
         }
 
         if (
@@ -1457,7 +1876,7 @@
             Lampa.Controller.listener &&
             Lampa.Controller.listener.follow
         ) {
-            Lampa.Controller.listener.follow('hover', function (event) {
+            state.controllerListener = function (event) {
                 if (!state.active || !event) return;
 
                 var card = getCardElement(
@@ -1467,24 +1886,32 @@
                     event.object
                 );
 
-                if (card) processFocusedCard(card);
-            });
+                if (card) {
+                    processFocusedCard(card);
+                }
+            };
+
+            Lampa.Controller.listener.follow(
+                'hover',
+                state.controllerListener
+            );
         }
     }
 
-    /* -------------------------------------------------------
+    /* =======================================================
        INITIALIZATION
-    ------------------------------------------------------- */
+    ======================================================= */
 
     function init() {
         installStyles();
+
         installListeners();
 
         setTimeout(function () {
             if (isHomeActivity(null)) {
                 startHome();
             }
-        }, 500);
+        }, 600);
 
         log(
             PLUGIN_NAME +
@@ -1495,7 +1922,10 @@
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener(
+            'DOMContentLoaded',
+            init
+        );
     } else {
         init();
     }
