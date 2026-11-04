@@ -1,28 +1,30 @@
+
 (function () {
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.3
+     * CINEMATIC FULL 1.0.5
      *
      * Lampa / Android TV / Mobile
      *
-     * FIXES 1.0.3:
-     * - Original Trailer Feed gradient preserved exactly
-     * - Gradient is now rendered on a fixed viewport layer
-     * - Fixed gradient remains stationary while scrolling
-     * - Gradient height matches original .cf-info height
-     * - No fullscreen gradient stretching
-     * - No additional darkening of the upper background
-     * - Gradient automatically recalculates on resize
+     * CHANGES 1.0.5:
+     * - One main production studio logo
+     * - Studio logo displayed above movie logo
+     * - Original studio logo colors preserved
+     * - Black monochrome logos converted to white
+     * - No empty space when studio logo is unavailable
+     * - Automatic studio logo loading from TMDB
      *
      * BASE:
-     * - CINEMATIC FULL 1.0.1
+     * - CINEMATIC FULL 1.0.3
      *
-     * DESIGN:
-     * - Original КіноТрейлери 2.3 spacing
-     * - Original logo dimensions
-     * - Original metadata dimensions
-     * - Original description dimensions
+     * PRESERVED:
+     * - Original Trailer Feed gradient
+     * - Fixed viewport gradient
+     * - Gradient height adjustment: -150px
+     * - Original movie logo dimensions
+     * - Original metadata and description
+     * - Native Lampa media buttons
      */
 
     if (!window.Lampa || !window.$) return;
@@ -38,6 +40,8 @@
     var requestId = 0;
 
     var logoCache = {};
+    var studioCache = {};
+
     var movedElements = [];
 
     var observer = null;
@@ -69,10 +73,6 @@
 
     var css = '' +
 
-        /*
-         * SINGLE FIXED BACKGROUND
-         */
-
         '.cf-background{' +
             'position:fixed;' +
             'left:0;' +
@@ -88,16 +88,6 @@
             'pointer-events:none;' +
         '}' +
 
-        /*
-         * FIXED GRADIENT
-         *
-         * The gradient uses the exact original
-         * Trailer Feed gradient.
-         *
-         * Its height is calculated from .cf-info.
-         * It stays fixed at the bottom of the screen.
-         */
-
         '.cf-gradient-fixed{' +
             'position:fixed;' +
             'left:0;' +
@@ -111,20 +101,12 @@
             'contain:layout paint;' +
         '}' +
 
-        /*
-         * FULL ROOT
-         */
-
         '.full-start-new.cf-active{' +
             'position:relative;' +
             'z-index:2;' +
             'background:transparent!important;' +
             'background-image:none!important;' +
         '}' +
-
-        /*
-         * REMOVE NATIVE BACKDROP
-         */
 
         '.cf-active .full-start-new__background,' +
         '.cf-active .full-start__background,' +
@@ -137,10 +119,6 @@
             'background-image:none!important;' +
         '}' +
 
-        /*
-         * HERO
-         */
-
         '.cf-hero{' +
             'position:relative;' +
             'width:100%;' +
@@ -149,16 +127,6 @@
             'box-sizing:border-box;' +
             'background:transparent!important;' +
         '}' +
-
-        /*
-         * INFO
-         *
-         * The original gradient is displayed
-         * by .cf-gradient-fixed.
-         *
-         * This element remains transparent so
-         * the gradient is not duplicated.
-         */
 
         '.cf-info{' +
             'position:absolute;' +
@@ -173,7 +141,34 @@
         '}' +
 
         /*
-         * LOGO
+         * SINGLE STUDIO LOGO
+         */
+
+        '.cf-studio{' +
+            'display:none;' +
+            'width:auto;' +
+            'height:2.3em;' +
+            'max-width:9em;' +
+            'max-height:2.3em;' +
+            'object-fit:contain;' +
+            'object-position:left center;' +
+            'margin:0 0 .85em 0;' +
+            'opacity:0;' +
+            'transition:opacity .35s ease;' +
+            'filter:none;' +
+        '}' +
+
+        '.cf-studio.cf-studio--visible{' +
+            'display:block;' +
+            'opacity:1;' +
+        '}' +
+
+        '.cf-studio.cf-studio--white{' +
+            'filter:brightness(0) invert(1);' +
+        '}' +
+
+        /*
+         * MAIN MOVIE LOGO
          */
 
         '.cf-logo{' +
@@ -304,6 +299,13 @@
                 'right:0;' +
             '}' +
 
+            '.cf-studio{' +
+                'height:1.7em;' +
+                'max-width:7em;' +
+                'max-height:1.7em;' +
+                'margin-bottom:.65em;' +
+            '}' +
+
             '.cf-title{' +
                 'font-size:1.8em;' +
             '}' +
@@ -397,7 +399,7 @@
     }
 
     // --------------------------------------------------
-    // LOGO SELECTION
+    // MOVIE LOGO SELECTION
     // --------------------------------------------------
 
     function pickLogo(logos) {
@@ -417,7 +419,7 @@
     }
 
     // --------------------------------------------------
-    // LOGO REQUEST
+    // MOVIE LOGO REQUEST
     // --------------------------------------------------
 
     function ensureLogo(movie, method, callback) {
@@ -461,6 +463,228 @@
                 callback(null);
             }
         );
+    }
+
+    // --------------------------------------------------
+    // STUDIO LOGO COLOR DETECTION
+    // --------------------------------------------------
+
+    function isBlackStudioLogo(image) {
+        try {
+            var canvas = document.createElement('canvas');
+
+            var context = canvas.getContext('2d', {
+                willReadFrequently: true
+            });
+
+            if (!context) return false;
+
+            var size = 32;
+
+            canvas.width = size;
+            canvas.height = size;
+
+            context.clearRect(0, 0, size, size);
+            context.drawImage(image, 0, 0, size, size);
+
+            var pixels = context.getImageData(
+                0,
+                0,
+                size,
+                size
+            ).data;
+
+            var total = 0;
+            var brightness = 0;
+            var saturation = 0;
+
+            for (var i = 0; i < pixels.length; i += 4) {
+                var alpha = pixels[i + 3];
+
+                if (alpha < 40) continue;
+
+                var r = pixels[i];
+                var g = pixels[i + 1];
+                var b = pixels[i + 2];
+
+                var max = Math.max(r, g, b);
+                var min = Math.min(r, g, b);
+
+                var luminance =
+                    (0.299 * r) +
+                    (0.587 * g) +
+                    (0.114 * b);
+
+                brightness += luminance;
+                saturation += max - min;
+
+                total++;
+            }
+
+            if (!total) return false;
+
+            brightness /= total;
+            saturation /= total;
+
+            /*
+             * Dark monochrome logos become white.
+             * Colored logos remain unchanged.
+             */
+
+            return brightness < 75 && saturation < 42;
+
+        } catch (e) {
+            /*
+             * If canvas access is blocked,
+             * preserve the original logo.
+             */
+
+            return false;
+        }
+    }
+
+    // --------------------------------------------------
+    // GET MAIN STUDIO
+    // --------------------------------------------------
+
+    function getMainStudio(companies) {
+        if (!Array.isArray(companies)) return null;
+
+        /*
+         * Use the first production company
+         * that has an actual logo.
+         */
+
+        for (var i = 0; i < companies.length; i++) {
+            var company = companies[i];
+
+            if (
+                company &&
+                company.logo_path
+            ) {
+                return {
+                    id: company.id,
+                    name: company.name || '',
+                    logo_path: company.logo_path
+                };
+            }
+        }
+
+        return null;
+    }
+
+    // --------------------------------------------------
+    // STUDIO LOGO REQUEST
+    // --------------------------------------------------
+
+    function ensureStudioLogo(movie, method, callback) {
+        var key = method + '_' + movie.id;
+
+        if (studioCache[key] !== undefined) {
+            callback(studioCache[key]);
+            return;
+        }
+
+        if (!tmdb || typeof tmdb.get !== 'function') {
+            callback(null);
+            return;
+        }
+
+        var companies = Array.isArray(movie.production_companies)
+            ? movie.production_companies
+            : [];
+
+        if (companies.length) {
+            var studio = getMainStudio(companies);
+
+            studioCache[key] = studio;
+            callback(studio);
+
+            return;
+        }
+
+        /*
+         * Request full TMDB details
+         * if production_companies are missing.
+         */
+
+        tmdb.get(
+            method + '/' + movie.id,
+            {},
+            function (json) {
+                var list = json &&
+                    Array.isArray(json.production_companies)
+                    ? json.production_companies
+                    : [];
+
+                var studio = getMainStudio(list);
+
+                studioCache[key] = studio;
+
+                callback(studio);
+            },
+            function () {
+                studioCache[key] = null;
+                callback(null);
+            }
+        );
+    }
+
+    // --------------------------------------------------
+    // RENDER SINGLE STUDIO LOGO
+    // --------------------------------------------------
+
+    function renderStudioLogo(container, movie, method) {
+        ensureStudioLogo(movie, method, function (studio) {
+            if (
+                currentId !== movie.id ||
+                !container.closest('body').length
+            ) {
+                return;
+            }
+
+            container.removeClass(
+                'cf-studio--visible cf-studio--white'
+            );
+
+            container.removeAttr('src');
+
+            if (!studio || !studio.logo_path) {
+                container.hide();
+                return;
+            }
+
+            container.off('.cinematic-studio');
+
+            container.attr('crossorigin', 'anonymous');
+
+            container.on('load.cinematic-studio', function () {
+                if (
+                    currentId !== movie.id ||
+                    !container.closest('body').length
+                ) {
+                    return;
+                }
+
+                if (isBlackStudioLogo(this)) {
+                    container.addClass('cf-studio--white');
+                } else {
+                    container.removeClass('cf-studio--white');
+                }
+
+                container.addClass('cf-studio--visible');
+            });
+
+            container.on('error.cinematic-studio', function () {
+                container.removeClass('cf-studio--visible');
+                container.hide();
+            });
+
+            container.attr(
+                'src',
+                Lampa.Api.img(studio.logo_path, 'w300')
+            );
+        });
     }
 
     // --------------------------------------------------
@@ -516,7 +740,11 @@
         var newHeight = Math.ceil(height);
 
         if (gradient.data('cf-height') !== newHeight) {
-            gradient.css('height', (newHeight - 150) + 'px');
+            gradient.css(
+                'height',
+                Math.max(0, newHeight - 150) + 'px'
+            );
+
             gradient.data('cf-height', newHeight);
         }
     }
@@ -552,7 +780,12 @@
     // --------------------------------------------------
 
     function moveNativeElement(element, destination) {
-        if (!element || !element.length || !destination || !destination.length) {
+        if (
+            !element ||
+            !element.length ||
+            !destination ||
+            !destination.length
+        ) {
             return;
         }
 
@@ -560,7 +793,9 @@
 
         if (!node.parentNode) return;
 
-        var placeholder = document.createComment('cinematic-full-placeholder');
+        var placeholder = document.createComment(
+            'cinematic-full-placeholder'
+        );
 
         node.parentNode.insertBefore(placeholder, node);
 
@@ -584,7 +819,9 @@
                     item.placeholder
                 );
 
-                item.placeholder.parentNode.removeChild(item.placeholder);
+                item.placeholder.parentNode.removeChild(
+                    item.placeholder
+                );
             }
         });
 
@@ -617,6 +854,7 @@
         var hero = $(
             '<div class="cf-hero">' +
                 '<div class="cf-info">' +
+                    '<img class="cf-studio" alt="">' +
                     '<img class="cf-logo" alt="">' +
                     '<div class="cf-title"></div>' +
                     '<div class="cf-meta"></div>' +
@@ -626,6 +864,7 @@
             '</div>'
         );
 
+        var studio = hero.find('.cf-studio');
         var logo = hero.find('.cf-logo');
         var title = hero.find('.cf-title');
         var actions = hero.find('.cf-actions');
@@ -678,6 +917,17 @@
         }
 
         title.text(movieTitle);
+
+        /*
+         * Main studio logo.
+         * Only one logo is displayed.
+         */
+
+        renderStudioLogo(studio, movie, method);
+
+        /*
+         * Main TMDB movie logo.
+         */
 
         ensureLogo(movie, method, function (url) {
             if (
@@ -742,7 +992,10 @@
 
         if (!node || !document.body.contains(node)) return false;
 
-        if (typeof currentRoot.is === 'function' && !currentRoot.is(':visible')) {
+        if (
+            typeof currentRoot.is === 'function' &&
+            !currentRoot.is(':visible')
+        ) {
             return false;
         }
 
