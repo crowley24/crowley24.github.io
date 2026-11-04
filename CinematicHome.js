@@ -1,23 +1,26 @@
+
 (function () {
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.2 — FAST CINEMATIC HERO
+     * INTERFACE+ 1.6.3 — KINOTRAYLERY LOGO ENGINE
      * TMDB ONLY
      *
-     * 1.6.2 CHANGES:
-     * - Restored w1280 backdrop size from original 1.5.6
-     * - Instant backdrop prefetch on card focus
-     * - Double-layer cinematic background
-     * - Previous backdrop remains visible until next is ready
-     * - Faster backdrop cache handling
-     * - Prevented outdated requests from replacing current image
-     * - Preserved fullscreen background and gradient
-     * - Preserved TMDB logo engine, cache and settings
+     * 1.6.3 CHANGES:
+     * - Completely replaced previous logo engine
+     * - Logo loading algorithm from КіноТрейлери 2.3
+     * - TMDB images endpoint through Lampa API
+     * - Language priority: Lampa language -> English -> null -> first logo
+     * - Fixed logo resolution: w500
+     * - Per-item cache with shared pending requests
+     * - 20-second request timeout
+     * - Prefetch logos for up to 10 upcoming cards
+     * - Same logo engine for Hero and full movie card
+     * - Preserved cinematic backdrop and all interface settings
      */
 
-    var VERSION = '1.6.2';
-    var READY_KEY = 'interface_plus_tmdb_only_162';
+    var VERSION = '1.6.3';
+    var READY_KEY = 'interface_plus_tmdb_only_163';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -29,32 +32,27 @@
         size: 'interface_size',
         font: 'fontchanger_selected',
         card: P + 'card_logo',
-        quality: P + 'logo_quality',
         scale: P + 'logo_scale'
     };
 
-    var CACHE_KEY = P + 'tmdb_only_cache_v156';
-    var CACHE_LIMIT = 200;
+    /*
+     * Logo engine from КіноТрейлери 2.3
+     */
 
-    var TTL_LOGO = 24 * 60 * 60 * 1000;
-    var TTL_EMPTY = 60 * 60 * 1000;
-    var TTL_ERROR = 60 * 1000;
+    var LOGO_SIZE = 'w500';
+    var LOGO_CACHE_TIMEOUT = 20000;
+    var LOGO_PREFETCH_AHEAD = 10;
 
-    var memoryCache = {};
-    var pending = {};
-    var searchPending = {};
-    var generation = 0;
+    var logoItems = {};
 
-    /* Backdrop cache */
+    var BACKDROP_SIZE = 'w1280';
 
     var backdropCache = {};
     var backdropCacheOrder = [];
     var backdropPending = {};
     var BACKDROP_CACHE_LIMIT = 12;
 
-    /* Original backdrop resolution */
-
-    var BACKDROP_SIZE = 'w1280';
+    var generation = 0;
 
     var initialized = false;
     var focusTimer = null;
@@ -120,6 +118,7 @@
     function first() {
         for (var i = 0; i < arguments.length; i++) {
             var v = text(arguments[i]);
+
             if (v) return v;
         }
 
@@ -220,15 +219,6 @@
             .trim();
     }
 
-    function titleMatches(a, b) {
-        var x = normalizeTitle(a);
-        var y = normalizeTitle(b);
-
-        if (!x || !y) return false;
-
-        return x === y;
-    }
-
     function identity(d) {
         if (!d) return '';
 
@@ -291,14 +281,6 @@
         return enabled(S.card, true);
     }
 
-    function logoQuality() {
-        var q = text(storageGet(S.quality, 'original'));
-
-        return /^(w300|w500|original)$/.test(q) ?
-            q :
-            'original';
-    }
-
     function logoScale() {
         var v = parseInt(storageGet(S.scale, '100'), 10);
 
@@ -308,87 +290,192 @@
     }
 
     /* =========================
-       LOGO CACHE
+       KINOTRAYLERY LOGO PICKER
     ========================= */
 
-    function readCache() {
-        var db = storageGet(CACHE_KEY, {});
+    function pickLogo(logos) {
+        var lang = '';
 
-        return db && typeof db === 'object' ?
-            db :
-            {};
+        try {
+            lang = Lampa.Storage.field('tmdb_lang');
+        } catch (e) {}
+
+        var order = [
+            lang || 'en',
+            'en',
+            null
+        ];
+
+        for (var i = 0; i < order.length; i++) {
+            var found = (logos || []).filter(function (l) {
+                return l.iso_639_1 === order[i] && l.file_path;
+            })[0];
+
+            if (found) return found;
+        }
+
+        return (logos || []).filter(function (l) {
+            return l && l.file_path;
+        })[0] || null;
     }
 
-    function cacheTTL(v) {
-        if (v && v.failed) return TTL_ERROR;
-        if (v && v.path) return TTL_LOGO;
+    /* =========================
+       KINOTRAYLERY CACHE
+    ========================= */
 
-        return TTL_EMPTY;
+    function getLogoHolder(item) {
+        var key = identity(item);
+
+        if (!key) return {};
+
+        if (!logoItems[key]) {
+            logoItems[key] = {};
+        }
+
+        return logoItems[key];
     }
 
-    function validCache(v) {
-        return !!(
-            v &&
-            v.time &&
-            Date.now() - v.time < cacheTTL(v)
+    function cached(item, key, request, cb) {
+        if (item[key] !== undefined) {
+            cb(item[key]);
+            return;
+        }
+
+        if (item[key + '_wait']) {
+            item[key + '_wait'].push(cb);
+            return;
+        }
+
+        item[key + '_wait'] = [cb];
+
+        var completed = false;
+
+        var timer = setTimeout(function () {
+            finish(null);
+        }, LOGO_CACHE_TIMEOUT);
+
+        function finish(value) {
+            if (completed) return;
+
+            completed = true;
+
+            clearTimeout(timer);
+
+            item[key] = value || null;
+
+            var list = item[key + '_wait'] || [];
+
+            item[key + '_wait'] = null;
+
+            list.forEach(function (f) {
+                try {
+                    f(item[key]);
+                } catch (e) {}
+            });
+        }
+
+        try {
+            request(finish);
+        } catch (e) {
+            finish(null);
+        }
+    }
+
+    /* =========================
+       KINOTRAYLERY LOGO SERVICE
+    ========================= */
+
+    function ensureLogo(item, cb) {
+        cb = cb || function () {};
+
+        if (!item) {
+            cb(null);
+            return;
+        }
+
+        var type = movieType(item);
+        var holder = getLogoHolder(item);
+
+        cached(
+            holder,
+            'tfeed_logo',
+
+            function (done) {
+                var id = first(
+                    item.tmdb_id,
+                    item.tmdbId,
+                    item.id
+                );
+
+                if (
+                    id &&
+                    typeof id === 'object'
+                ) {
+                    id = id.id;
+                }
+
+                id = text(id);
+
+                if (!/^\d+$/.test(id)) {
+                    done(null);
+                    return;
+                }
+
+                var lang = 'en';
+
+                try {
+                    lang = Lampa.Storage.field('tmdb_lang') || 'en';
+                } catch (e) {}
+
+                var langs = lang + ',en,null';
+
+                var tmdb = Lampa.Api.sources.tmdb;
+
+                if (!tmdb || !tmdb.get) {
+                    done(null);
+                    return;
+                }
+
+                tmdb.get(
+                    type + '/' + id + '/images',
+
+                    {
+                        filter: {
+                            include_image_language: langs
+                        }
+                    },
+
+                    function (json) {
+                        var logo = json &&
+                                   json.logos &&
+                                   json.logos.length
+                            ? pickLogo(json.logos)
+                            : null;
+
+                        done(
+                            logo
+                                ? Lampa.Api.img(
+                                    logo.file_path,
+                                    LOGO_SIZE
+                                )
+                                : null
+                        );
+                    },
+
+                    function () {
+                        done(null);
+                    }
+                );
+            },
+
+            cb
         );
     }
 
-    function cached(key) {
-        if (
-            memoryCache[key] &&
-            validCache(memoryCache[key])
-        ) {
-            return memoryCache[key];
-        }
-
-        var db = readCache();
-
-        if (validCache(db[key])) {
-            memoryCache[key] = db[key];
-
-            return db[key];
-        }
-
-        return null;
-    }
-
-    function saveCache(key, value) {
-        memoryCache[key] = value;
-
-        if (value.failed) return;
-
-        var db = readCache();
-
-        db[key] = value;
-
-        var keys = Object.keys(db);
-
-        if (keys.length > CACHE_LIMIT) {
-            keys.sort(function (a, b) {
-                return (db[a].time || 0) -
-                       (db[b].time || 0);
-            });
-
-            keys.slice(
-                0,
-                keys.length - CACHE_LIMIT
-            ).forEach(function (k) {
-                delete db[k];
-            });
-        }
-
-        storageSet(CACHE_KEY, db);
-    }
-
-    function clearCache() {
+    function clearLogoCache() {
         generation++;
 
-        memoryCache = {};
-        pending = {};
-        searchPending = {};
-
-        storageSet(CACHE_KEY, {});
+        logoItems = {};
 
         refreshAll(true);
 
@@ -397,288 +484,6 @@
                 'Кеш логотипів TMDB очищено'
             );
         } catch (e) {}
-    }
-
-    /* =========================
-       TMDB API
-    ========================= */
-
-    function tmdbKey() {
-        try {
-            return Lampa.TMDB.key();
-        } catch (e) {
-            return '';
-        }
-    }
-
-    function apiURL(path, params) {
-        var url =
-            'https://api.themoviedb.org/3/' +
-            path +
-            '?api_key=' +
-            encodeURIComponent(tmdbKey());
-
-        Object.keys(params || {}).forEach(function (k) {
-            var v = params[k];
-
-            if (
-                v !== undefined &&
-                v !== null &&
-                v !== ''
-            ) {
-                url += '&' +
-                    encodeURIComponent(k) +
-                    '=' +
-                    encodeURIComponent(v);
-            }
-        });
-
-        return url;
-    }
-
-    function apiGet(path, params, callback) {
-        if (!tmdbKey() || typeof $ === 'undefined') {
-            callback(null, true);
-            return;
-        }
-
-        $.ajax({
-            url: apiURL(path, params),
-            type: 'GET',
-            dataType: 'json',
-            timeout: 6000,
-
-            success: function (data) {
-                callback(data, false);
-            },
-
-            error: function () {
-                callback(null, true);
-            }
-        });
-    }
-
-    function numericId(v) {
-        var s = text(v);
-
-        return /^\d+$/.test(s) ? s : '';
-    }
-
-    function explicitTMDBId(d) {
-        if (!d) return '';
-
-        var id = d.tmdb_id || d.tmdbId || '';
-
-        if (id && typeof id === 'object') {
-            id = id.id;
-        }
-
-        return numericId(id);
-    }
-
-    function possibleTMDBId(d) {
-        if (!d) return '';
-
-        return explicitTMDBId(d) ||
-               numericId(d.id);
-    }
-
-    /* =========================
-       TMDB TITLE VERIFICATION
-    ========================= */
-
-    function matchesDetails(details, d) {
-        if (!details || !details.id) return false;
-
-        var expectedYear = movieYear(d);
-        var actualYear = movieYear(details);
-
-        if (
-            expectedYear &&
-            actualYear &&
-            Math.abs(
-                parseInt(expectedYear, 10) -
-                parseInt(actualYear, 10)
-            ) > 1
-        ) {
-            return false;
-        }
-
-        var expected = [
-            d.title,
-            d.name,
-            d.original_title,
-            d.original_name
-        ].filter(Boolean);
-
-        var actual = [
-            details.title,
-            details.name,
-            details.original_title,
-            details.original_name
-        ].filter(Boolean);
-
-        for (var i = 0; i < expected.length; i++) {
-            for (var j = 0; j < actual.length; j++) {
-                if (
-                    titleMatches(
-                        expected[i],
-                        actual[j]
-                    )
-                ) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /* =========================
-       TMDB SEARCH
-    ========================= */
-
-    function searchMovie(d, callback) {
-        var type = movieType(d);
-        var name = movieTitle(d);
-        var year = movieYear(d);
-
-        if (!name) {
-            callback(null);
-            return;
-        }
-
-        var searchKey = [
-            type,
-            normalizeTitle(name),
-            year
-        ].join('|');
-
-        if (searchPending[searchKey]) {
-            searchPending[searchKey].push(callback);
-            return;
-        }
-
-        searchPending[searchKey] = [callback];
-
-        function finish(result) {
-            var callbacks =
-                searchPending[searchKey] || [];
-
-            delete searchPending[searchKey];
-
-            callbacks.forEach(function (fn) {
-                try {
-                    fn(result);
-                } catch (e) {}
-            });
-        }
-
-        var params = {
-            query: name,
-            language: 'uk-UA',
-            include_adult: 'false'
-        };
-
-        if (year) {
-            params[
-                type === 'tv' ?
-                    'first_air_date_year' :
-                    'year'
-            ] = year;
-        }
-
-        apiGet(
-            'search/' + type,
-            params,
-            function (json, failed) {
-                if (
-                    failed ||
-                    !json ||
-                    !Array.isArray(json.results)
-                ) {
-                    finish(null);
-                    return;
-                }
-
-                var list = json.results.filter(
-                    function (item) {
-                        return matchesDetails(item, d);
-                    }
-                );
-
-                if (!list.length) {
-                    finish(null);
-                    return;
-                }
-
-                list.sort(function (a, b) {
-                    return (
-                        Number(b.popularity) || 0
-                    ) - (
-                        Number(a.popularity) || 0
-                    );
-                });
-
-                finish(list[0]);
-            }
-        );
-    }
-
-    /* =========================
-       STRICT LOGO PICKER
-    ========================= */
-
-    function chooseLogo(list) {
-        if (!Array.isArray(list)) return null;
-
-        var languages = ['uk', 'en'];
-
-        for (var i = 0; i < languages.length; i++) {
-            var lang = languages[i];
-
-            var candidates = list.filter(
-                function (x) {
-                    return x &&
-                           x.file_path &&
-                           x.iso_639_1 === lang;
-                }
-            );
-
-            if (!candidates.length) continue;
-
-            candidates.sort(function (a, b) {
-                var av = Number(a.vote_average) || 0;
-                var bv = Number(b.vote_average) || 0;
-
-                if (bv !== av) return bv - av;
-
-                return (
-                    Number(b.vote_count) || 0
-                ) - (
-                    Number(a.vote_count) || 0
-                );
-            });
-
-            return candidates[0];
-        }
-
-        return null;
-    }
-
-    function imageURL(path, size) {
-        if (!path) return '';
-
-        var p = text(path);
-
-        if (/\.svg$/i.test(p)) {
-            p = p.replace(/\.svg$/i, '.png');
-        }
-
-        return 'https://image.tmdb.org/t/p/' +
-            (size || logoQuality()) +
-            (p.charAt(0) === '/' ? '' : '/') +
-            p;
     }
 
     /* =========================
@@ -727,8 +532,7 @@
     function rememberBackdrop(url) {
         if (!url) return;
 
-        var oldIndex =
-            backdropCacheOrder.indexOf(url);
+        var oldIndex = backdropCacheOrder.indexOf(url);
 
         if (oldIndex !== -1) {
             backdropCacheOrder.splice(oldIndex, 1);
@@ -784,8 +588,7 @@
                 rememberBackdrop(url);
             }
 
-            var callbacks =
-                backdropPending[url] || [];
+            var callbacks = backdropPending[url] || [];
 
             delete backdropPending[url];
 
@@ -811,6 +614,17 @@
         }
     }
 
+    function imageURL(path, size) {
+        if (!path) return '';
+
+        var p = text(path);
+
+        return 'https://image.tmdb.org/t/p/' +
+            (size || 'w500') +
+            (p.charAt(0) === '/' ? '' : '/') +
+            p;
+    }
+
     /*
      * Start loading the next backdrop
      * immediately when the card receives focus.
@@ -830,169 +644,47 @@
     }
 
     /* =========================
-       FETCH DETAILS
+       LOGO PREFETCH
     ========================= */
 
-    function requestDetails(type, id, callback) {
-        apiGet(
-            type + '/' + id,
-            {
-                language: 'uk-UA',
-                append_to_response: 'images',
-                include_image_language: 'uk,en,null'
-            },
-            callback
-        );
-    }
+    function prefetchLogoItem(item) {
+        if (!item) return;
 
-    function resolveTMDB(d, callback) {
-        var type = movieType(d);
-        var id = possibleTMDBId(d);
-        var explicit = explicitTMDBId(d);
-
-        if (!id) {
-            searchMovie(d, function (result) {
-                if (!result) {
-                    callback(null, true);
-                    return;
-                }
-
-                requestDetails(
-                    type,
-                    result.id,
-                    callback
-                );
-            });
-
-            return;
-        }
-
-        requestDetails(
-            type,
-            id,
-            function (details, failed) {
-                if (
-                    !failed &&
-                    details &&
-                    (
-                        matchesDetails(details, d) ||
-                        (
-                            explicit &&
-                            String(details.id) === explicit
-                        )
-                    )
-                ) {
-                    callback(details, false);
-                    return;
-                }
-
-                searchMovie(d, function (result) {
-                    if (!result) {
-                        callback(null, true);
-                        return;
-                    }
-
-                    requestDetails(
-                        type,
-                        result.id,
-                        callback
-                    );
-                });
+        ensureLogo(item, function (url) {
+            if (url) {
+                new Image().src = url;
             }
-        );
-    }
-
-    /* =========================
-       LOGO SERVICE
-    ========================= */
-
-    function loadLogo(d, callback, force) {
-        if (!d) {
-            callback({
-                src: '',
-                title: ''
-            });
-
-            return;
-        }
-
-        var k = identity(d);
-        var fallback = movieTitle(d);
-
-        if (!force) {
-            var hit = cached(k);
-
-            if (hit) {
-                callback({
-                    src: imageURL(hit.path),
-                    title: hit.title || fallback
-                });
-
-                return;
-            }
-        }
-
-        if (pending[k]) {
-            pending[k].push(callback);
-            return;
-        }
-
-        pending[k] = [callback];
-
-        var requestGeneration = generation;
-
-        function finish(path, title, failed) {
-            if (requestGeneration !== generation) return;
-
-            var value = {
-                path: path || '',
-                title: title || fallback,
-                failed: !!failed,
-                time: Date.now()
-            };
-
-            saveCache(k, value);
-
-            var callbacks = pending[k] || [];
-
-            delete pending[k];
-
-            var result = {
-                src: imageURL(value.path),
-                title: value.title
-            };
-
-            callbacks.forEach(function (fn) {
-                try {
-                    fn(result);
-                } catch (e) {}
-            });
-        }
-
-        resolveTMDB(d, function (json, failed) {
-            if (failed || !json || !json.id) {
-                finish('', fallback, true);
-                return;
-            }
-
-            var title = first(
-                movieType(d) === 'tv' ?
-                    json.name :
-                    json.title,
-                fallback
-            );
-
-            var logos =
-                json.images && json.images.logos;
-
-            var selected = chooseLogo(logos);
-
-            finish(
-                selected ? selected.file_path : '',
-                title,
-                false
-            );
         });
+    }
+
+    function prefetchNearbyLogos(card, root) {
+        if (!card || !root) return;
+
+        var cards = root.querySelectorAll('.card');
+
+        var currentIndex = Array.prototype.indexOf.call(
+            cards,
+            card
+        );
+
+        if (currentIndex < 0) return;
+
+        var end = Math.min(
+            cards.length,
+            currentIndex + 1 + LOGO_PREFETCH_AHEAD
+        );
+
+        for (
+            var i = currentIndex;
+            i < end;
+            i++
+        ) {
+            var element = cards[i];
+
+            if (!element || !element.card_data) continue;
+
+            prefetchLogoItem(element.card_data);
+        }
     }
 
     /* =========================
@@ -1400,20 +1092,10 @@
     function switchHeroBackdrop(hero, url, token) {
         if (!hero || !url) return;
 
-        /*
-         * If the image is already cached,
-         * switch immediately without waiting.
-         */
-
         if (backdropCache[url]) {
             applyBackdrop(hero, url, token);
             return;
         }
-
-        /*
-         * Otherwise use the already running
-         * focus preloading request.
-         */
 
         preloadBackdrop(url, function (ok) {
             if (!ok) return;
@@ -1439,24 +1121,12 @@
 
         if (!nextLayer) return;
 
-        /*
-         * Prepare the hidden layer.
-         */
-
         nextLayer.classList.remove('show');
 
         nextLayer.style.backgroundImage =
             'url("' + url + '")';
 
-        /*
-         * Force style calculation.
-         */
-
         void nextLayer.offsetWidth;
-
-        /*
-         * Crossfade.
-         */
 
         nextLayer.classList.add('show');
 
@@ -1489,13 +1159,9 @@
 
         showHeroBackground();
 
-        /* Reset previous logo */
-
         p.logo.classList.remove('ready');
         p.logo.style.display = 'none';
-        p.logo.src = '';
-
-        /* New title */
+        p.logo.removeAttribute('src');
 
         p.title.style.display = '';
         p.title.textContent = movieTitle(d);
@@ -1539,12 +1205,6 @@
 
         p.descr.textContent = d.overview || '';
 
-        /*
-         * Backdrop:
-         * Keep previous image visible while
-         * the next image is loading.
-         */
-
         if (d.backdrop_path) {
             var bg = imageURL(
                 d.backdrop_path,
@@ -1570,14 +1230,8 @@
             hero.activeBgIndex = 0;
         }
 
-        /* Logo */
-
-        function applyLogo(src, titleText) {
+        function applyLogo(src) {
             if (hero.token !== token) return;
-
-            if (titleText) {
-                p.title.textContent = titleText;
-            }
 
             if (!src) {
                 p.title.style.display = '';
@@ -1608,29 +1262,11 @@
             });
         }
 
-        var fastCached = cached(key);
+        ensureLogo(d, function (url) {
+            if (hero.token !== token) return;
 
-        if (fastCached && fastCached.path) {
-            applyLogo(
-                imageURL(fastCached.path),
-                fastCached.title || movieTitle(d)
-            );
-
-            return;
-        }
-
-        loadLogo(
-            d,
-            function (result) {
-                if (hero.token !== token) return;
-
-                applyLogo(
-                    result.src,
-                    result.title || movieTitle(d)
-                );
-            },
-            !!force
-        );
+            applyLogo(url);
+        });
     }
 
     /* =========================
@@ -1686,11 +1322,12 @@
         if (lastFocusKey === key) return;
 
         /*
-         * Start loading immediately.
-         * This happens before the visual timer.
+         * Start backdrop and logo preloading
+         * immediately when focus changes.
          */
 
         prefetchHeroBackdrop(d);
+        prefetchNearbyLogos(item, root);
 
         clearTimeout(focusTimer);
 
@@ -1857,9 +1494,10 @@
     }
 
     function showCardLogoInstant(root, d) {
-        var hit = cached(identity(d));
+        var holder = getLogoHolder(d);
+        var hit = holder.tfeed_logo;
 
-        if (!hit || !hit.path) return false;
+        if (!hit) return false;
 
         var title = findTitle(root);
 
@@ -1874,7 +1512,7 @@
 
         logo.style.transformOrigin = 'left center';
 
-        logo.src = imageURL(hit.path);
+        logo.src = hit;
 
         logo.classList.add('ready');
 
@@ -1918,7 +1556,6 @@
         };
 
         if (
-            !force &&
             showCardLogoInstant(root, d)
         ) {
             return;
@@ -1968,42 +1605,35 @@
             activeCard.observer = observer;
         }
 
-        loadLogo(
-            d,
-            function (result) {
-                if (!cardCurrent(token, key)) return;
+        ensureLogo(d, function (url) {
+            if (!cardCurrent(token, key)) return;
 
-                activeCard.title =
-                    result.title || movieTitle(d);
+            activeCard.src = url || '';
 
-                if (!result.src) return;
+            if (!url) return;
 
-                activeCard.src = result.src;
+            var title = findTitle(root);
 
-                var title = findTitle(root);
+            if (!title) return;
 
-                if (!title) return;
+            var logo = prepareLogo(title);
 
-                var logo = prepareLogo(title);
+            if (!logo) return;
 
-                if (!logo) return;
+            logo.style.transform =
+                'scale(' + logoScale() + ')';
 
-                logo.style.transform =
-                    'scale(' + logoScale() + ')';
+            logo.style.transformOrigin =
+                'left center';
 
-                logo.style.transformOrigin =
-                    'left center';
+            logo.src = url;
 
-                logo.src = result.src;
+            logo.classList.add('ready');
 
-                logo.classList.add('ready');
-
-                title.classList.add(
-                    'interface-plus-logo-active'
-                );
-            },
-            !!force
-        );
+            title.classList.add(
+                'interface-plus-logo-active'
+            );
+        });
     }
 
     function refreshCard(force) {
@@ -2264,22 +1894,6 @@
         );
 
         add(
-            S.quality,
-            'select',
-            'original',
-            'Якість логотипів',
-            'Роздільна здатність зображень TMDB',
-            {
-                w300: '300px',
-                w500: '500px',
-                original: 'Original'
-            },
-            function () {
-                refreshAll(false);
-            }
-        );
-
-        add(
             S.scale,
             'select',
             '100',
@@ -2305,7 +1919,7 @@
             'Очистити кеш логотипів',
             'Повторно отримати логотипи з TMDB',
             null,
-            clearCache
+            clearLogoCache
         );
 
         add(
@@ -2453,10 +2067,7 @@
                             applySize();
                         }
 
-                        if (
-                            e.name === S.quality ||
-                            e.name === S.scale
-                        ) {
+                        if (e.name === S.scale) {
                             refreshAll(false);
                         }
                     }
@@ -2501,7 +2112,7 @@
             }
         });
 
-        log('Fast cinematic hero initialized');
+        log('Kinotraylery logo engine initialized');
     }
 
     /* =========================
