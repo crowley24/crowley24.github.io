@@ -3,22 +3,21 @@
     'use strict';
 
     /*
-     * CINEMATIC FULL 1.0.1
+     * CINEMATIC FULL 1.0.2
      *
      * Lampa / Android TV / Mobile
      *
-     * FIXES 1.0.1:
-     * - Removed duplicate fullscreen shade
-     * - Original Trailer Feed gradient moved to .cf-info
-     * - Hide native Lampa backdrop to prevent double background
-     * - Reliable background cleanup when leaving Full
-     * - MutationObserver for activity transitions
-     * - Native media buttons are restored during cleanup
-     * - Fixed background remains stationary while scrolling
-     * - No logo shadow
+     * FIXES 1.0.2:
+     * - Fullscreen fixed gradient overlay
+     * - Gradient covers entire viewport
+     * - Gradient does not move while scrolling
+     * - Gradient reaches all screen edges
+     * - Background remains fixed
+     * - Reliable background and shade cleanup
+     * - Native media buttons are restored on cleanup
      *
      * DESIGN:
-     * - Original КіноТрейлери 2.3 spacing
+     * - Original КіноТрейлери 2.3 gradient values
      * - Original logo dimensions
      * - Original metadata dimensions
      * - Original description dimensions
@@ -57,13 +56,12 @@
     var css = '' +
 
         /*
-         * SINGLE FIXED BACKGROUND
+         * FIXED BACKGROUND
          */
 
         '.cf-background{' +
             'position:fixed;' +
-            'left:0;' +
-            'top:0;' +
+            'inset:0;' +
             'width:100%;' +
             'height:100%;' +
             'background-color:#000;' +
@@ -73,6 +71,23 @@
             'transform:scale(1.01);' +
             'z-index:0;' +
             'pointer-events:none;' +
+        '}' +
+
+        /*
+         * FULLSCREEN FIXED GRADIENT
+         *
+         * Original Trailer Feed gradient.
+         * Exact original values.
+         */
+
+        '.cf-shade{' +
+            'position:fixed;' +
+            'inset:0;' +
+            'width:100%;' +
+            'height:100%;' +
+            'pointer-events:none;' +
+            'z-index:1;' +
+            'background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);' +
         '}' +
 
         /*
@@ -115,10 +130,10 @@
         '}' +
 
         /*
-         * ORIGINAL TRAILER FEED INFO
+         * INFO
          *
-         * Original gradient values.
-         * Original spacing.
+         * Gradient is no longer here.
+         * It is now a separate fullscreen layer.
          */
 
         '.cf-info{' +
@@ -130,7 +145,7 @@
             'box-sizing:border-box;' +
             'padding:7em 12em 2.5em 3em;' +
             'z-index:5;' +
-            'background:linear-gradient(to top,rgba(0,0,0,.94) 0%,rgba(0,0,0,.65) 48%,transparent 100%);' +
+            'background:transparent!important;' +
         '}' +
 
         /*
@@ -425,13 +440,14 @@
     }
 
     // --------------------------------------------------
-    // BACKGROUND
+    // BACKGROUND + FULLSCREEN SHADE
     // --------------------------------------------------
 
     function createBackground(movie) {
-        $('.cf-background').remove();
+        $('.cf-background, .cf-shade').remove();
 
         var background = $('<div class="cf-background"></div>');
+        var shade = $('<div class="cf-shade"></div>');
 
         if (movie.backdrop_path) {
             background.css(
@@ -441,6 +457,23 @@
         }
 
         $('body').append(background);
+        $('body').append(shade);
+    }
+
+    // --------------------------------------------------
+    // METADATA
+    // --------------------------------------------------
+
+    function createMetadata(movie, method) {
+        var date = getDate(movie);
+        var genres = getGenres(movie, method);
+        var rating = Number(movie.vote_average) || 0;
+
+        return [
+            date.slice(0, 4),
+            rating ? '★ ' + rating.toFixed(1) : '',
+            genres
+        ].filter(Boolean).join(' · ');
     }
 
     // --------------------------------------------------
@@ -485,22 +518,6 @@
         });
 
         movedElements = [];
-    }
-
-    // --------------------------------------------------
-    // METADATA
-    // --------------------------------------------------
-
-    function createMetadata(movie, method) {
-        var date = getDate(movie);
-        var genres = getGenres(movie, method);
-        var rating = Number(movie.vote_average) || 0;
-
-        return [
-            date.slice(0, 4),
-            rating ? '★ ' + rating.toFixed(1) : '',
-            genres
-        ].filter(Boolean).join(' · ');
     }
 
     // --------------------------------------------------
@@ -638,7 +655,10 @@
 
         if (!node || !document.body.contains(node)) return false;
 
-        if (typeof currentRoot.is === 'function' && !currentRoot.is(':visible')) {
+        if (
+            typeof currentRoot.is === 'function' &&
+            !currentRoot.is(':visible')
+        ) {
             return false;
         }
 
@@ -678,10 +698,10 @@
         restoreNativeElements();
 
         /*
-         * Remove the only custom background.
+         * Remove both fixed visual layers.
          */
 
-        $('.cf-background').remove();
+        $('.cf-background, .cf-shade').remove();
 
         /*
          * Restore original Lampa root.
@@ -785,10 +805,6 @@
 
         if (!root || !root.length) return;
 
-        /*
-         * Clean previous card before creating another.
-         */
-
         cleanup();
 
         var myRequest = requestId;
@@ -802,10 +818,8 @@
         installCSS();
 
         /*
-         * Remove stale backgrounds before adding one.
+         * Create one background and one fullscreen gradient.
          */
-
-        $('.cf-background').remove();
 
         createBackground(movie);
 
@@ -834,12 +848,8 @@
     // ACTIVITY EVENTS
     // --------------------------------------------------
 
-    Lampa.Listener.follow('activity', function (event) {
+    Lampa.Listener.follow('activity', function () {
         if (!cardActive) return;
-
-        /*
-         * Give Lampa time to switch activities.
-         */
 
         if (cleanupTimer) clearTimeout(cleanupTimer);
 
