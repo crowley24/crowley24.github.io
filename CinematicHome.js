@@ -2,22 +2,22 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.0 — FULLSCREEN CINEMATIC HERO
+     * INTERFACE+ 1.6.1 — FAST CINEMATIC HERO
      * TMDB ONLY
      *
-     * 1.6.0 CHANGES:
-     * - Restored fullscreen background image
-     * - Background remains independently attached to document.body
-     * - Image focal point shifted upward
-     * - Removed right-side image sizing
-     * - Removed radial masking
-     * - Added smooth bottom gradient fading into black
-     * - Background fully disappears before the card rows
+     * 1.6.1 CHANGES:
+     * - Added double-layer background rendering
+     * - Previous backdrop remains visible while next loads
+     * - Added in-memory backdrop cache (12 images)
+     * - Added instant backdrop preloading on card focus
+     * - Added smooth crossfade between backdrops
+     * - Prevented outdated backdrop requests from replacing current image
+     * - Preserved fullscreen cinematic background and gradient
      * - Preserved TMDB logo engine, cache and settings
      */
 
-    var VERSION = '1.6.0';
-    var READY_KEY = 'interface_plus_tmdb_only_160';
+    var VERSION = '1.6.1';
+    var READY_KEY = 'interface_plus_tmdb_only_161';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -44,6 +44,13 @@
     var pending = {};
     var searchPending = {};
     var generation = 0;
+
+    /* Backdrop memory cache */
+
+    var backdropCache = {};
+    var backdropCacheOrder = [];
+    var backdropPending = {};
+    var BACKDROP_CACHE_LIMIT = 12;
 
     var initialized = false;
     var focusTimer = null;
@@ -604,6 +611,10 @@
             p;
     }
 
+    /* =========================
+       IMAGE PRELOAD
+    ========================= */
+
     function preload(url, callback) {
         if (!url) {
             callback(false);
@@ -636,6 +647,110 @@
         if (img.complete && img.naturalWidth) {
             done(true);
         }
+    }
+
+    /* =========================
+       BACKDROP PRELOAD CACHE
+    ========================= */
+
+    function rememberBackdrop(url) {
+        if (!url) return;
+
+        if (backdropCache[url]) {
+            var oldIndex = backdropCacheOrder.indexOf(url);
+
+            if (oldIndex !== -1) {
+                backdropCacheOrder.splice(oldIndex, 1);
+            }
+        }
+
+        backdropCache[url] = true;
+        backdropCacheOrder.push(url);
+
+        while (
+            backdropCacheOrder.length >
+            BACKDROP_CACHE_LIMIT
+        ) {
+            var old = backdropCacheOrder.shift();
+
+            if (old) {
+                delete backdropCache[old];
+            }
+        }
+    }
+
+    function preloadBackdrop(url, callback) {
+        callback = callback || function () {};
+
+        if (!url) {
+            callback(false);
+            return;
+        }
+
+        if (backdropCache[url]) {
+            callback(true);
+            return;
+        }
+
+        if (backdropPending[url]) {
+            backdropPending[url].push(callback);
+            return;
+        }
+
+        backdropPending[url] = [callback];
+
+        var img = new Image();
+        var completed = false;
+
+        function finish(ok) {
+            if (completed) return;
+
+            completed = true;
+
+            img.onload = null;
+            img.onerror = null;
+
+            if (ok) {
+                rememberBackdrop(url);
+            }
+
+            var callbacks = backdropPending[url] || [];
+
+            delete backdropPending[url];
+
+            callbacks.forEach(function (fn) {
+                try {
+                    fn(ok);
+                } catch (e) {}
+            });
+        }
+
+        img.onload = function () {
+            finish(true);
+        };
+
+        img.onerror = function () {
+            finish(false);
+        };
+
+        img.src = url;
+
+        if (img.complete && img.naturalWidth) {
+            finish(true);
+        }
+    }
+
+    function prefetchHeroBackdrop(d) {
+        if (!d || !d.backdrop_path) return;
+
+        var url = imageURL(
+            d.backdrop_path,
+            'original'
+        );
+
+        if (!url || backdropCache[url]) return;
+
+        preloadBackdrop(url, function () {});
     }
 
     /* =========================
@@ -787,8 +902,32 @@
        FULLSCREEN CINEMATIC BACKGROUND
     ========================= */
 
+    function ensureBackgroundLayers(layer) {
+        if (!layer) return;
+
+        var bgA = layer.querySelector(
+            '.banner-screen-bg__image--a'
+        );
+
+        var bgB = layer.querySelector(
+            '.banner-screen-bg__image--b'
+        );
+
+        var vignette = layer.querySelector(
+            '.banner-screen-bg__vignette'
+        );
+
+        if (bgA && bgB && vignette) return;
+
+        layer.innerHTML =
+            '<div class="banner-screen-bg__image banner-screen-bg__image--a"></div>' +
+            '<div class="banner-screen-bg__image banner-screen-bg__image--b"></div>' +
+            '<div class="banner-screen-bg__vignette"></div>';
+    }
+
     function ensureScreenBackground() {
         if (screenBackground && screenBackground.isConnected) {
+            ensureBackgroundLayers(screenBackground);
             return screenBackground;
         }
 
@@ -798,6 +937,7 @@
 
         if (existing) {
             screenBackground = existing;
+            ensureBackgroundLayers(screenBackground);
             return screenBackground;
         }
 
@@ -806,15 +946,32 @@
         layer.id = 'interface-plus-screen-background';
         layer.className = 'banner-screen-bg';
 
-        layer.innerHTML =
-            '<div class="banner-screen-bg__image"></div>' +
-            '<div class="banner-screen-bg__vignette"></div>';
+        ensureBackgroundLayers(layer);
 
         document.body.appendChild(layer);
 
         screenBackground = layer;
 
         return screenBackground;
+    }
+
+    function clearHeroBackgrounds() {
+        if (!screenBackground) {
+            screenBackground = document.getElementById(
+                'interface-plus-screen-background'
+            );
+        }
+
+        if (!screenBackground) return;
+
+        var images = screenBackground.querySelectorAll(
+            '.banner-screen-bg__image'
+        );
+
+        Array.prototype.forEach.call(images, function (bg) {
+            bg.classList.remove('show');
+            bg.style.backgroundImage = 'none';
+        });
     }
 
     function hideHeroBackground() {
@@ -828,13 +985,7 @@
 
         screenBackground.style.display = 'none';
 
-        var bg = screenBackground.querySelector(
-            '.banner-screen-bg__image'
-        );
-
-        if (bg) {
-            bg.classList.remove('show');
-        }
+        clearHeroBackgrounds();
     }
 
     function showHeroBackground() {
@@ -865,7 +1016,7 @@
             'background:#000;' +
         '}',
 
-        /* Fullscreen image */
+        /* Fullscreen image layers */
 
         '.banner-screen-bg__image{' +
             'position:absolute;' +
@@ -878,7 +1029,8 @@
             'opacity:0;' +
             'filter:none;' +
             'transform:none;' +
-            'transition:opacity .35s ease;' +
+            'transition:opacity .18s ease;' +
+            'will-change:opacity;' +
         '}',
 
         '.banner-screen-bg__image.show{' +
@@ -887,31 +1039,30 @@
 
         /*
          * Bottom cinematic gradient.
-         * The image gradually disappears into black
-         * before the card rows begin.
+         * Preserved from 1.6.0.
          */
 
         '.banner-screen-bg__vignette{' +
-    'position:absolute;' +
-    'inset:0;' +
-    'width:100%;' +
-    'height:100%;' +
-    'z-index:1;' +
-    'pointer-events:none;' +
-    'background:' +
-        'linear-gradient(' +
-            'to bottom,' +
-            'rgba(0,0,0,0) 0vh,' +
-            'rgba(0,0,0,0) 35vh,' +
-            'rgba(0,0,0,.04) 40vh,' +
-            'rgba(0,0,0,.12) 45vh,' +
-            'rgba(0,0,0,.30) 50vh,' +
-            'rgba(0,0,0,.60) 55vh,' +
-            'rgba(0,0,0,.88) 59vh,' +
-            '#000 63vh,' +
-            '#000 100%' +
-        ');' +
-'}',
+            'position:absolute;' +
+            'inset:0;' +
+            'width:100%;' +
+            'height:100%;' +
+            'z-index:1;' +
+            'pointer-events:none;' +
+            'background:' +
+                'linear-gradient(' +
+                    'to bottom,' +
+                    'rgba(0,0,0,0) 0vh,' +
+                    'rgba(0,0,0,0) 35vh,' +
+                    'rgba(0,0,0,.04) 40vh,' +
+                    'rgba(0,0,0,.12) 45vh,' +
+                    'rgba(0,0,0,.30) 50vh,' +
+                    'rgba(0,0,0,.60) 55vh,' +
+                    'rgba(0,0,0,.88) 59vh,' +
+                    '#000 63vh,' +
+                    '#000 100%' +
+                ');' +
+        '}',
 
         /* Hero container */
 
@@ -1057,11 +1208,6 @@
                 'max-height:5em;' +
             '}' +
 
-            /*
-             * Keep the same fullscreen background
-             * on mobile. Only adjust focal position.
-             */
-
             '.banner-screen-bg__image{' +
                 'background-position:center 60%;' +
             '}' +
@@ -1118,8 +1264,11 @@
         root.classList.add('banner-host');
 
         hero.parts = {
-            bg: layer.querySelector(
-                '.banner-screen-bg__image'
+            bgA: layer.querySelector(
+                '.banner-screen-bg__image--a'
+            ),
+            bgB: layer.querySelector(
+                '.banner-screen-bg__image--b'
             ),
             logo: hero.querySelector(
                 '.banner-hero__logo'
@@ -1137,10 +1286,60 @@
 
         hero.token = 0;
         hero.root = root;
+        hero.activeBgIndex = 0;
 
         root.__interfacePlusHero = hero;
 
         return hero;
+    }
+
+    /* =========================
+       HERO BACKDROP SWITCH
+    ========================= */
+
+    function switchHeroBackdrop(hero, url, token) {
+        if (!hero || !url) return;
+
+        preloadBackdrop(url, function (ok) {
+            if (!ok || hero.token !== token) return;
+
+            var p = hero.parts;
+
+            var current = hero.activeBgIndex || 0;
+            var next = current === 0 ? 1 : 0;
+
+            var currentLayer = current === 0 ? p.bgA : p.bgB;
+            var nextLayer = next === 0 ? p.bgA : p.bgB;
+
+            if (!nextLayer) return;
+
+            /*
+             * Prepare the hidden layer first.
+             * The currently visible image stays on screen.
+             */
+
+            nextLayer.classList.remove('show');
+            nextLayer.style.backgroundImage =
+                'url("' + url + '")';
+
+            /*
+             * Force style calculation before crossfade.
+             */
+
+            void nextLayer.offsetWidth;
+
+            /*
+             * Show new image and hide previous one.
+             */
+
+            nextLayer.classList.add('show');
+
+            if (currentLayer && currentLayer !== nextLayer) {
+                currentLayer.classList.remove('show');
+            }
+
+            hero.activeBgIndex = next;
+        });
     }
 
     function showHero(hero, d, force) {
@@ -1204,22 +1403,34 @@
 
         p.descr.textContent = d.overview || '';
 
-        /* Hide previous backdrop */
-
-        p.bg.classList.remove('show');
-        p.bg.style.backgroundImage = 'none';
-
-        /* Fullscreen original TMDB backdrop */
+        /*
+         * Do not clear the previous backdrop here.
+         * The previous image remains visible until
+         * the next image is completely loaded.
+         */
 
         if (d.backdrop_path) {
-            var bg = imageURL(d.backdrop_path, 'original');
+            var bg = imageURL(
+                d.backdrop_path,
+                'original'
+            );
 
-            preload(bg, function (ok) {
-                if (!ok || hero.token !== token) return;
+            switchHeroBackdrop(hero, bg, token);
+        } else {
+            /*
+             * If the new item has no backdrop,
+             * remove both old images.
+             */
 
-                p.bg.style.backgroundImage = 'url("' + bg + '")';
-                p.bg.classList.add('show');
-            });
+            if (p.bgA) {
+                p.bgA.classList.remove('show');
+                p.bgA.style.backgroundImage = 'none';
+            }
+
+            if (p.bgB) {
+                p.bgB.classList.remove('show');
+                p.bgB.style.backgroundImage = 'none';
+            }
         }
 
         function applyLogo(src, titleText) {
@@ -1288,15 +1499,7 @@
             var previousRoot = activeHero && activeHero.root;
 
             if (previousRoot && previousRoot !== root) {
-                var bg = ensureScreenBackground().querySelector(
-                    '.banner-screen-bg__image'
-                );
-
-                if (bg) {
-                    bg.classList.remove('show');
-                    bg.style.backgroundImage = 'none';
-                }
-
+                clearHeroBackgrounds();
                 lastFocusKey = '';
             }
 
@@ -1325,6 +1528,13 @@
         var key = identity(d);
 
         if (lastFocusKey === key) return;
+
+        /*
+         * Start backdrop loading immediately on focus,
+         * without waiting for the visual switch timer.
+         */
+
+        prefetchHeroBackdrop(d);
 
         clearTimeout(focusTimer);
 
@@ -2067,7 +2277,7 @@
             }
         });
 
-        log('Fullscreen cinematic hero initialized');
+        log('Fast cinematic hero initialized');
     }
 
     /* =========================
