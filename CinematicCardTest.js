@@ -2,26 +2,29 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.8.0 — NETFLIX CINEMATIC FULL CARD
+     * INTERFACE+ 1.8.1 — NETFLIX CINEMATIC FULL CARD
      * TMDB ONLY
      *
-     * - Full-screen TMDB backdrop
-     * - Netflix-style bottom content layout
-     * - Large adaptive TMDB logo
-     * - Native Lampa buttons and actions preserved
-     * - Shared logo/backdrop cache with home banner
-     * - Smooth backdrop changes
-     * - Card navigation updates the displayed movie
-     * - Preserved home banner and menu cinematic shift
+     * FIXES 1.8.1:
+     * - Fixed empty full-card layout
+     * - Does not blindly hide the left content column
+     * - Detects the actual content container
+     * - Preserves native Lampa buttons and actions
+     * - Keeps the full-screen backdrop behind card content
+     * - Supports full-start-new and full-start layouts
+     * - Shared TMDB logo and backdrop cache
+     * - Smooth backdrop transitions
+     * - Preserved home hero and menu shift
      */
 
-    var VERSION = '1.8.0';
-    var READY_KEY = 'interface_plus_tmdb_only_180';
+    var VERSION = '1.8.1';
+    var READY_KEY = 'interface_plus_tmdb_only_181';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
 
     var P = 'interface_plus_';
+
     var S = {
         hero: 'banner_hero_enabled',
         size: 'interface_size',
@@ -56,8 +59,14 @@
     var currentSize = '';
     var menuObserver = null;
 
-    var TITLE_SELECTOR =
-        '.full-start__title,.full-start-new__title,.full__title,.full-card__title';
+    var TITLE_SELECTOR = [
+        '.full-start-new__title',
+        '.full-start__title',
+        '.full__title',
+        '.full-card__title',
+        '.left-title__content .full-start__title',
+        '.left-title__content .full-start-new__title'
+    ].join(',');
 
     /* -------------------------------------------------------
        UTILITIES
@@ -67,7 +76,9 @@
         try {
             console.log.apply(
                 console,
-                ['[INTERFACE+ ' + VERSION + ']'].concat([].slice.call(arguments))
+                ['[INTERFACE+ ' + VERSION + ']'].concat(
+                    [].slice.call(arguments)
+                )
             );
         } catch (e) {}
     }
@@ -82,7 +93,13 @@
 
     function enabled(k, f) {
         var v = storageGet(k, f);
-        return v === true || v === 'true' || v === 1 || v === '1';
+
+        return (
+            v === true ||
+            v === 'true' ||
+            v === 1 ||
+            v === '1'
+        );
     }
 
     function text(v) {
@@ -94,13 +111,18 @@
             var v = text(arguments[i]);
             if (v) return v;
         }
+
         return '';
     }
 
     function node(v) {
-        return v && v.nodeType === 1
-            ? v
-            : (v && v[0] && v[0].nodeType === 1 ? v[0] : null);
+        if (v && v.nodeType === 1) return v;
+
+        if (v && v[0] && v[0].nodeType === 1) {
+            return v[0];
+        }
+
+        return null;
     }
 
     function renderActivity(o) {
@@ -131,7 +153,12 @@
 
     function isFull(o) {
         var c = text(o && o.component).toLowerCase();
-        return c === 'full' || c === 'full_start' || c === 'fullstart';
+
+        return (
+            c === 'full' ||
+            c === 'full_start' ||
+            c === 'fullstart'
+        );
     }
 
     function isMain(o) {
@@ -173,9 +200,7 @@
     function normalizeTitle(s) {
         return text(s)
             .toLowerCase()
-            .normalize('NFKD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/[^\wа-яіїєґ]+/gi, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -227,21 +252,44 @@
     }
 
     var MOVIE_GENRES = {
-        28:'Бойовик',12:'Пригоди',16:'Анімація',35:'Комедія',
-        80:'Кримінал',99:'Документальний',18:'Драма',
-        10751:'Сімейний',14:'Фентезі',36:'Історичний',
-        27:'Жахи',10402:'Музика',9648:'Детектив',
-        10749:'Мелодрама',878:'Фантастика',10770:'Телефільм',
-        53:'Трилер',10752:'Військовий',37:'Вестерн'
+        28: 'Бойовик',
+        12: 'Пригоди',
+        16: 'Анімація',
+        35: 'Комедія',
+        80: 'Кримінал',
+        99: 'Документальний',
+        18: 'Драма',
+        10751: 'Сімейний',
+        14: 'Фентезі',
+        36: 'Історичний',
+        27: 'Жахи',
+        10402: 'Музика',
+        9648: 'Детектив',
+        10749: 'Мелодрама',
+        878: 'Фантастика',
+        10770: 'Телефільм',
+        53: 'Трилер',
+        10752: 'Військовий',
+        37: 'Вестерн'
     };
 
     var TV_GENRES = {
-        10759:'Бойовик і пригоди',16:'Анімація',35:'Комедія',
-        80:'Кримінал',99:'Документальний',18:'Драма',
-        10751:'Сімейний',10762:'Дитячий',9648:'Детектив',
-        10763:'Новини',10764:'Реаліті-шоу',10765:'Фантастика',
-        10766:'Мильна опера',10767:'Ток-шоу',
-        10768:'Війна і політика',37:'Вестерн'
+        10759: 'Бойовик і пригоди',
+        16: 'Анімація',
+        35: 'Комедія',
+        80: 'Кримінал',
+        99: 'Документальний',
+        18: 'Драма',
+        10751: 'Сімейний',
+        10762: 'Дитячий',
+        9648: 'Детектив',
+        10763: 'Новини',
+        10764: 'Реаліті-шоу',
+        10765: 'Фантастика',
+        10766: 'Мильна опера',
+        10767: 'Ток-шоу',
+        10768: 'Війна і політика',
+        37: 'Вестерн'
     };
 
     function movieGenres(d) {
@@ -254,19 +302,30 @@
             src.forEach(function (g) {
                 var name = typeof g === 'string'
                     ? g
-                    : first(g && g.name, g && g.ua_name, g && g.title);
+                    : first(
+                        g && g.name,
+                        g && g.ua_name,
+                        g && g.title
+                    );
 
-                if (name && res.indexOf(name) === -1) res.push(name);
+                if (name && res.indexOf(name) === -1) {
+                    res.push(name);
+                }
             });
         }
 
         if (!res.length) {
             var ids = d.genre_ids || d.genres_ids || [];
-            var dict = movieType(d) === 'tv' ? TV_GENRES : MOVIE_GENRES;
+            var dict = movieType(d) === 'tv'
+                ? TV_GENRES
+                : MOVIE_GENRES;
 
             (Array.isArray(ids) ? ids : []).forEach(function (id) {
                 var name = dict[Number(id)];
-                if (name && res.indexOf(name) === -1) res.push(name);
+
+                if (name && res.indexOf(name) === -1) {
+                    res.push(name);
+                }
             });
         }
 
@@ -283,25 +342,42 @@
 
     function logoScale() {
         var v = parseInt(storageGet(S.scale, '100'), 10);
-        return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
+
+        return Math.max(
+            70,
+            Math.min(120, isNaN(v) ? 100 : v)
+        ) / 100;
+    }
+
+    function imageURL(path, size) {
+        if (!path) return '';
+
+        var p = text(path);
+
+        return 'https://image.tmdb.org/t/p/' +
+            (size || 'w500') +
+            (p.charAt(0) === '/' ? '' : '/') +
+            p;
     }
 
     /* -------------------------------------------------------
-       ADAPTIVE LOGO
+       LOGO CACHE
     ------------------------------------------------------- */
 
     function adaptiveLogoHeight(img, mode) {
-        if (!img || !img.naturalWidth || !img.naturalHeight) return;
+        if (!img || !img.naturalWidth || !img.naturalHeight) {
+            return;
+        }
 
-        var r = img.naturalWidth / img.naturalHeight;
+        var ratio = img.naturalWidth / img.naturalHeight;
 
         var factor =
-            r >= 3.5 ? 1.00 :
-            r >= 3.0 ? 1.04 :
-            r >= 2.5 ? 1.08 :
-            r >= 2.0 ? 1.12 :
-            r >= 1.5 ? 1.16 :
-            r >= 1.1 ? 1.21 : 1.26;
+            ratio >= 3.5 ? 1.00 :
+            ratio >= 3.0 ? 1.04 :
+            ratio >= 2.5 ? 1.08 :
+            ratio >= 2.0 ? 1.12 :
+            ratio >= 1.5 ? 1.16 :
+            ratio >= 1.1 ? 1.21 : 1.26;
 
         if (mode === 'hero') {
             img.style.height = (
@@ -349,7 +425,10 @@
 
         for (var i = 0; i < order.length; i++) {
             var found = (logos || []).filter(function (l) {
-                return l.iso_639_1 === order[i] && l.file_path;
+                return (
+                    l.iso_639_1 === order[i] &&
+                    l.file_path
+                );
             })[0];
 
             if (found) return found;
@@ -365,7 +444,9 @@
 
         if (!key) return {};
 
-        if (!logoItems[key]) logoItems[key] = {};
+        if (!logoItems[key]) {
+            logoItems[key] = {};
+        }
 
         return logoItems[key];
     }
@@ -426,9 +507,15 @@
         var holder = getLogoHolder(item);
 
         cached(holder, 'tfeed_logo', function (done) {
-            var id = first(item.tmdb_id, item.tmdbId, item.id);
+            var id = first(
+                item.tmdb_id,
+                item.tmdbId,
+                item.id
+            );
 
-            if (id && typeof id === 'object') id = id.id;
+            if (id && typeof id === 'object') {
+                id = id.id;
+            }
 
             id = text(id);
 
@@ -443,7 +530,9 @@
                 lang = Lampa.Storage.field('tmdb_lang') || 'en';
             } catch (e) {}
 
-            var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+            var tmdb = Lampa.Api &&
+                Lampa.Api.sources &&
+                Lampa.Api.sources.tmdb;
 
             if (!tmdb || !tmdb.get) {
                 done(null);
@@ -458,11 +547,20 @@
                     }
                 },
                 function (json) {
-                    var logo = json && json.logos && json.logos.length
+                    var logo = json &&
+                        json.logos &&
+                        json.logos.length
                         ? pickLogo(json.logos)
                         : null;
 
-                    done(logo ? Lampa.Api.img(logo.file_path, LOGO_SIZE) : null);
+                    done(
+                        logo
+                            ? Lampa.Api.img(
+                                logo.file_path,
+                                LOGO_SIZE
+                            )
+                            : null
+                    );
                 },
                 function () {
                     done(null);
@@ -504,7 +602,9 @@
 
         img.src = url;
 
-        if (img.complete && img.naturalWidth) done(true);
+        if (img.complete && img.naturalWidth) {
+            done(true);
+        }
     }
 
     /* -------------------------------------------------------
@@ -516,13 +616,18 @@
 
         var idx = backdropCacheOrder.indexOf(url);
 
-        if (idx !== -1) backdropCacheOrder.splice(idx, 1);
+        if (idx !== -1) {
+            backdropCacheOrder.splice(idx, 1);
+        }
 
         backdropCache[url] = true;
         backdropCacheOrder.push(url);
 
-        while (backdropCacheOrder.length > BACKDROP_CACHE_LIMIT) {
+        while (
+            backdropCacheOrder.length > BACKDROP_CACHE_LIMIT
+        ) {
             var old = backdropCacheOrder.shift();
+
             if (old) delete backdropCache[old];
         }
     }
@@ -556,6 +661,7 @@
             if (ok) rememberBackdrop(url);
 
             var list = backdropPending[url] || [];
+
             delete backdropPending[url];
 
             list.forEach(function (fn) {
@@ -575,24 +681,18 @@
 
         img.src = url;
 
-        if (img.complete && img.naturalWidth) finish(true);
-    }
-
-    function imageURL(path, size) {
-        if (!path) return '';
-
-        var p = text(path);
-
-        return 'https://image.tmdb.org/t/p/' +
-            (size || 'w500') +
-            (p.charAt(0) === '/' ? '' : '/') +
-            p;
+        if (img.complete && img.naturalWidth) {
+            finish(true);
+        }
     }
 
     function prefetchHeroBackdrop(d) {
         if (!d || !d.backdrop_path) return;
 
-        var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
+        var url = imageURL(
+            d.backdrop_path,
+            BACKDROP_SIZE
+        );
 
         if (url && !backdropCache[url]) {
             preloadBackdrop(url, function () {});
@@ -628,11 +728,14 @@
     }
 
     /* -------------------------------------------------------
-       HOME SCREEN BACKGROUND
+       HOME BACKGROUND
     ------------------------------------------------------- */
 
     function ensureBackgroundLayers(layer) {
-        if (!layer || layer.querySelector('.banner-screen-bg__image--a')) return;
+        if (
+            !layer ||
+            layer.querySelector('.banner-screen-bg__image--a')
+        ) return;
 
         layer.innerHTML =
             '<div class="banner-screen-bg__image banner-screen-bg__image--a"></div>' +
@@ -641,7 +744,10 @@
     }
 
     function ensureScreenBackground() {
-        if (screenBackground && screenBackground.isConnected) {
+        if (
+            screenBackground &&
+            screenBackground.isConnected
+        ) {
             ensureBackgroundLayers(screenBackground);
             return screenBackground;
         }
@@ -679,14 +785,18 @@
         if (!screenBackground) return;
 
         Array.prototype.forEach.call(
-            screenBackground.querySelectorAll('.banner-screen-bg__image'),
+            screenBackground.querySelectorAll(
+                '.banner-screen-bg__image'
+            ),
             function (bg) {
                 bg.classList.remove('show');
                 bg.style.backgroundImage = 'none';
             }
         );
 
-        if (activeHero) activeHero.activeBgIndex = 0;
+        if (activeHero) {
+            activeHero.activeBgIndex = 0;
+        }
     }
 
     function hideHeroBackground() {
@@ -704,18 +814,19 @@
 
     function showHeroBackground() {
         var layer = ensureScreenBackground();
+
         if (layer) layer.style.display = 'block';
     }
 
     /* -------------------------------------------------------
-       CSS — HOME BANNER + NETFLIX FULL CARD
+       CSS
     ------------------------------------------------------- */
 
     var CSS = [
         '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
         '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease;will-change:opacity;}',
         '.banner-screen-bg__image.show{opacity:1;}',
-        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30),rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 35vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
+        '.banner-screen-bg__vignette{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48),rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,transparent 56%),linear-gradient(to bottom,rgba(0,0,0,.30),transparent 30vh),linear-gradient(to bottom,transparent 35vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
         '.banner-host{position:relative;z-index:1;}',
         '.banner-enabled .banner-host .activity__body{padding-top:42vh!important;box-sizing:border-box;}',
         '.banner-hero{position:absolute;top:0;left:0;right:0;height:50vh;overflow:visible;pointer-events:none;z-index:2;transition:transform .28s ease;will-change:transform;}',
@@ -738,24 +849,32 @@
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
-        /* HOME MENU SHIFT */
         'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
-        /* FULL SCREEN CARD BACKGROUND */
-        '.interface-plus-full-card-bg{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;overflow:hidden;pointer-events:none;z-index:0;background:#000;opacity:1;}',
+        /* FULL CARD BACKGROUND */
+        '.interface-plus-full-card-bg{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;overflow:hidden;pointer-events:none!important;z-index:0!important;background:#000;opacity:1;}',
         '.interface-plus-full-card-bg__image{position:absolute;inset:0;width:100%;height:100%;background-size:cover;background-position:center 42%;background-repeat:no-repeat;opacity:0;transition:opacity .38s ease;will-change:opacity;transform:scale(1.015);}',
         '.interface-plus-full-card-bg__image.show{opacity:1;}',
-        '.interface-plus-full-card-bg__shade{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.58) 0%,rgba(0,0,0,.27) 36%,rgba(0,0,0,.06) 72%),linear-gradient(0deg,#000 0%,rgba(0,0,0,.96) 7%,rgba(0,0,0,.76) 18%,rgba(0,0,0,.30) 39%,rgba(0,0,0,.08) 68%,rgba(0,0,0,.22) 100%);}',
+        '.interface-plus-full-card-bg__shade{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.58),rgba(0,0,0,.27) 36%,rgba(0,0,0,.06) 72%),linear-gradient(0deg,#000 0%,rgba(0,0,0,.96) 7%,rgba(0,0,0,.76) 18%,rgba(0,0,0,.30) 39%,rgba(0,0,0,.08) 68%,rgba(0,0,0,.22) 100%);}',
         '.interface-plus-full-card-bg__shade:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 52% 38%,transparent 28%,rgba(0,0,0,.20) 100%);}',
 
-        /* CARD ROOT */
-        '.interface-plus-full-card-root{position:relative!important;isolation:isolate!important;min-height:100vh!important;background:transparent!important;overflow:visible!important;}',
-        '.interface-plus-full-card-root .interface-plus-full-card-bg{z-index:0!important;}',
-        '.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{position:relative!important;isolation:isolate!important;min-height:100vh!important;height:100vh!important;background:transparent!important;overflow:visible!important;}',
-        '.interface-plus-full-card-root .full-start-new__body,.interface-plus-full-card-root .full-start__body{position:relative!important;display:block!important;width:100%!important;height:100vh!important;min-height:100vh!important;margin:0!important;padding:0!important;background:transparent!important;z-index:2!important;}',
-        '.interface-plus-full-card-root .full-start-new__left,.interface-plus-full-card-root .full-start__left{display:none!important;visibility:hidden!important;opacity:0!important;width:0!important;max-width:0!important;min-width:0!important;}',
+        /* ROOT AND CARD VIEW */
+        '.interface-plus-full-card-root{position:relative!important;min-height:100vh!important;background:transparent!important;overflow:visible!important;}',
+        '.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start,.interface-plus-full-card-root .full-card{position:relative!important;min-height:100vh!important;height:100vh!important;background:transparent!important;overflow:visible!important;}',
+        '.interface-plus-full-card-root .full-start-new__body,.interface-plus-full-card-root .full-start__body{position:relative!important;display:block!important;width:100%!important;min-height:100vh!important;height:100vh!important;margin:0!important;padding:0!important;background:transparent!important;z-index:2!important;}',
+
+        /*
+         * IMPORTANT FIX:
+         * Do not hide the left column unconditionally.
+         * Some Lampa templates place the actual content there.
+         */
+        '.interface-plus-full-card-root .full-start-new__left,.interface-plus-full-card-root .full-start__left{position:relative!important;z-index:3!important;background:transparent!important;}',
+        '.interface-plus-full-card-root .interface-plus-card-poster-hidden{display:none!important;}',
+
         '.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{position:absolute!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;min-width:0!important;margin:0!important;padding:0!important;z-index:4!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-end!important;background:transparent!important;}',
+        '.interface-plus-full-card-root .interface-plus-netflix-content{position:absolute!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;z-index:4!important;}',
+
         '.interface-plus-full-card-root .full-start-new__title,.interface-plus-full-card-root .full-start__title{font-size:clamp(2em,4vw,4.3em)!important;line-height:1.04!important;font-weight:800!important;letter-spacing:-.035em!important;color:#fff!important;margin:0 0 1.05em!important;text-shadow:0 3px 18px rgba(0,0,0,.65)!important;filter:drop-shadow(0 3px 12px rgba(0,0,0,.75));}',
         '.interface-plus-full-card-root .interface-plus-card-logo{display:block!important;max-width:min(48vw,620px)!important;margin:0 0 .12em!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,.72))!important;}',
         '.interface-plus-full-card-root .interface-plus-logo-title.interface-plus-logo-active{height:auto!important;min-height:0!important;margin-bottom:1.1em!important;}',
@@ -766,30 +885,25 @@
         '.interface-plus-full-card-root .full-start-new__buttons .button,.interface-plus-full-card-root .full-start__buttons .button{border-radius:.35em!important;}',
         '.interface-plus-full-card-root .full-start-new__reactions,.interface-plus-full-card-root .full-start__reactions{position:relative!important;z-index:5!important;}',
         '.interface-plus-full-card-root .full-start__background{opacity:0!important;visibility:hidden!important;display:none!important;}',
-        '.interface-plus-full-card-root .full-start-new__left *,.interface-plus-full-card-root .full-start__left *{pointer-events:none!important;}',
-        '.interface-plus-full-card-root .full-start-new__right>*{max-width:100%;}',
-        '.interface-plus-full-card-root .full-start-new__title .interface-plus-original-title,.interface-plus-full-card-root .full-start__title .interface-plus-original-title{display:block;}',
-        '.interface-plus-full-card-root .full-start-new__title.interface-plus-logo-active,.interface-plus-full-card-root .full-start__title.interface-plus-logo-active{font-size:0!important;}',
+        '.interface-plus-full-card-root .full-start-new__right>*,.interface-plus-full-card-root .full-start__right>*{max-width:100%;}',
 
-        /* Fallback for Lampa layouts with slightly different class names */
-        '.interface-plus-full-card-root .full-start-new__right .full-start__title{margin-bottom:1em!important;}',
-        '.interface-plus-full-card-root .full-start-new__right .full-start__description{max-width:760px!important;}',
-        '.interface-plus-full-card-root .full-start-new__body>*{z-index:2;}',
-
-        '@media(max-width:900px){.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{left:4vw!important;width:70vw!important;bottom:4vh!important;}}',
-        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.94) 12%,rgba(0,0,0,.68) 31%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.28) 100%);}.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{height:100vh!important;}.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{left:5vw!important;right:5vw!important;width:auto!important;max-width:none!important;bottom:4vh!important;}.interface-plus-full-card-root .interface-plus-card-logo{max-width:82vw!important;}.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{font-size:1em!important;-webkit-line-clamp:3!important;}}',
+        '@media(max-width:900px){.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right,.interface-plus-full-card-root .interface-plus-netflix-content{left:4vw!important;width:70vw!important;bottom:4vh!important;}}',
+        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.94) 12%,rgba(0,0,0,.68) 31%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.28) 100%);}.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{height:100vh!important;}.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right,.interface-plus-full-card-root .interface-plus-netflix-content{left:5vw!important;right:5vw!important;width:auto!important;max-width:none!important;bottom:4vh!important;}.interface-plus-full-card-root .interface-plus-card-logo{max-width:82vw!important;}.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{-webkit-line-clamp:3!important;font-size:1em!important;}}',
         '@media(max-width:480px){.banner-hero__info{left:1.5em;width:75%;}.banner-screen-bg__image{background-position:center 60%;}}',
         '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}'
     ].join('\n');
 
     function installStyle() {
-        var el = document.getElementById('interface-plus-tmdb-only-style') ||
-            document.createElement('style');
+        var el = document.getElementById(
+            'interface-plus-tmdb-only-style'
+        ) || document.createElement('style');
 
         el.id = 'interface-plus-tmdb-only-style';
         el.textContent = CSS;
 
-        if (!el.parentNode) document.head.appendChild(el);
+        if (!el.parentNode) {
+            document.head.appendChild(el);
+        }
     }
 
     /* -------------------------------------------------------
@@ -824,8 +938,12 @@
         root.classList.add('banner-host');
 
         hero.parts = {
-            bgA: layer.querySelector('.banner-screen-bg__image--a'),
-            bgB: layer.querySelector('.banner-screen-bg__image--b'),
+            bgA: layer.querySelector(
+                '.banner-screen-bg__image--a'
+            ),
+            bgB: layer.querySelector(
+                '.banner-screen-bg__image--b'
+            ),
             logo: hero.querySelector('.banner-hero__logo'),
             title: hero.querySelector('.banner-hero__title'),
             meta: hero.querySelector('.banner-hero__meta'),
@@ -858,6 +976,7 @@
         nextLayer.style.backgroundImage = 'url("' + url + '")';
 
         void nextLayer.offsetWidth;
+
         nextLayer.classList.add('show');
 
         if (curLayer && curLayer !== nextLayer) {
@@ -889,10 +1008,14 @@
 
         if (rating > 0) {
             var rate = document.createElement('span');
-            rate.className = 'banner-hero__meta-item banner-hero__rate';
+
+            rate.className =
+                'banner-hero__meta-item banner-hero__rate';
+
             rate.innerHTML =
                 '<span class="banner-hero__rate-star">★</span>' +
                 '<span>' + rating.toFixed(1) + '</span>';
+
             container.appendChild(rate);
         }
 
@@ -900,40 +1023,38 @@
 
         if (year) {
             if (container.children.length) {
-                container.appendChild(
-                    Object.assign(document.createElement('span'), {
-                        className: 'banner-hero__separator',
-                        textContent: '·'
-                    })
-                );
+                var sep = document.createElement('span');
+                sep.className = 'banner-hero__separator';
+                sep.textContent = '·';
+                container.appendChild(sep);
             }
 
-            container.appendChild(
-                Object.assign(document.createElement('span'), {
-                    className: 'banner-hero__meta-item banner-hero__year',
-                    textContent: year
-                })
-            );
+            var yearNode = document.createElement('span');
+
+            yearNode.className =
+                'banner-hero__meta-item banner-hero__year';
+
+            yearNode.textContent = year;
+            container.appendChild(yearNode);
         }
 
         var genres = movieGenres(d);
 
         if (genres.length) {
             if (container.children.length) {
-                container.appendChild(
-                    Object.assign(document.createElement('span'), {
-                        className: 'banner-hero__separator',
-                        textContent: '·'
-                    })
-                );
+                var sep2 = document.createElement('span');
+                sep2.className = 'banner-hero__separator';
+                sep2.textContent = '·';
+                container.appendChild(sep2);
             }
 
-            container.appendChild(
-                Object.assign(document.createElement('span'), {
-                    className: 'banner-hero__meta-item banner-hero__genre',
-                    textContent: genres.join(' / ')
-                })
-            );
+            var genreNode = document.createElement('span');
+
+            genreNode.className =
+                'banner-hero__meta-item banner-hero__genre';
+
+            genreNode.textContent = genres.join(' / ');
+            container.appendChild(genreNode);
         }
     }
 
@@ -960,10 +1081,13 @@
         p.title.style.display = '';
         p.title.textContent = movieTitle(d);
 
-        p.logo.style.transform = 'scale(' + logoScale() + ')';
+        p.logo.style.transform =
+            'scale(' + logoScale() + ')';
+
         p.logo.style.transformOrigin = 'left center';
 
         buildHeroMeta(p.meta, d);
+
         p.descr.textContent = d.overview || '';
 
         if (d.backdrop_path) {
@@ -981,7 +1105,10 @@
                 if (!ok || hero.token !== token) return;
 
                 setAdaptiveLogo(p.logo, url, 'hero');
-                p.logo.style.transform = 'scale(' + logoScale() + ')';
+
+                p.logo.style.transform =
+                    'scale(' + logoScale() + ')';
+
                 p.logo.style.transformOrigin = 'left center';
                 p.logo.style.display = 'block';
 
@@ -1004,6 +1131,7 @@
         }
 
         var root = renderActivity(o);
+
         if (!root) return;
 
         if (activeHero && activeHero.root !== root) {
@@ -1029,13 +1157,19 @@
 
         for (var i = 0; i < selectors.length; i++) {
             var f = root.querySelector(selectors[i]);
+
             if (f && f.card_data) return f;
         }
 
         var active = document.activeElement;
 
-        if (active && root.contains(active) && active.closest) {
+        if (
+            active &&
+            root.contains(active) &&
+            active.closest
+        ) {
             var f2 = active.closest('.card');
+
             if (f2 && f2.card_data) return f2;
         }
 
@@ -1046,12 +1180,15 @@
         if (!heroEnabled()) return;
 
         var activity = activeActivity();
+
         if (!isMain(activity)) return;
 
         var root = renderActivity(activity);
+
         if (!root) return;
 
         attachHero(activity);
+
         activeHero = root.__interfacePlusHero;
 
         if (!activeHero) return;
@@ -1062,15 +1199,28 @@
 
         if (focusedCard && focusedCard.card_data) {
             lastFocusKey = identity(focusedCard.card_data);
+
             prefetchHeroBackdrop(focusedCard.card_data);
-            showHero(activeHero, focusedCard.card_data, true);
+
+            showHero(
+                activeHero,
+                focusedCard.card_data,
+                true
+            );
+
             prefetchNearbyLogos(focusedCard, root);
             return;
         }
 
         if (activeHero.lastMovieData) {
             lastFocusKey = identity(activeHero.lastMovieData);
-            showHero(activeHero, activeHero.lastMovieData, true);
+
+            showHero(
+                activeHero,
+                activeHero.lastMovieData,
+                true
+            );
+
             return;
         }
 
@@ -1078,7 +1228,12 @@
 
         if (firstCard && firstCard.card_data) {
             lastFocusKey = identity(firstCard.card_data);
-            showHero(activeHero, firstCard.card_data, true);
+
+            showHero(
+                activeHero,
+                firstCard.card_data,
+                true
+            );
         }
     }
 
@@ -1092,17 +1247,14 @@
 
     /* -------------------------------------------------------
        FOCUS HANDLER
-       Supports both home hero and full-card navigation.
     ------------------------------------------------------- */
 
     function onFocus(e) {
         var target = e.target;
+
         if (!target || !target.closest) return;
 
         var item = target.closest('.card');
-
-        /* If a selectable movie card is focused inside a full activity,
-           update the Netflix card with that movie. */
         var activity = activeActivity();
 
         if (isFull(activity) && item && item.card_data) {
@@ -1118,7 +1270,9 @@
             return;
         }
 
-        if (!heroEnabled() || !item || !item.card_data) return;
+        if (!heroEnabled() || !item || !item.card_data) {
+            return;
+        }
 
         var root = item.closest('.activity');
 
@@ -1147,12 +1301,17 @@
     function applyHero() {
         var on = heroEnabled();
 
-        document.body.classList.toggle('banner-enabled', on);
+        document.body.classList.toggle(
+            'banner-enabled',
+            on
+        );
 
         if (!on) {
             clearTimeout(focusTimer);
             clearTimeout(restoreTimer);
+
             lastFocusKey = '';
+
             hideHeroBackground();
             return;
         }
@@ -1161,33 +1320,49 @@
     }
 
     /* -------------------------------------------------------
-       CARD TITLE / LOGO
+       TITLE / LOGO
     ------------------------------------------------------- */
 
     function restoreTitle(root) {
         if (!root) return;
 
-        var titles = root.classList &&
+        var titles = [];
+
+        if (
+            root.classList &&
             root.classList.contains('interface-plus-logo-title')
-            ? [root] : [];
+        ) {
+            titles.push(root);
+        }
 
         if (root.querySelectorAll) {
             [].push.apply(
                 titles,
-                root.querySelectorAll('.interface-plus-logo-title')
+                root.querySelectorAll(
+                    '.interface-plus-logo-title'
+                )
             );
         }
 
         titles.forEach(function (t) {
-            var logo = t.querySelector('.interface-plus-card-logo');
+            var logo = t.querySelector(
+                '.interface-plus-card-logo'
+            );
+
             if (logo) logo.remove();
 
-            var original = t.querySelector('.interface-plus-original-title');
+            var original = t.querySelector(
+                '.interface-plus-original-title'
+            );
 
             if (original) {
                 while (original.firstChild) {
-                    t.insertBefore(original.firstChild, original);
+                    t.insertBefore(
+                        original.firstChild,
+                        original
+                    );
                 }
+
                 original.remove();
             }
 
@@ -1199,20 +1374,24 @@
     }
 
     function findTitle(root) {
-        return root && root.querySelector
-            ? root.querySelector(TITLE_SELECTOR)
-            : null;
+        if (!root || !root.querySelector) return null;
+
+        return root.querySelector(TITLE_SELECTOR);
     }
 
     function prepareLogo(title) {
         if (!title) return null;
 
-        var logo = title.querySelector('.interface-plus-card-logo');
+        var logo = title.querySelector(
+            '.interface-plus-card-logo'
+        );
+
         if (logo) return logo;
 
         title.classList.add('interface-plus-logo-title');
 
         var original = document.createElement('span');
+
         original.className = 'interface-plus-original-title';
 
         while (title.firstChild) {
@@ -1222,6 +1401,7 @@
         title.appendChild(original);
 
         logo = document.createElement('img');
+
         logo.className = 'interface-plus-card-logo';
         logo.alt = '';
         logo.draggable = false;
@@ -1232,7 +1412,7 @@
     }
 
     /* -------------------------------------------------------
-       NETFLIX FULL CARD LAYOUT
+       NETFLIX CARD LAYOUT
     ------------------------------------------------------- */
 
     function findCardView(root) {
@@ -1241,6 +1421,52 @@
         return root.querySelector(
             '.full-start-new,.full-start,.full-card'
         ) || root;
+    }
+
+    function findCardContent(root) {
+        if (!root) return null;
+
+        /*
+         * Prefer the standard right-side content container.
+         */
+        var right = root.querySelector(
+            '.full-start-new__right,.full-start__right'
+        );
+
+        if (right) return right;
+
+        /*
+         * Some Lampa templates use left-title content.
+         */
+        var leftTitle = root.querySelector(
+            '.left-title__content'
+        );
+
+        if (leftTitle) return leftTitle;
+
+        /*
+         * Fallback: search the left column for actual title,
+         * description or buttons before using it.
+         */
+        var left = root.querySelector(
+            '.full-start-new__left,.full-start__left'
+        );
+
+        if (left) {
+            if (
+                left.querySelector(
+                    TITLE_SELECTOR +
+                    ',.full-start-new__description,' +
+                    '.full-start__description,' +
+                    '.full-start-new__buttons,' +
+                    '.full-start__buttons'
+                )
+            ) {
+                return left;
+            }
+        }
+
+        return null;
     }
 
     function applyNetflixLayout(root) {
@@ -1254,37 +1480,51 @@
             view.classList.add('interface-plus-netflix-card');
         }
 
-        var left = root.querySelector(
-            '.full-start-new__left,.full-start__left'
-        );
+        var content = findCardContent(root);
 
-        if (left) {
-            left.classList.add('interface-plus-card-poster-hidden');
+        if (content) {
+            content.classList.add(
+                'interface-plus-netflix-content'
+            );
+
+            /*
+             * Do not move or clone the native buttons.
+             * Their original Lampa event handlers remain intact.
+             */
         }
 
-        var right = root.querySelector(
-            '.full-start-new__right,.full-start__right'
+        /*
+         * Hide only a clearly separate poster-only element.
+         * Never hide the complete left column by default.
+         */
+        var poster = root.querySelector(
+            '.full-start-new__left .full-start__poster,' +
+            '.full-start__left .full-start__poster,' +
+            '.full-start-new__left .full-start-new__poster'
         );
 
-        if (right) {
-            right.classList.add('interface-plus-netflix-content');
+        if (poster) {
+            poster.classList.add(
+                'interface-plus-card-poster-hidden'
+            );
         }
     }
 
     /* -------------------------------------------------------
-       FULL SCREEN BACKGROUND
+       FULL SCREEN CARD BACKGROUND
     ------------------------------------------------------- */
 
     function ensureCardBackground(root) {
         if (!root) return null;
 
         var layer = root.querySelector(
-            ':scope > .interface-plus-full-card-bg'
+            '.interface-plus-full-card-bg'
         );
 
         if (layer) return layer;
 
         layer = document.createElement('div');
+
         layer.className = 'interface-plus-full-card-bg';
 
         layer.innerHTML =
@@ -1293,7 +1533,10 @@
             '<div class="interface-plus-full-card-bg__shade"></div>';
 
         root.insertBefore(layer, root.firstChild);
-        root.classList.add('interface-plus-full-card-root');
+
+        root.classList.add(
+            'interface-plus-full-card-root'
+        );
 
         layer.__activeIndex = 0;
         layer.__currentURL = '';
@@ -1308,7 +1551,9 @@
             !activeCard ||
             activeCard.token !== token ||
             activeCard.bgLayer !== layer
-        ) return;
+        ) {
+            return;
+        }
 
         if (layer.__currentURL === url) return;
 
@@ -1330,12 +1575,17 @@
         if (!nextLayer) return;
 
         nextLayer.classList.remove('show');
-        nextLayer.style.backgroundImage = 'url("' + url + '")';
+
+        nextLayer.style.backgroundImage =
+            'url("' + url + '")';
 
         void nextLayer.offsetWidth;
+
         nextLayer.classList.add('show');
 
-        if (curLayer) curLayer.classList.remove('show');
+        if (curLayer) {
+            curLayer.classList.remove('show');
+        }
 
         layer.__activeIndex = next;
         layer.__currentURL = url;
@@ -1345,13 +1595,20 @@
         if (!root || !d || !cardEnabled()) return;
 
         var layer = ensureCardBackground(root);
+
         if (!layer) return;
 
-        if (activeCard) activeCard.bgLayer = layer;
+        if (activeCard) {
+            activeCard.bgLayer = layer;
+        }
 
         if (!d.backdrop_path) return;
 
-        var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
+        var url = imageURL(
+            d.backdrop_path,
+            BACKDROP_SIZE
+        );
+
         if (!url) return;
 
         if (backdropCache[url]) {
@@ -1366,7 +1623,9 @@
                 !activeCard ||
                 activeCard.token !== token ||
                 activeCard.root !== root
-            ) return;
+            ) {
+                return;
+            }
 
             applyCardBackdrop(layer, url, token);
         });
@@ -1375,10 +1634,15 @@
     function removeCardBackground(root) {
         if (!root) return;
 
-        var layer = root.querySelector('.interface-plus-full-card-bg');
+        var layer = root.querySelector(
+            '.interface-plus-full-card-bg'
+        );
+
         if (layer) layer.remove();
 
-        root.classList.remove('interface-plus-full-card-root');
+        root.classList.remove(
+            'interface-plus-full-card-root'
+        );
     }
 
     /* -------------------------------------------------------
@@ -1393,15 +1657,21 @@
         if (!title) return false;
 
         var logo = prepareLogo(title);
+
         if (!logo) return false;
 
-        logo.style.transform = 'scale(' + logoScale() + ')';
+        logo.style.transform =
+            'scale(' + logoScale() + ')';
+
         logo.style.transformOrigin = 'left center';
 
         setAdaptiveLogo(logo, hit, 'fullcard');
 
         logo.classList.add('ready');
-        title.classList.add('interface-plus-logo-active');
+
+        title.classList.add(
+            'interface-plus-logo-active'
+        );
 
         return true;
     }
@@ -1433,6 +1703,33 @@
         );
     }
 
+    function applyLogoToCard(root, url) {
+        if (!root || !url) return false;
+
+        var title = findTitle(root);
+
+        if (!title) return false;
+
+        var logo = prepareLogo(title);
+
+        if (!logo) return false;
+
+        logo.style.transform =
+            'scale(' + logoScale() + ')';
+
+        logo.style.transformOrigin = 'left center';
+
+        setAdaptiveLogo(logo, url, 'fullcard');
+
+        logo.classList.add('ready');
+
+        title.classList.add(
+            'interface-plus-logo-active'
+        );
+
+        return true;
+    }
+
     function startCard(o, override, force) {
         if (!cardEnabled() || !isFull(o)) return;
 
@@ -1448,7 +1745,9 @@
             activeCard &&
             activeCard.key === key &&
             activeCard.root === root
-        ) return;
+        ) {
+            return;
+        }
 
         stopCard(false);
 
@@ -1465,14 +1764,20 @@
         };
 
         applyNetflixLayout(root);
+
         setCardBackdrop(root, d, token);
 
-        /* Cached logo is painted immediately. */
+        /*
+         * Cached logo is displayed immediately.
+         */
         if (showCardLogoInstant(root, d)) {
             return;
         }
 
-        /* Observe late-rendered Lampa title and card structure. */
+        /*
+         * Wait for the native Lampa card template to finish
+         * rendering its title and content.
+         */
         if (window.MutationObserver) {
             var observer = new MutationObserver(function () {
                 if (!cardCurrent(token, key)) return;
@@ -1484,19 +1789,14 @@
                 if (
                     title &&
                     activeCard.src &&
-                    !title.querySelector('.interface-plus-card-logo')
+                    !title.querySelector(
+                        '.interface-plus-card-logo'
+                    )
                 ) {
-                    var logo = prepareLogo(title);
-
-                    if (logo) {
-                        logo.style.transform = 'scale(' + logoScale() + ')';
-                        logo.style.transformOrigin = 'left center';
-
-                        setAdaptiveLogo(logo, activeCard.src, 'fullcard');
-
-                        logo.classList.add('ready');
-                        title.classList.add('interface-plus-logo-active');
-                    }
+                    applyLogoToCard(
+                        root,
+                        activeCard.src
+                    );
                 }
             });
 
@@ -1512,21 +1812,10 @@
             if (!cardCurrent(token, key)) return;
 
             activeCard.src = url || '';
+
             if (!url) return;
 
-            var title = findTitle(root);
-            if (!title) return;
-
-            var logo = prepareLogo(title);
-            if (!logo) return;
-
-            logo.style.transform = 'scale(' + logoScale() + ')';
-            logo.style.transformOrigin = 'left center';
-
-            setAdaptiveLogo(logo, url, 'fullcard');
-
-            logo.classList.add('ready');
-            title.classList.add('interface-plus-logo-active');
+            applyLogoToCard(root, url);
         });
     }
 
@@ -1546,7 +1835,9 @@
     function refreshAll(force) {
         lastFocusKey = '';
 
-        if (activeHero) activeHero.movieKey = '';
+        if (activeHero) {
+            activeHero.movieKey = '';
+        }
 
         var a = activeActivity();
 
@@ -1584,21 +1875,31 @@
     };
 
     function applyFont() {
-        var name = text(storageGet(S.font, 'default'));
+        var name = text(
+            storageGet(S.font, 'default')
+        );
+
         if (currentFont === name) return;
 
         currentFont = name;
 
         var font = FONTS[name] || FONTS.default;
 
-        var oldFace = document.getElementById('interface-plus-font-face');
+        var oldFace = document.getElementById(
+            'interface-plus-font-face'
+        );
+
         if (oldFace) oldFace.remove();
 
-        var oldStyle = document.getElementById('interface-plus-font-style');
+        var oldStyle = document.getElementById(
+            'interface-plus-font-style'
+        );
+
         if (oldStyle) oldStyle.remove();
 
         if (font.url) {
             var face = document.createElement('style');
+
             face.id = 'interface-plus-font-face';
 
             face.textContent =
@@ -1612,9 +1913,13 @@
         }
 
         var style = document.createElement('style');
+
         style.id = 'interface-plus-font-style';
+
         style.textContent =
-            'body,.body,*{font-family:' + font.family + '!important}';
+            'body,.body,*{font-family:' +
+            font.family +
+            '!important}';
 
         document.head.appendChild(style);
     }
@@ -1625,7 +1930,13 @@
         ['Line', 'Category'].forEach(function (type) {
             var maker = Lampa.Maker.map(type);
 
-            if (!maker || !maker.Items || !maker.Items.onInit) return;
+            if (
+                !maker ||
+                !maker.Items ||
+                !maker.Items.onInit
+            ) {
+                return;
+            }
 
             if (maker.Items.__interfacePlusPatched) {
                 maker.Items.__interfacePlusCount = count;
@@ -1638,9 +1949,13 @@
                 original.apply(this, arguments);
 
                 if (type === 'Line') {
-                    this.view = maker.Items.__interfacePlusCount || count;
+                    this.view =
+                        maker.Items.__interfacePlusCount ||
+                        count;
                 } else {
-                    this.limit_view = maker.Items.__interfacePlusCount || count;
+                    this.limit_view =
+                        maker.Items.__interfacePlusCount ||
+                        count;
                 }
             };
 
@@ -1650,7 +1965,8 @@
     }
 
     function applySize() {
-        var value = parseFloat(storageGet(S.size, '10.6')) || 10.6;
+        var value =
+            parseFloat(storageGet(S.size, '10.6')) || 10.6;
 
         var mobile = false;
 
@@ -1667,7 +1983,9 @@
         if (String(value) === currentSize) return;
 
         currentSize = String(value);
-        document.body.style.fontSize = value + 'px';
+
+        document.body.style.fontSize =
+            value + 'px';
 
         patchMaker(
             value <= 9.6 ? 8 :
@@ -1690,7 +2008,15 @@
             icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 5h2v5h-2z"/></svg>'
         });
 
-        function add(key, type, def, name, desc, values, change) {
+        function add(
+            key,
+            type,
+            def,
+            name,
+            desc,
+            values,
+            change
+        ) {
             api.addParam({
                 component: 'interface_plus_settings',
                 param: {
@@ -1736,12 +2062,12 @@
             'Розмір логотипів',
             'Додатковий масштаб після автоматичного підбору',
             {
-                '70':'70%',
-                '80':'80%',
-                '90':'90%',
-                '100':'100%',
-                '110':'110%',
-                '120':'120%'
+                '70': '70%',
+                '80': '80%',
+                '90': '90%',
+                '100': '100%',
+                '110': '110%',
+                '120': '120%'
             },
             function () {
                 refreshAll(false);
@@ -1765,10 +2091,10 @@
             'Розмір інтерфейсу',
             'Масштаб елементів інтерфейсу',
             {
-                '09.1':'Міні',
-                '09.6':'Дуже малий',
-                '10.1':'Малий',
-                '10.6':'Середній'
+                '09.1': 'Міні',
+                '09.6': 'Дуже малий',
+                '10.1': 'Малий',
+                '10.6': 'Середній'
             },
             applySize
         );
@@ -1780,11 +2106,11 @@
             'Шрифт інтерфейсу',
             'Стиль тексту',
             {
-                default:'Roboto',
-                netflix:'Netflix Sans',
-                montserrat:'Montserrat',
-                inter:'Inter',
-                nunito:'Nunito'
+                default: 'Roboto',
+                netflix: 'Netflix Sans',
+                montserrat: 'Montserrat',
+                inter: 'Inter',
+                nunito: 'Nunito'
             },
             applyFont
         );
@@ -1795,10 +2121,14 @@
     ------------------------------------------------------- */
 
     function installMenuObserver() {
-        if (!window.MutationObserver || menuObserver) return;
+        if (!window.MutationObserver || menuObserver) {
+            return;
+        }
 
         menuObserver = new MutationObserver(function () {
-            var opened = document.body.classList.contains('menu--open');
+            var opened = document.body.classList.contains(
+                'menu--open'
+            );
 
             document.body.classList.toggle(
                 'interface-plus-menu-open',
@@ -1822,7 +2152,11 @@
     ------------------------------------------------------- */
 
     function installListeners() {
-        document.addEventListener('hover:focus', onFocus, true);
+        document.addEventListener(
+            'hover:focus',
+            onFocus,
+            true
+        );
 
         if (!Lampa.Listener) return;
 
@@ -1836,6 +2170,7 @@
                         clearTimeout(focusTimer);
 
                         lastFocusKey = '';
+
                         hideHeroBackground();
 
                         stopCard(false);
@@ -1845,13 +2180,17 @@
                         stopCard(false);
                     } else {
                         clearTimeout(focusTimer);
+
                         hideHeroBackground();
                         stopCard(false);
                     }
                 });
             }
 
-            if (e.type === 'destroy' && isFull(e.object)) {
+            if (
+                e.type === 'destroy' &&
+                isFull(e.object)
+            ) {
                 stopCard(false);
                 scheduleHeroRestore();
             }
@@ -1861,7 +2200,10 @@
                     e.object && e.object.component
                 ).toLowerCase();
 
-                if (comp === 'main' || comp === 'category') {
+                if (
+                    comp === 'main' ||
+                    comp === 'category'
+                ) {
                     hideHeroBackground();
                 }
             }
@@ -1870,8 +2212,13 @@
         Lampa.Listener.follow('full', function (e) {
             if (
                 !e ||
-                (e.type !== 'complete' && e.type !== 'complite')
-            ) return;
+                (
+                    e.type !== 'complete' &&
+                    e.type !== 'complite'
+                )
+            ) {
+                return;
+            }
 
             var d = e.data && e.data.movie;
 
@@ -1891,25 +2238,34 @@
                 Lampa.Storage.listener &&
                 Lampa.Storage.listener.follow
             ) {
-                Lampa.Storage.listener.follow('change', function (e) {
-                    if (!e || !e.name) return;
+                Lampa.Storage.listener.follow(
+                    'change',
+                    function (e) {
+                        if (!e || !e.name) return;
 
-                    if (e.name === S.hero) applyHero();
+                        if (e.name === S.hero) {
+                            applyHero();
+                        }
 
-                    if (e.name === S.card) refreshCard(true);
+                        if (e.name === S.card) {
+                            refreshCard(true);
+                        }
 
-                    if (e.name === S.font) {
-                        currentFont = '';
-                        applyFont();
+                        if (e.name === S.font) {
+                            currentFont = '';
+                            applyFont();
+                        }
+
+                        if (e.name === S.size) {
+                            currentSize = '';
+                            applySize();
+                        }
+
+                        if (e.name === S.scale) {
+                            refreshAll(false);
+                        }
                     }
-
-                    if (e.name === S.size) {
-                        currentSize = '';
-                        applySize();
-                    }
-
-                    if (e.name === S.scale) refreshAll(false);
-                });
+                );
             }
         } catch (e) {}
     }
@@ -1919,7 +2275,13 @@
     ------------------------------------------------------- */
 
     function init() {
-        if (initialized || !window.Lampa || !Lampa.Storage) return;
+        if (
+            initialized ||
+            !window.Lampa ||
+            !Lampa.Storage
+        ) {
+            return;
+        }
 
         initialized = true;
 
