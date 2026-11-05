@@ -2,21 +2,20 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.9 — MENU CINEMATIC SHIFT
+     * INTERFACE+ 1.7.0 — SMART HERO RESTORE
      * TMDB ONLY
      *
-     * CHANGES 1.6.9:
-     * - Cinematic banner shift when Lampa menu opens
-     * - Background shifts together with hero
-     * - Smooth menu transition
-     * - Black area revealed behind left navigation
-     * - Banner hidden on non-main activities
-     * - Hero restoration after returning from full card
+     * CHANGES 1.7.0:
+     * - Back button restores the previously focused movie
+     * - "На головну" restores the first movie in the current row
+     * - Separate return logic for Back and Home navigation
+     * - Removed generic first-card fallback from focus detection
+     * - Preserved MENU CINEMATIC SHIFT
      * - Preserved TMDB logo cache and adaptive sizing
      */
 
-    var VERSION = '1.6.9';
-    var READY_KEY = 'interface_plus_tmdb_only_169';
+    var VERSION = '1.7.0';
+    var READY_KEY = 'interface_plus_tmdb_only_170';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -56,22 +55,46 @@
     var currentSize = '';
     var menuObserver = null;
 
-    var TITLE_SELECTOR = '.full-start__title, .full-start-new__title, .full__title, .full-card__title';
+    /*
+     * SMART HERO RESTORE
+     *
+     * back:
+     *   Restore the movie that was focused before opening full card.
+     *
+     * home:
+     *   Restore the first movie in the current row.
+     */
+
+    var fullCardOpen = false;
+    var fullReturnPending = false;
+    var fullReturnMode = 'back';
+    var fullReturnMovieData = null;
+
+    var TITLE_SELECTOR =
+        '.full-start__title, .full-start-new__title, .full__title, .full-card__title';
 
     /* Утиліти */
 
     function log() {
         try {
-            console.log.apply(console, ['[INTERFACE+ ' + VERSION + ']'].concat([].slice.call(arguments)));
+            console.log.apply(
+                console,
+                ['[INTERFACE+ ' + VERSION + ']'].concat([].slice.call(arguments))
+            );
         } catch (e) {}
     }
 
     function storageGet(k, f) {
-        try { return Lampa.Storage.get(k, f); } catch (e) { return f; }
+        try {
+            return Lampa.Storage.get(k, f);
+        } catch (e) {
+            return f;
+        }
     }
 
     function enabled(k, f) {
         var v = storageGet(k, f);
+
         return v === true || v === 'true' || v === 1 || v === '1';
     }
 
@@ -82,25 +105,33 @@
     function first() {
         for (var i = 0; i < arguments.length; i++) {
             var v = text(arguments[i]);
+
             if (v) return v;
         }
+
         return '';
     }
 
     function node(v) {
-        return v && v.nodeType === 1 ? v :
-            (v && v[0] && v[0].nodeType === 1 ? v[0] : null);
+        return v && v.nodeType === 1
+            ? v
+            : (v && v[0] && v[0].nodeType === 1 ? v[0] : null);
     }
 
     function renderActivity(o) {
         var r = null;
+
         try {
-            if (o && o.activity && o.activity.render) r = o.activity.render(true);
+            if (o && o.activity && o.activity.render) {
+                r = o.activity.render(true);
+            }
         } catch (e) {}
 
         if (!r) {
             try {
-                if (o && o.render) r = o.render(true);
+                if (o && o.render) {
+                    r = o.render(true);
+                }
             } catch (e) {}
         }
 
@@ -108,16 +139,22 @@
     }
 
     function activeActivity() {
-        try { return Lampa.Activity.active(); } catch (e) { return null; }
+        try {
+            return Lampa.Activity.active();
+        } catch (e) {
+            return null;
+        }
     }
 
     function isFull(o) {
         var c = text(o && o.component).toLowerCase();
+
         return c === 'full' || c === 'full_start' || c === 'fullstart';
     }
 
     function isMain(o) {
         var c = text(o && o.component).toLowerCase();
+
         return c === 'main';
     }
 
@@ -210,23 +247,44 @@
     }
 
     var MOVIE_GENRES = {
-        28:'Бойовик', 12:'Пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 14:'Фентезі',
-        36:'Історичний', 27:'Жахи', 10402:'Музика',
-        9648:'Детектив', 10749:'Мелодрама', 878:'Фантастика',
-        10770:'Телефільм', 53:'Трилер', 10752:'Військовий',
-        37:'Вестерн'
+        28: 'Бойовик',
+        12: 'Пригоди',
+        16: 'Анімація',
+        35: 'Комедія',
+        80: 'Кримінал',
+        99: 'Документальний',
+        18: 'Драма',
+        10751: 'Сімейний',
+        14: 'Фентезі',
+        36: 'Історичний',
+        27: 'Жахи',
+        10402: 'Музика',
+        9648: 'Детектив',
+        10749: 'Мелодрама',
+        878: 'Фантастика',
+        10770: 'Телефільм',
+        53: 'Трилер',
+        10752: 'Військовий',
+        37: 'Вестерн'
     };
 
     var TV_GENRES = {
-        10759:'Бойовик і пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 10762:'Дитячий',
-        9648:'Детектив', 10763:'Новини', 10764:'Реаліті-шоу',
-        10765:'Фантастика', 10766:'Мильна опера',
-        10767:'Ток-шоу', 10768:'Війна і політика',
-        37:'Вестерн'
+        10759: 'Бойовик і пригоди',
+        16: 'Анімація',
+        35: 'Комедія',
+        80: 'Кримінал',
+        99: 'Документальний',
+        18: 'Драма',
+        10751: 'Сімейний',
+        10762: 'Дитячий',
+        9648: 'Детектив',
+        10763: 'Новини',
+        10764: 'Реаліті-шоу',
+        10765: 'Фантастика',
+        10766: 'Мильна опера',
+        10767: 'Ток-шоу',
+        10768: 'Війна і політика',
+        37: 'Вестерн'
     };
 
     function movieGenres(d) {
@@ -241,7 +299,9 @@
                     ? g
                     : first(g && g.name, g && g.ua_name, g && g.title);
 
-                if (name && res.indexOf(name) === -1) res.push(name);
+                if (name && res.indexOf(name) === -1) {
+                    res.push(name);
+                }
             });
         }
 
@@ -251,7 +311,10 @@
 
             (Array.isArray(ids) ? ids : []).forEach(function (id) {
                 var name = dict[Number(id)];
-                if (name && res.indexOf(name) === -1) res.push(name);
+
+                if (name && res.indexOf(name) === -1) {
+                    res.push(name);
+                }
             });
         }
 
@@ -268,6 +331,7 @@
 
     function logoScale() {
         var v = parseInt(storageGet(S.scale, '100'), 10);
+
         return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
     }
 
@@ -344,7 +408,9 @@
 
         if (!key) return {};
 
-        if (!logoItems[key]) logoItems[key] = {};
+        if (!logoItems[key]) {
+            logoItems[key] = {};
+        }
 
         return logoItems[key];
     }
@@ -380,7 +446,9 @@
             item[key + '_wait'] = null;
 
             list.forEach(function (f) {
-                try { f(item[key]); } catch (e) {}
+                try {
+                    f(item[key]);
+                } catch (e) {}
             });
         }
 
@@ -405,7 +473,9 @@
         cached(holder, 'tfeed_logo', function (done) {
             var id = first(item.tmdb_id, item.tmdbId, item.id);
 
-            if (id && typeof id === 'object') id = id.id;
+            if (id && typeof id === 'object') {
+                id = id.id;
+            }
 
             id = text(id);
 
@@ -439,7 +509,11 @@
                         ? pickLogo(json.logos)
                         : null;
 
-                    done(logo ? Lampa.Api.img(logo.file_path, LOGO_SIZE) : null);
+                    done(
+                        logo
+                            ? Lampa.Api.img(logo.file_path, LOGO_SIZE)
+                            : null
+                    );
                 },
                 function () {
                     done(null);
@@ -473,11 +547,19 @@
             cb(ok);
         };
 
-        img.onload = function () { done(true); };
-        img.onerror = function () { done(false); };
+        img.onload = function () {
+            done(true);
+        };
+
+        img.onerror = function () {
+            done(false);
+        };
+
         img.src = url;
 
-        if (img.complete && img.naturalWidth) done(true);
+        if (img.complete && img.naturalWidth) {
+            done(true);
+        }
     }
 
     function rememberBackdrop(url) {
@@ -485,14 +567,19 @@
 
         var idx = backdropCacheOrder.indexOf(url);
 
-        if (idx !== -1) backdropCacheOrder.splice(idx, 1);
+        if (idx !== -1) {
+            backdropCacheOrder.splice(idx, 1);
+        }
 
         backdropCache[url] = true;
         backdropCacheOrder.push(url);
 
         while (backdropCacheOrder.length > BACKDROP_CACHE_LIMIT) {
             var old = backdropCacheOrder.shift();
-            if (old) delete backdropCache[old];
+
+            if (old) {
+                delete backdropCache[old];
+            }
         }
     }
 
@@ -522,21 +609,34 @@
             img.onload = null;
             img.onerror = null;
 
-            if (ok) rememberBackdrop(url);
+            if (ok) {
+                rememberBackdrop(url);
+            }
 
             var list = backdropPending[url] || [];
+
             delete backdropPending[url];
 
             list.forEach(function (fn) {
-                try { fn(ok); } catch (e) {}
+                try {
+                    fn(ok);
+                } catch (e) {}
             });
         };
 
-        img.onload = function () { finish(true); };
-        img.onerror = function () { finish(false); };
+        img.onload = function () {
+            finish(true);
+        };
+
+        img.onerror = function () {
+            finish(false);
+        };
+
         img.src = url;
 
-        if (img.complete && img.naturalWidth) finish(true);
+        if (img.complete && img.naturalWidth) {
+            finish(true);
+        }
     }
 
     function imageURL(path, size) {
@@ -563,7 +663,9 @@
     function prefetchLogoItem(item) {
         if (item) {
             ensureLogo(item, function (url) {
-                if (url) new Image().src = url;
+                if (url) {
+                    new Image().src = url;
+                }
             });
         }
     }
@@ -576,7 +678,10 @@
 
         if (idx < 0) return;
 
-        var end = Math.min(cards.length, idx + 1 + LOGO_PREFETCH_AHEAD);
+        var end = Math.min(
+            cards.length,
+            idx + 1 + LOGO_PREFETCH_AHEAD
+        );
 
         for (var i = idx; i < end; i++) {
             if (cards[i] && cards[i].card_data) {
@@ -588,7 +693,9 @@
     /* Фоновий шар */
 
     function ensureBackgroundLayers(layer) {
-        if (!layer || layer.querySelector('.banner-screen-bg__image--a')) return;
+        if (!layer || layer.querySelector('.banner-screen-bg__image--a')) {
+            return;
+        }
 
         layer.innerHTML =
             '<div class="banner-screen-bg__image banner-screen-bg__image--a"></div>' +
@@ -602,11 +709,14 @@
             return screenBackground;
         }
 
-        var existing = document.getElementById('interface-plus-screen-background');
+        var existing = document.getElementById(
+            'interface-plus-screen-background'
+        );
 
         if (existing) {
             screenBackground = existing;
             ensureBackgroundLayers(screenBackground);
+
             return screenBackground;
         }
 
@@ -626,7 +736,9 @@
 
     function clearHeroBackgrounds() {
         if (!screenBackground) {
-            screenBackground = document.getElementById('interface-plus-screen-background');
+            screenBackground = document.getElementById(
+                'interface-plus-screen-background'
+            );
         }
 
         if (!screenBackground) return;
@@ -639,12 +751,16 @@
             }
         );
 
-        if (activeHero) activeHero.activeBgIndex = 0;
+        if (activeHero) {
+            activeHero.activeBgIndex = 0;
+        }
     }
 
     function hideHeroBackground() {
         if (!screenBackground) {
-            screenBackground = document.getElementById('interface-plus-screen-background');
+            screenBackground = document.getElementById(
+                'interface-plus-screen-background'
+            );
         }
 
         if (screenBackground) {
@@ -656,7 +772,9 @@
     function showHeroBackground() {
         var layer = ensureScreenBackground();
 
-        if (layer) layer.style.display = 'block';
+        if (layer) {
+            layer.style.display = 'block';
+        }
     }
 
     /* CSS стилі */
@@ -689,6 +807,7 @@
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
         /* MENU CINEMATIC SHIFT */
+
         'body.menu--open #interface-plus-screen-background{width:calc(100% - ' + MENU_SHIFT + ');transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
@@ -697,13 +816,16 @@
     ].join('\n');
 
     function installStyle() {
-        var el = document.getElementById('interface-plus-tmdb-only-style') ||
-            document.createElement('style');
+        var el = document.getElementById(
+            'interface-plus-tmdb-only-style'
+        ) || document.createElement('style');
 
         el.id = 'interface-plus-tmdb-only-style';
         el.textContent = CSS;
 
-        if (!el.parentNode) document.head.appendChild(el);
+        if (!el.parentNode) {
+            document.head.appendChild(el);
+        }
     }
 
     /* Герой (Банер) */
@@ -711,14 +833,19 @@
     function createHero(root) {
         if (!root) return null;
 
-        if (root.__interfacePlusHero && root.contains(root.__interfacePlusHero)) {
+        if (
+            root.__interfacePlusHero &&
+            root.contains(root.__interfacePlusHero)
+        ) {
             ensureScreenBackground();
+
             return root.__interfacePlusHero;
         }
 
         var layer = ensureScreenBackground();
 
         var hero = document.createElement('div');
+
         hero.className = 'banner-hero';
 
         hero.innerHTML =
@@ -730,6 +857,7 @@
             '</div>';
 
         root.insertBefore(hero, root.firstChild);
+
         root.classList.add('banner-host');
 
         hero.parts = {
@@ -756,6 +884,7 @@
 
         if (backdropCache[url]) {
             applyBackdrop(hero, url, token);
+
             return;
         }
 
@@ -800,7 +929,9 @@
         if (rating > 0) {
             var rate = document.createElement('span');
 
-            rate.className = 'banner-hero__meta-item banner-hero__rate';
+            rate.className =
+                'banner-hero__meta-item banner-hero__rate';
+
             rate.innerHTML =
                 '<span class="banner-hero__rate-star">★</span>' +
                 '<span>' + rating.toFixed(1) + '</span>';
@@ -926,6 +1057,7 @@
 
         if (!isMain(o)) {
             hideHeroBackground();
+
             return;
         }
 
@@ -943,36 +1075,76 @@
         showHeroBackground();
     }
 
+    /*
+     * Пошук картки з реальним фокусом.
+     *
+     * Важливо:
+     * Не використовуємо загальний селектор '.card' як fallback.
+     * Він повертав першу картку ряду, навіть коли фокус ще не відновився.
+     */
+
     function findFocusedMovie(root) {
         if (!root) return null;
+
+        var active = document.activeElement;
+
+        if (active && root.contains(active) && active.closest) {
+            var activeCard = active.closest('.card');
+
+            if (activeCard && activeCard.card_data) {
+                return activeCard;
+            }
+        }
 
         var selectors = [
             '.card.focus',
             '.card.hover',
             '.card.selected',
             '.card.is-focused',
-            '.card.focused',
-            '.card'
+            '.card.focused'
         ];
 
         for (var i = 0; i < selectors.length; i++) {
-            var f = root.querySelector(selectors[i]);
+            var found = root.querySelector(selectors[i]);
 
-            if (f && f.card_data) return f;
-        }
-
-        var active = document.activeElement;
-
-        if (active && root.contains(active) && active.closest) {
-            var f2 = active.closest('.card');
-
-            if (f2 && f2.card_data) return f2;
+            if (found && found.card_data) {
+                return found;
+            }
         }
 
         return null;
     }
 
-    function restoreHeroAfterFull() {
+    /*
+     * Перша картка поточного ряду.
+     * Використовується ТІЛЬКИ для сценарію "На головну".
+     */
+
+    function findFirstMovie(root) {
+        if (!root) return null;
+
+        var cards = root.querySelectorAll('.card');
+
+        for (var i = 0; i < cards.length; i++) {
+            if (cards[i] && cards[i].card_data) {
+                return cards[i];
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * Відновлення банера після повної картки.
+     *
+     * mode === 'home':
+     *   Перший фільм поточного ряду.
+     *
+     * mode === 'back':
+     *   Фільм, який був у фокусі до відкриття повної картки.
+     */
+
+    function restoreHeroAfterFull(mode) {
         if (!heroEnabled()) return;
 
         var activity = activeActivity();
@@ -991,47 +1163,78 @@
 
         showHeroBackground();
 
-        var focusedCard = findFocusedMovie(root);
+        var selectedCard = null;
+        var selectedMovie = null;
 
-        if (focusedCard && focusedCard.card_data) {
-            lastFocusKey = identity(focusedCard.card_data);
+        if (mode === 'home') {
+            selectedCard = findFirstMovie(root);
 
-            prefetchHeroBackdrop(focusedCard.card_data);
+            if (selectedCard) {
+                selectedMovie = selectedCard.card_data;
+            }
+        } else {
+            /*
+             * Для Back пріоритет має збережений фільм.
+             * Поточний фокус використовується лише тоді,
+             * коли збережених даних немає.
+             */
 
-            showHero(activeHero, focusedCard.card_data, true);
+            selectedMovie = fullReturnMovieData;
 
-            prefetchNearbyLogos(focusedCard, root);
+            if (!selectedMovie && activeHero.lastMovieData) {
+                selectedMovie = activeHero.lastMovieData;
+            }
 
-            return;
+            if (!selectedMovie) {
+                selectedCard = findFocusedMovie(root);
+
+                if (selectedCard) {
+                    selectedMovie = selectedCard.card_data;
+                }
+            }
         }
 
-        if (activeHero.lastMovieData) {
-            lastFocusKey = identity(activeHero.lastMovieData);
+        if (selectedMovie) {
+            lastFocusKey = identity(selectedMovie);
 
-            showHero(activeHero, activeHero.lastMovieData, true);
+            prefetchHeroBackdrop(selectedMovie);
 
-            return;
+            showHero(activeHero, selectedMovie, true);
+
+            if (selectedCard) {
+                prefetchNearbyLogos(selectedCard, root);
+            }
         }
 
-        var firstCard = root.querySelector('.card');
-
-        if (firstCard && firstCard.card_data) {
-            lastFocusKey = identity(firstCard.card_data);
-
-            showHero(activeHero, firstCard.card_data, true);
-        }
+        fullReturnPending = false;
+        fullCardOpen = false;
+        fullReturnMode = 'back';
+        fullReturnMovieData = null;
     }
 
-    function scheduleHeroRestore() {
+    function scheduleHeroRestore(mode) {
+        if (mode) {
+            fullReturnMode = mode;
+        }
+
         clearTimeout(restoreTimer);
 
         restoreTimer = setTimeout(function () {
-            requestAnimationFrame(restoreHeroAfterFull);
+            requestAnimationFrame(function () {
+                restoreHeroAfterFull(fullReturnMode);
+            });
         }, 100);
     }
 
     function onFocus(e) {
         if (!heroEnabled()) return;
+
+        /*
+         * Не дозволяємо проміжним focus-подіям змінити банер,
+         * поки ще виконується повернення з повної картки.
+         */
+
+        if (fullReturnPending) return;
 
         var target = e.target;
 
@@ -1056,7 +1259,7 @@
         clearTimeout(focusTimer);
 
         focusTimer = setTimeout(function () {
-            if (!heroEnabled()) return;
+            if (!heroEnabled() || fullReturnPending) return;
 
             lastFocusKey = key;
             activeHero = root.__interfacePlusHero;
@@ -1076,6 +1279,11 @@
 
             lastFocusKey = '';
 
+            fullReturnPending = false;
+            fullCardOpen = false;
+            fullReturnMovieData = null;
+            fullReturnMode = 'back';
+
             hideHeroBackground();
 
             return;
@@ -1091,7 +1299,8 @@
 
         var titles = root.classList &&
             root.classList.contains('interface-plus-logo-title')
-            ? [root] : [];
+            ? [root]
+            : [];
 
         if (root.querySelectorAll) {
             [].push.apply(
@@ -1103,9 +1312,13 @@
         titles.forEach(function (t) {
             var logo = t.querySelector('.interface-plus-card-logo');
 
-            if (logo) logo.remove();
+            if (logo) {
+                logo.remove();
+            }
 
-            var original = t.querySelector('.interface-plus-original-title');
+            var original = t.querySelector(
+                '.interface-plus-original-title'
+            );
 
             if (original) {
                 while (original.firstChild) {
@@ -1215,7 +1428,9 @@
             activeCard &&
             activeCard.key === key &&
             activeCard.root === root
-        ) return;
+        ) {
+            return;
+        }
 
         stopCard(false);
 
@@ -1245,13 +1460,22 @@
                     var logo = prepareLogo(title);
 
                     if (logo) {
-                        logo.style.transform = 'scale(' + logoScale() + ')';
+                        logo.style.transform =
+                            'scale(' + logoScale() + ')';
+
                         logo.style.transformOrigin = 'left center';
 
-                        setAdaptiveLogo(logo, activeCard.src, 'card');
+                        setAdaptiveLogo(
+                            logo,
+                            activeCard.src,
+                            'card'
+                        );
 
                         logo.classList.add('ready');
-                        title.classList.add('interface-plus-logo-active');
+
+                        title.classList.add(
+                            'interface-plus-logo-active'
+                        );
                     }
                 }
             });
@@ -1285,6 +1509,7 @@
             setAdaptiveLogo(logo, url, 'card');
 
             logo.classList.add('ready');
+
             title.classList.add('interface-plus-logo-active');
         });
     }
@@ -1292,6 +1517,7 @@
     function refreshCard(force) {
         if (!cardEnabled()) {
             stopCard(true);
+
             return;
         }
 
@@ -1305,7 +1531,9 @@
     function refreshAll(force) {
         lastFocusKey = '';
 
-        if (activeHero) activeHero.movieKey = '';
+        if (activeHero) {
+            activeHero.movieKey = '';
+        }
 
         var a = activeActivity();
 
@@ -1349,13 +1577,21 @@
 
         var font = FONTS[name] || FONTS.default;
 
-        var oldFace = document.getElementById('interface-plus-font-face');
+        var oldFace = document.getElementById(
+            'interface-plus-font-face'
+        );
 
-        if (oldFace) oldFace.remove();
+        if (oldFace) {
+            oldFace.remove();
+        }
 
-        var oldStyle = document.getElementById('interface-plus-font-style');
+        var oldStyle = document.getElementById(
+            'interface-plus-font-style'
+        );
 
-        if (oldStyle) oldStyle.remove();
+        if (oldStyle) {
+            oldStyle.remove();
+        }
 
         if (font.url) {
             var face = document.createElement('style');
@@ -1375,7 +1611,9 @@
         var style = document.createElement('style');
 
         style.id = 'interface-plus-font-style';
-        style.textContent = 'body,.body,*{font-family:' +
+
+        style.textContent =
+            'body,.body,*{font-family:' +
             font.family +
             '!important}';
 
@@ -1388,10 +1626,13 @@
         ['Line', 'Category'].forEach(function (type) {
             var maker = Lampa.Maker.map(type);
 
-            if (!maker || !maker.Items || !maker.Items.onInit) return;
+            if (!maker || !maker.Items || !maker.Items.onInit) {
+                return;
+            }
 
             if (maker.Items.__interfacePlusPatched) {
                 maker.Items.__interfacePlusCount = count;
+
                 return;
             }
 
@@ -1401,9 +1642,11 @@
                 original.apply(this, arguments);
 
                 if (type === 'Line') {
-                    this.view = maker.Items.__interfacePlusCount || count;
+                    this.view =
+                        maker.Items.__interfacePlusCount || count;
                 } else {
-                    this.limit_view = maker.Items.__interfacePlusCount || count;
+                    this.limit_view =
+                        maker.Items.__interfacePlusCount || count;
                 }
             };
 
@@ -1425,7 +1668,9 @@
             );
         } catch (e) {}
 
-        if (mobile) value = 10.1;
+        if (mobile) {
+            value = 10.1;
+        }
 
         if (String(value) === currentSize) return;
 
@@ -1498,12 +1743,12 @@
             'Розмір логотипів',
             'Додатковий масштаб після автоматичного підбору',
             {
-                '70':'70%',
-                '80':'80%',
-                '90':'90%',
-                '100':'100%',
-                '110':'110%',
-                '120':'120%'
+                '70': '70%',
+                '80': '80%',
+                '90': '90%',
+                '100': '100%',
+                '110': '110%',
+                '120': '120%'
             },
             function () {
                 refreshAll(false);
@@ -1527,10 +1772,10 @@
             'Розмір інтерфейсу',
             'Масштаб елементів інтерфейсу',
             {
-                '09.1':'Міні',
-                '09.6':'Дуже малий',
-                '10.1':'Малий',
-                '10.6':'Середній'
+                '09.1': 'Міні',
+                '09.6': 'Дуже малий',
+                '10.1': 'Малий',
+                '10.6': 'Середній'
             },
             applySize
         );
@@ -1542,11 +1787,11 @@
             'Шрифт інтерфейсу',
             'Стиль тексту',
             {
-                default:'Roboto',
-                netflix:'Netflix Sans',
-                montserrat:'Montserrat',
-                inter:'Inter',
-                nunito:'Nunito'
+                default: 'Roboto',
+                netflix: 'Netflix Sans',
+                montserrat: 'Montserrat',
+                inter: 'Inter',
+                nunito: 'Nunito'
             },
             applyFont
         );
@@ -1590,8 +1835,31 @@
             if (e.type === 'start') {
                 requestAnimationFrame(function () {
                     if (isFull(e.object)) {
+                        /*
+                         * Запам'ятовуємо саме той фільм,
+                         * банер якого був показаний перед відкриттям
+                         * повної картки.
+                         */
+
                         clearTimeout(restoreTimer);
                         clearTimeout(focusTimer);
+
+                        var previousCard = null;
+
+                        if (activeHero && activeHero.root) {
+                            previousCard = findFocusedMovie(
+                                activeHero.root
+                            );
+                        }
+
+                        fullReturnMovieData =
+                            (previousCard && previousCard.card_data) ||
+                            (activeHero && activeHero.lastMovieData) ||
+                            null;
+
+                        fullCardOpen = true;
+                        fullReturnPending = false;
+                        fullReturnMode = 'back';
 
                         lastFocusKey = '';
 
@@ -1600,8 +1868,29 @@
                         stopCard(false);
                         startCard(e.object);
                     } else if (isMain(e.object)) {
-                        attachHero(e.object);
-                        stopCard(false);
+                        /*
+                         * Якщо головна відкривається з повної картки,
+                         * це сценарій "На головну".
+                         *
+                         * Не плутаємо його з кнопкою Back.
+                         */
+
+                        if (fullCardOpen || fullReturnPending) {
+                            fullReturnMode = 'home';
+                            fullReturnPending = true;
+
+                            clearTimeout(focusTimer);
+
+                            attachHero(e.object);
+
+                            stopCard(false);
+
+                            scheduleHeroRestore('home');
+                        } else {
+                            attachHero(e.object);
+
+                            stopCard(false);
+                        }
                     } else {
                         clearTimeout(focusTimer);
 
@@ -1613,8 +1902,21 @@
             }
 
             if (e.type === 'destroy' && isFull(e.object)) {
+                /*
+                 * Якщо сценарій "На головну" вже визначений,
+                 * не перезаписуємо його на Back.
+                 */
+
+                fullCardOpen = false;
+                fullReturnPending = true;
+
                 stopCard(false);
-                scheduleHeroRestore();
+
+                if (fullReturnMode !== 'home') {
+                    fullReturnMode = 'back';
+                }
+
+                scheduleHeroRestore(fullReturnMode);
             }
 
             if (e.type === 'destroy') {
@@ -1632,7 +1934,9 @@
             if (
                 !e ||
                 (e.type !== 'complete' && e.type !== 'complite')
-            ) return;
+            ) {
+                return;
+            }
 
             var d = e.data && e.data.movie;
 
@@ -1655,9 +1959,13 @@
                 Lampa.Storage.listener.follow('change', function (e) {
                     if (!e || !e.name) return;
 
-                    if (e.name === S.hero) applyHero();
+                    if (e.name === S.hero) {
+                        applyHero();
+                    }
 
-                    if (e.name === S.card) refreshCard(true);
+                    if (e.name === S.card) {
+                        refreshCard(true);
+                    }
 
                     if (e.name === S.font) {
                         currentFont = '';
@@ -1669,7 +1977,9 @@
                         applySize();
                     }
 
-                    if (e.name === S.scale) refreshAll(false);
+                    if (e.name === S.scale) {
+                        refreshAll(false);
+                    }
                 });
             }
         } catch (e) {}
@@ -1678,7 +1988,9 @@
     /* Ініціалізація */
 
     function init() {
-        if (initialized || !window.Lampa || !Lampa.Storage) return;
+        if (initialized || !window.Lampa || !Lampa.Storage) {
+            return;
+        }
 
         initialized = true;
 
@@ -1709,14 +2021,16 @@
             }
         });
 
-        log('Kinotraylery logo engine initialized');
+        log('Smart hero restore initialized');
     }
 
     if (window.appready) {
         setTimeout(init, 150);
     } else if (window.Lampa && Lampa.Listener) {
         Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') setTimeout(init, 150);
+            if (e.type === 'ready') {
+                setTimeout(init, 150);
+            }
         });
     }
 
