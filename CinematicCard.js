@@ -21,7 +21,6 @@
         'settings_cas_show_tagline': 'Показувати слоган'
     };
 
-    // --- HELPERS & CACHE ---
     const getLang = () => String(Lampa.Storage.field?.('tmdb_lang') || Lampa.Storage.get('tmdb_lang') || 'en').toLowerCase();
 
     function getStorageCache(key) {
@@ -53,7 +52,6 @@
         });
     }
 
-    // --- TEMPLATE & STYLES ---
     function addCustomTemplate() {
         const anim = Lampa.Storage.get('cas_animation_style') || 'slide';
         Lampa.Template.add('full_start_new', `
@@ -130,7 +128,6 @@
         </style>`);
     }
 
-    // --- SETTINGS ---
     function addSettings() {
         const defaults = {
             'cas_bg_animation': 'kenburns', 'cas_animation_style': 'slide',
@@ -177,7 +174,6 @@
         }
     }
 
-    // --- SLIDESHOW ---
     function stopSlideshow() {
         slideGen++;
         if (intervalId) { clearInterval(intervalId); intervalId = null; }
@@ -216,7 +212,6 @@
         window.casBgInterval = intervalId;
     }
 
-    // --- LOGOS & DETAILS ---
     function pickLogo(logos) {
         if (!Array.isArray(logos) || !logos.length) return null;
         const pref = getLang();
@@ -229,7 +224,9 @@
 
     async function displayLogo(render, data, logos, reqId) {
         if (reqId !== logoReqId) return;
-        const container = render.find('.cas-logo').empty();
+        const container = render.find('.cas-logo');
+        if (!container.length) return;
+        container.empty();
         const logo = pickLogo(logos);
 
         if (!logo?.file_path) {
@@ -248,7 +245,9 @@
     }
 
     function renderMetadata(render, data) {
-        const container = render.find('.cas-meta-info').empty();
+        const container = render.find('.cas-meta-info');
+        if (!container.length) return;
+        container.empty();
         const rating = getRating(data), year = getYear(data), country = getCountry(data), runtime = formatTime(getRuntime(data));
         const genres = (data.genres || []).map(g => g.name).filter(Boolean).slice(0, 3).join(', ');
 
@@ -272,7 +271,6 @@
         });
     }
 
-    // --- MAIN LOADER ---
     function attachLoader() {
         Lampa.Listener.follow('full', async event => {
             if (event.type !== 'complite') return;
@@ -281,27 +279,32 @@
 
             const render = event.object.activity.render();
             const cardRoot = render.find('.full-start-new.left-title');
+            if (!cardRoot.length) return;
+
             const reqId = ++cardReqId;
             const logoId = ++logoReqId;
 
             cardRoot.removeClass('cas-animated');
-            render.find('.cas-description, .cas-tagline, .cas-studios-row').empty().hide();
-            render.find('.cas-meta-info, .cas-logo').empty();
+            
+            const desc = render.find('.cas-description'); if (desc.length) desc.empty().hide();
+            const tag = render.find('.cas-tagline'); if (tag.length) tag.empty().hide();
+            const stud = render.find('.cas-studios-row'); if (stud.length) stud.empty();
+            const meta = render.find('.cas-meta-info'); if (meta.length) meta.empty();
+            const logoC = render.find('.cas-logo'); if (logoC.length) logoC.empty();
+
             render.find('.full-start-new__details, .full-start-new__description, .full-descr, .full-start__description').hide();
 
             event.object.activity.onBeforeDestroy = stopSlideshow;
 
-            // Render initial data
             renderMetadata(render, data);
-            if (data.overview) render.find('.cas-description').text(data.overview).show();
-            if (data.tagline && Lampa.Storage.get('cas_show_tagline')) render.find('.cas-tagline').text('«' + data.tagline + '»').show();
+            if (data.overview && desc.length) desc.text(data.overview).show();
+            if (data.tagline && Lampa.Storage.get('cas_show_tagline') && tag.length) tag.text('«' + data.tagline + '»').show();
 
-            // Load Images & Logos
             const cacheKey = 'tmdb_' + data.id;
             let res = getStorageCache('cas_images_cache')[cacheKey]?.data;
 
             if (!res) {
-                res = await new Promise(res => $.getJSON(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&include_image_language=' + getLang() + ',en,null'), res).fail(() => res(null)));
+                res = await new Promise(r => $.getJSON(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&include_image_language=' + getLang() + ',en,null'), r).fail(() => r(null)));
                 if (res) setStorageCache('cas_images_cache', cacheKey, res);
             }
 
@@ -313,26 +316,25 @@
                 if (logo) {
                     logoCacheMap[cachedLogoKey] = logo;
                     displayLogo(render, data, [logo], logoId);
-                } else {
-                    render.find('.cas-logo').html($('<div class="cas-logo-fallback"></div>').text(data.title || data.name || ''));
+                } else if (logoC.length) {
+                    logoC.html($('<div class="cas-logo-fallback"></div>').text(data.title || data.name || ''));
                 }
                 startSlideshow(render, res.backdrops);
             }
 
-            // Load extra details if needed
             if (!getCountry(data) || !getRuntime(data) || !data.genres?.length || !getRating(data)) {
                 const details = await loadDetails(data);
                 if (details && reqId === cardReqId) {
                     const merged = Object.assign({}, data, details);
                     renderMetadata(render, merged);
-                    if (!data.overview && details.overview) render.find('.cas-description').text(details.overview).show();
-                    if (!data.tagline && details.tagline && Lampa.Storage.get('cas_show_tagline')) render.find('.cas-tagline').text('«' + details.tagline + '»').show();
-                    if (Lampa.Storage.get('cas_show_studios') && details.production_companies?.[0]?.logo_path) {
-                        render.find('.cas-studios-row').html(`<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + details.production_companies[0].logo_path)}"/></div>`).show();
+                    if (!data.overview && details.overview && desc.length) desc.text(details.overview).show();
+                    if (!data.tagline && details.tagline && Lampa.Storage.get('cas_show_tagline') && tag.length) tag.text('«' + details.tagline + '»').show();
+                    if (Lampa.Storage.get('cas_show_studios') && details.production_companies?.[0]?.logo_path && stud.length) {
+                        stud.html(`<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + details.production_companies[0].logo_path)}"/></div>`).show();
                     }
                 }
-            } else if (Lampa.Storage.get('cas_show_studios') && data.production_companies?.[0]?.logo_path) {
-                render.find('.cas-studios-row').html(`<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + data.production_companies[0].logo_path)}"/></div>`).show();
+            } else if (Lampa.Storage.get('cas_show_studios') && data.production_companies?.[0]?.logo_path && stud.length) {
+                stud.html(`<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + data.production_companies[0].logo_path)}"/></div>`).show();
             }
 
             if (reqId === cardReqId) requestAnimationFrame(() => cardRoot.addClass('cas-animated'));
@@ -352,7 +354,7 @@
             addStyles();
             addSettings();
             attachLoader();
-            console.log('NewCard 3.3.8 initialized successfully');
+            console.log('NewCard 3.3.9 initialized successfully');
         } catch (e) {
             console.error('Failed to initialize NewCard plugin:', e);
         }
