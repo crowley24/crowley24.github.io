@@ -2,22 +2,21 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.1 — INSTANT CINEMATIC FULL CARD
+     * INTERFACE+ 1.8.0 — NETFLIX CINEMATIC FULL CARD
      * TMDB ONLY
      *
-     * CHANGES 1.7.1:
-     * - Full-screen cinematic background on movie card
-     * - Reuses the existing Interface+ backdrop cache
-     * - No duplicate TMDB backdrop requests
-     * - Instant background display when backdrop is cached
-     * - Smooth background replacement when navigating cards
-     * - Background remains stable while card content updates
-     * - Reuses existing TMDB logo cache
-     * - Preserved 1.7.0 home banner and menu behavior
+     * - Full-screen TMDB backdrop
+     * - Netflix-style bottom content layout
+     * - Large adaptive TMDB logo
+     * - Native Lampa buttons and actions preserved
+     * - Shared logo/backdrop cache with home banner
+     * - Smooth backdrop changes
+     * - Card navigation updates the displayed movie
+     * - Preserved home banner and menu cinematic shift
      */
 
-    var VERSION = '1.7.1';
-    var READY_KEY = 'interface_plus_tmdb_only_171';
+    var VERSION = '1.8.0';
+    var READY_KEY = 'interface_plus_tmdb_only_180';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -44,7 +43,6 @@
     var backdropCache = {};
     var backdropCacheOrder = [];
     var backdropPending = {};
-    var generation = 0;
 
     var initialized = false;
     var focusTimer = null;
@@ -58,9 +56,12 @@
     var currentSize = '';
     var menuObserver = null;
 
-    var TITLE_SELECTOR = '.full-start__title, .full-start-new__title, .full__title, .full-card__title';
+    var TITLE_SELECTOR =
+        '.full-start__title,.full-start-new__title,.full__title,.full-card__title';
 
-    /* Утиліти */
+    /* -------------------------------------------------------
+       UTILITIES
+    ------------------------------------------------------- */
 
     function log() {
         try {
@@ -226,23 +227,21 @@
     }
 
     var MOVIE_GENRES = {
-        28:'Бойовик', 12:'Пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 14:'Фентезі',
-        36:'Історичний', 27:'Жахи', 10402:'Музика',
-        9648:'Детектив', 10749:'Мелодрама', 878:'Фантастика',
-        10770:'Телефільм', 53:'Трилер', 10752:'Військовий',
-        37:'Вестерн'
+        28:'Бойовик',12:'Пригоди',16:'Анімація',35:'Комедія',
+        80:'Кримінал',99:'Документальний',18:'Драма',
+        10751:'Сімейний',14:'Фентезі',36:'Історичний',
+        27:'Жахи',10402:'Музика',9648:'Детектив',
+        10749:'Мелодрама',878:'Фантастика',10770:'Телефільм',
+        53:'Трилер',10752:'Військовий',37:'Вестерн'
     };
 
     var TV_GENRES = {
-        10759:'Бойовик і пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 10762:'Дитячий',
-        9648:'Детектив', 10763:'Новини', 10764:'Реаліті-шоу',
-        10765:'Фантастика', 10766:'Мильна опера',
-        10767:'Ток-шоу', 10768:'Війна і політика',
-        37:'Вестерн'
+        10759:'Бойовик і пригоди',16:'Анімація',35:'Комедія',
+        80:'Кримінал',99:'Документальний',18:'Драма',
+        10751:'Сімейний',10762:'Дитячий',9648:'Детектив',
+        10763:'Новини',10764:'Реаліті-шоу',10765:'Фантастика',
+        10766:'Мильна опера',10767:'Ток-шоу',
+        10768:'Війна і політика',37:'Вестерн'
     };
 
     function movieGenres(d) {
@@ -271,7 +270,7 @@
             });
         }
 
-        return res.slice(0, 2);
+        return res.slice(0, 3);
     }
 
     function heroEnabled() {
@@ -287,7 +286,9 @@
         return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
     }
 
-    /* Адаптивне масштабування логотипів */
+    /* -------------------------------------------------------
+       ADAPTIVE LOGO
+    ------------------------------------------------------- */
 
     function adaptiveLogoHeight(img, mode) {
         if (!img || !img.naturalWidth || !img.naturalHeight) return;
@@ -306,6 +307,10 @@
             img.style.height = (
                 (window.innerWidth <= 480 ? 5 : 7) * factor
             ) + 'em';
+        } else if (mode === 'fullcard') {
+            img.style.height = Math.round(
+                (window.innerWidth <= 700 ? 105 : 158) * factor
+            ) + 'px';
         } else {
             img.style.height = Math.round(
                 (window.innerWidth <= 480 ? 75 : 105) * factor
@@ -467,9 +472,7 @@
     }
 
     function clearLogoCache() {
-        generation++;
         logoItems = {};
-
         refreshAll(true);
 
         try {
@@ -504,22 +507,16 @@
         if (img.complete && img.naturalWidth) done(true);
     }
 
-    /*
-     * ЄДИНИЙ КЕШ BACKDROP
-     *
-     * Тут зберігається статус завантаження URL.
-     * Банер і повноекранна картка використовують один і той самий кеш.
-     * URL формується однаково для обох інтерфейсів.
-     */
+    /* -------------------------------------------------------
+       SHARED BACKDROP CACHE
+    ------------------------------------------------------- */
 
     function rememberBackdrop(url) {
         if (!url) return;
 
         var idx = backdropCacheOrder.indexOf(url);
 
-        if (idx !== -1) {
-            backdropCacheOrder.splice(idx, 1);
-        }
+        if (idx !== -1) backdropCacheOrder.splice(idx, 1);
 
         backdropCache[url] = true;
         backdropCacheOrder.push(url);
@@ -603,11 +600,11 @@
     }
 
     function prefetchLogoItem(item) {
-        if (item) {
-            ensureLogo(item, function (url) {
-                if (url) new Image().src = url;
-            });
-        }
+        if (!item) return;
+
+        ensureLogo(item, function (url) {
+            if (url) new Image().src = url;
+        });
     }
 
     function prefetchNearbyLogos(card, root) {
@@ -630,7 +627,9 @@
         }
     }
 
-    /* Фоновий шар головного екрана */
+    /* -------------------------------------------------------
+       HOME SCREEN BACKGROUND
+    ------------------------------------------------------- */
 
     function ensureBackgroundLayers(layer) {
         if (!layer || layer.querySelector('.banner-screen-bg__image--a')) return;
@@ -663,7 +662,6 @@
         layer.className = 'banner-screen-bg';
 
         ensureBackgroundLayers(layer);
-
         document.body.appendChild(layer);
 
         screenBackground = layer;
@@ -706,17 +704,18 @@
 
     function showHeroBackground() {
         var layer = ensureScreenBackground();
-
         if (layer) layer.style.display = 'block';
     }
 
-    /* CSS */
+    /* -------------------------------------------------------
+       CSS — HOME BANNER + NETFLIX FULL CARD
+    ------------------------------------------------------- */
 
     var CSS = [
         '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
         '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease;will-change:opacity;}',
         '.banner-screen-bg__image.show{opacity:1;}',
-        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30) 0vh,rgba(0,0,0,.20) 8vh,rgba(0,0,0,.09) 17vh,rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 0vh,rgba(0,0,0,0) 35vh,rgba(0,0,0,.04) 40vh,rgba(0,0,0,.12) 45vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.60) 55vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
+        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30),rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 35vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
         '.banner-host{position:relative;z-index:1;}',
         '.banner-enabled .banner-host .activity__body{padding-top:42vh!important;box-sizing:border-box;}',
         '.banner-hero{position:absolute;top:0;left:0;right:0;height:50vh;overflow:visible;pointer-events:none;z-index:2;transition:transform .28s ease;will-change:transform;}',
@@ -739,36 +738,48 @@
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
-        /* MENU CINEMATIC SHIFT */
+        /* HOME MENU SHIFT */
         'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
-        /*
-         * FULL CARD BACKGROUND
-         * Фон картки є окремим шаром, але використовує той самий URL
-         * і той самий backdropCache, що й домашній банер.
-         */
-
-        '.interface-plus-full-card-bg{position:fixed;inset:0;width:100vw;height:100vh;overflow:hidden;pointer-events:none;z-index:0;background:#000;opacity:1;isolation:isolate;}',
-        '.interface-plus-full-card-bg__image{position:absolute;inset:0;width:100%;height:100%;background-size:cover;background-position:center 42%;background-repeat:no-repeat;opacity:0;transition:opacity .35s ease;will-change:opacity;}',
+        /* FULL SCREEN CARD BACKGROUND */
+        '.interface-plus-full-card-bg{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;overflow:hidden;pointer-events:none;z-index:0;background:#000;opacity:1;}',
+        '.interface-plus-full-card-bg__image{position:absolute;inset:0;width:100%;height:100%;background-size:cover;background-position:center 42%;background-repeat:no-repeat;opacity:0;transition:opacity .38s ease;will-change:opacity;transform:scale(1.015);}',
         '.interface-plus-full-card-bg__image.show{opacity:1;}',
-        '.interface-plus-full-card-bg__shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.48),rgba(0,0,0,.16) 55%,rgba(0,0,0,.04)),linear-gradient(0deg,#000 0%,rgba(0,0,0,.90) 9%,rgba(0,0,0,.60) 23%,rgba(0,0,0,.12) 58%,rgba(0,0,0,.20) 100%);z-index:2;}',
-        '.interface-plus-full-card-bg__shade:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,transparent 30%,rgba(0,0,0,.18) 100%);}',
-        '.interface-plus-full-card-root{position:relative!important;isolation:isolate;}',
-        '.interface-plus-full-card-root>*{position:relative;}',
-        '.interface-plus-full-card-root .interface-plus-full-card-bg{position:fixed!important;z-index:-1!important;}',
-        '.interface-plus-full-card-root .full-start__background{opacity:0!important;visibility:hidden!important;}',
-        '.interface-plus-full-card-root .full-start-new__left{opacity:0!important;visibility:hidden!important;}',
-        '.interface-plus-full-card-root .full-start-new__right{position:relative;z-index:3;}',
-        '.interface-plus-full-card-root .full-start-new__body{position:relative;z-index:2;}',
-        '.interface-plus-full-card-root .full-start-new__title,.interface-plus-full-card-root .full-start__title{filter:drop-shadow(0 3px 12px rgba(0,0,0,.75));}',
-        '.interface-plus-full-card-root .full-start-new__buttons,.interface-plus-full-card-root .full-start__buttons{position:relative;z-index:4;}',
-        '.interface-plus-full-card-root .full-start-new__details,.interface-plus-full-card-root .full-start__details{position:relative;z-index:3;}',
-        '.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{position:relative;z-index:3;}',
+        '.interface-plus-full-card-bg__shade{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.58) 0%,rgba(0,0,0,.27) 36%,rgba(0,0,0,.06) 72%),linear-gradient(0deg,#000 0%,rgba(0,0,0,.96) 7%,rgba(0,0,0,.76) 18%,rgba(0,0,0,.30) 39%,rgba(0,0,0,.08) 68%,rgba(0,0,0,.22) 100%);}',
+        '.interface-plus-full-card-bg__shade:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 52% 38%,transparent 28%,rgba(0,0,0,.20) 100%);}',
 
+        /* CARD ROOT */
+        '.interface-plus-full-card-root{position:relative!important;isolation:isolate!important;min-height:100vh!important;background:transparent!important;overflow:visible!important;}',
+        '.interface-plus-full-card-root .interface-plus-full-card-bg{z-index:0!important;}',
+        '.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{position:relative!important;isolation:isolate!important;min-height:100vh!important;height:100vh!important;background:transparent!important;overflow:visible!important;}',
+        '.interface-plus-full-card-root .full-start-new__body,.interface-plus-full-card-root .full-start__body{position:relative!important;display:block!important;width:100%!important;height:100vh!important;min-height:100vh!important;margin:0!important;padding:0!important;background:transparent!important;z-index:2!important;}',
+        '.interface-plus-full-card-root .full-start-new__left,.interface-plus-full-card-root .full-start__left{display:none!important;visibility:hidden!important;opacity:0!important;width:0!important;max-width:0!important;min-width:0!important;}',
+        '.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{position:absolute!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;min-width:0!important;margin:0!important;padding:0!important;z-index:4!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-end!important;background:transparent!important;}',
+        '.interface-plus-full-card-root .full-start-new__title,.interface-plus-full-card-root .full-start__title{font-size:clamp(2em,4vw,4.3em)!important;line-height:1.04!important;font-weight:800!important;letter-spacing:-.035em!important;color:#fff!important;margin:0 0 1.05em!important;text-shadow:0 3px 18px rgba(0,0,0,.65)!important;filter:drop-shadow(0 3px 12px rgba(0,0,0,.75));}',
+        '.interface-plus-full-card-root .interface-plus-card-logo{display:block!important;max-width:min(48vw,620px)!important;margin:0 0 .12em!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,.72))!important;}',
+        '.interface-plus-full-card-root .interface-plus-logo-title.interface-plus-logo-active{height:auto!important;min-height:0!important;margin-bottom:1.1em!important;}',
+        '.interface-plus-full-card-root .full-start-new__details,.interface-plus-full-card-root .full-start__details{position:relative!important;z-index:4!important;margin:0 0 1em!important;color:rgba(255,255,255,.92)!important;font-size:1.08em!important;line-height:1.5!important;}',
+        '.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{position:relative!important;z-index:4!important;max-width:760px!important;width:100%!important;margin:0 0 1.25em!important;color:rgba(255,255,255,.88)!important;font-size:1.08em!important;line-height:1.48!important;text-shadow:0 2px 10px rgba(0,0,0,.65)!important;display:-webkit-box!important;-webkit-line-clamp:4!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}',
+        '.interface-plus-full-card-root .full-start-new__buttons,.interface-plus-full-card-root .full-start__buttons{position:relative!important;z-index:5!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:.65em!important;margin:0!important;}',
+        '.interface-plus-full-card-root .full-start-new__buttons .selector,.interface-plus-full-card-root .full-start__buttons .selector{margin:0!important;}',
+        '.interface-plus-full-card-root .full-start-new__buttons .button,.interface-plus-full-card-root .full-start__buttons .button{border-radius:.35em!important;}',
+        '.interface-plus-full-card-root .full-start-new__reactions,.interface-plus-full-card-root .full-start__reactions{position:relative!important;z-index:5!important;}',
+        '.interface-plus-full-card-root .full-start__background{opacity:0!important;visibility:hidden!important;display:none!important;}',
+        '.interface-plus-full-card-root .full-start-new__left *,.interface-plus-full-card-root .full-start__left *{pointer-events:none!important;}',
+        '.interface-plus-full-card-root .full-start-new__right>*{max-width:100%;}',
+        '.interface-plus-full-card-root .full-start-new__title .interface-plus-original-title,.interface-plus-full-card-root .full-start__title .interface-plus-original-title{display:block;}',
+        '.interface-plus-full-card-root .full-start-new__title.interface-plus-logo-active,.interface-plus-full-card-root .full-start__title.interface-plus-logo-active{font-size:0!important;}',
+
+        /* Fallback for Lampa layouts with slightly different class names */
+        '.interface-plus-full-card-root .full-start-new__right .full-start__title{margin-bottom:1em!important;}',
+        '.interface-plus-full-card-root .full-start-new__right .full-start__description{max-width:760px!important;}',
+        '.interface-plus-full-card-root .full-start-new__body>*{z-index:2;}',
+
+        '@media(max-width:900px){.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{left:4vw!important;width:70vw!important;bottom:4vh!important;}}',
+        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.94) 12%,rgba(0,0,0,.68) 31%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.28) 100%);}.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{height:100vh!important;}.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{left:5vw!important;right:5vw!important;width:auto!important;max-width:none!important;bottom:4vh!important;}.interface-plus-full-card-root .interface-plus-card-logo{max-width:82vw!important;}.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{font-size:1em!important;-webkit-line-clamp:3!important;}}',
         '@media(max-width:480px){.banner-hero__info{left:1.5em;width:75%;}.banner-screen-bg__image{background-position:center 60%;}}',
-        '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}',
-        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.88) 13%,rgba(0,0,0,.48) 38%,rgba(0,0,0,.16) 72%,rgba(0,0,0,.24) 100%);}}'
+        '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}'
     ].join('\n');
 
     function installStyle() {
@@ -778,12 +789,12 @@
         el.id = 'interface-plus-tmdb-only-style';
         el.textContent = CSS;
 
-        if (!el.parentNode) {
-            document.head.appendChild(el);
-        }
+        if (!el.parentNode) document.head.appendChild(el);
     }
 
-    /* Герой — банер */
+    /* -------------------------------------------------------
+       HOME HERO
+    ------------------------------------------------------- */
 
     function createHero(root) {
         if (!root) return null;
@@ -831,21 +842,6 @@
         return hero;
     }
 
-    function switchHeroBackdrop(hero, url, token) {
-        if (!hero || !url) return;
-
-        if (backdropCache[url]) {
-            applyBackdrop(hero, url, token);
-            return;
-        }
-
-        preloadBackdrop(url, function (ok) {
-            if (ok && hero.token === token) {
-                applyBackdrop(hero, url, token);
-            }
-        });
-    }
-
     function applyBackdrop(hero, url, token) {
         if (!hero || hero.token !== token) return;
 
@@ -862,7 +858,6 @@
         nextLayer.style.backgroundImage = 'url("' + url + '")';
 
         void nextLayer.offsetWidth;
-
         nextLayer.classList.add('show');
 
         if (curLayer && curLayer !== nextLayer) {
@@ -872,6 +867,21 @@
         hero.activeBgIndex = next;
     }
 
+    function switchHeroBackdrop(hero, url, token) {
+        if (!hero || !url) return;
+
+        if (backdropCache[url]) {
+            applyBackdrop(hero, url, token);
+            return;
+        }
+
+        preloadBackdrop(url, function (ok) {
+            if (ok && hero.token === token) {
+                applyBackdrop(hero, url, token);
+            }
+        });
+    }
+
     function buildHeroMeta(container, d) {
         container.textContent = '';
 
@@ -879,12 +889,10 @@
 
         if (rating > 0) {
             var rate = document.createElement('span');
-
             rate.className = 'banner-hero__meta-item banner-hero__rate';
             rate.innerHTML =
                 '<span class="banner-hero__rate-star">★</span>' +
                 '<span>' + rating.toFixed(1) + '</span>';
-
             container.appendChild(rate);
         }
 
@@ -956,7 +964,6 @@
         p.logo.style.transformOrigin = 'left center';
 
         buildHeroMeta(p.meta, d);
-
         p.descr.textContent = d.overview || '';
 
         if (d.backdrop_path) {
@@ -965,18 +972,6 @@
                 imageURL(d.backdrop_path, BACKDROP_SIZE),
                 token
             );
-        } else {
-            if (p.bgA) {
-                p.bgA.classList.remove('show');
-                p.bgA.style.backgroundImage = 'none';
-            }
-
-            if (p.bgB) {
-                p.bgB.classList.remove('show');
-                p.bgB.style.backgroundImage = 'none';
-            }
-
-            hero.activeBgIndex = 0;
         }
 
         ensureLogo(d, function (url) {
@@ -986,7 +981,6 @@
                 if (!ok || hero.token !== token) return;
 
                 setAdaptiveLogo(p.logo, url, 'hero');
-
                 p.logo.style.transform = 'scale(' + logoScale() + ')';
                 p.logo.style.transformOrigin = 'left center';
                 p.logo.style.display = 'block';
@@ -1010,7 +1004,6 @@
         }
 
         var root = renderActivity(o);
-
         if (!root) return;
 
         if (activeHero && activeHero.root !== root) {
@@ -1019,7 +1012,6 @@
         }
 
         activeHero = createHero(root);
-
         showHeroBackground();
     }
 
@@ -1037,7 +1029,6 @@
 
         for (var i = 0; i < selectors.length; i++) {
             var f = root.querySelector(selectors[i]);
-
             if (f && f.card_data) return f;
         }
 
@@ -1045,7 +1036,6 @@
 
         if (active && root.contains(active) && active.closest) {
             var f2 = active.closest('.card');
-
             if (f2 && f2.card_data) return f2;
         }
 
@@ -1056,15 +1046,12 @@
         if (!heroEnabled()) return;
 
         var activity = activeActivity();
-
         if (!isMain(activity)) return;
 
         var root = renderActivity(activity);
-
         if (!root) return;
 
         attachHero(activity);
-
         activeHero = root.__interfacePlusHero;
 
         if (!activeHero) return;
@@ -1075,21 +1062,15 @@
 
         if (focusedCard && focusedCard.card_data) {
             lastFocusKey = identity(focusedCard.card_data);
-
             prefetchHeroBackdrop(focusedCard.card_data);
-
             showHero(activeHero, focusedCard.card_data, true);
-
             prefetchNearbyLogos(focusedCard, root);
-
             return;
         }
 
         if (activeHero.lastMovieData) {
             lastFocusKey = identity(activeHero.lastMovieData);
-
             showHero(activeHero, activeHero.lastMovieData, true);
-
             return;
         }
 
@@ -1097,7 +1078,6 @@
 
         if (firstCard && firstCard.card_data) {
             lastFocusKey = identity(firstCard.card_data);
-
             showHero(activeHero, firstCard.card_data, true);
         }
     }
@@ -1110,16 +1090,35 @@
         }, 100);
     }
 
+    /* -------------------------------------------------------
+       FOCUS HANDLER
+       Supports both home hero and full-card navigation.
+    ------------------------------------------------------- */
+
     function onFocus(e) {
-        if (!heroEnabled()) return;
-
         var target = e.target;
-
         if (!target || !target.closest) return;
 
         var item = target.closest('.card');
 
-        if (!item || !item.card_data) return;
+        /* If a selectable movie card is focused inside a full activity,
+           update the Netflix card with that movie. */
+        var activity = activeActivity();
+
+        if (isFull(activity) && item && item.card_data) {
+            var fullData = item.card_data;
+
+            if (
+                !activeCard ||
+                activeCard.key !== identity(fullData)
+            ) {
+                startCard(activity, fullData, true);
+            }
+
+            return;
+        }
+
+        if (!heroEnabled() || !item || !item.card_data) return;
 
         var root = item.closest('.activity');
 
@@ -1153,18 +1152,17 @@
         if (!on) {
             clearTimeout(focusTimer);
             clearTimeout(restoreTimer);
-
             lastFocusKey = '';
-
             hideHeroBackground();
-
             return;
         }
 
         attachHero(activeActivity());
     }
 
-    /* Відновлення стандартного заголовка */
+    /* -------------------------------------------------------
+       CARD TITLE / LOGO
+    ------------------------------------------------------- */
 
     function restoreTitle(root) {
         if (!root) return;
@@ -1182,7 +1180,6 @@
 
         titles.forEach(function (t) {
             var logo = t.querySelector('.interface-plus-card-logo');
-
             if (logo) logo.remove();
 
             var original = t.querySelector('.interface-plus-original-title');
@@ -1191,7 +1188,6 @@
                 while (original.firstChild) {
                     t.insertBefore(original.firstChild, original);
                 }
-
                 original.remove();
             }
 
@@ -1212,13 +1208,11 @@
         if (!title) return null;
 
         var logo = title.querySelector('.interface-plus-card-logo');
-
         if (logo) return logo;
 
         title.classList.add('interface-plus-logo-title');
 
         var original = document.createElement('span');
-
         original.className = 'interface-plus-original-title';
 
         while (title.firstChild) {
@@ -1228,7 +1222,6 @@
         title.appendChild(original);
 
         logo = document.createElement('img');
-
         logo.className = 'interface-plus-card-logo';
         logo.alt = '';
         logo.draggable = false;
@@ -1238,7 +1231,49 @@
         return logo;
     }
 
-    /* ПОВНОЕКРАННИЙ ФОН КАРТКИ */
+    /* -------------------------------------------------------
+       NETFLIX FULL CARD LAYOUT
+    ------------------------------------------------------- */
+
+    function findCardView(root) {
+        if (!root) return null;
+
+        return root.querySelector(
+            '.full-start-new,.full-start,.full-card'
+        ) || root;
+    }
+
+    function applyNetflixLayout(root) {
+        if (!root) return;
+
+        root.classList.add('interface-plus-full-card-root');
+
+        var view = findCardView(root);
+
+        if (view) {
+            view.classList.add('interface-plus-netflix-card');
+        }
+
+        var left = root.querySelector(
+            '.full-start-new__left,.full-start__left'
+        );
+
+        if (left) {
+            left.classList.add('interface-plus-card-poster-hidden');
+        }
+
+        var right = root.querySelector(
+            '.full-start-new__right,.full-start__right'
+        );
+
+        if (right) {
+            right.classList.add('interface-plus-netflix-content');
+        }
+    }
+
+    /* -------------------------------------------------------
+       FULL SCREEN BACKGROUND
+    ------------------------------------------------------- */
 
     function ensureCardBackground(root) {
         if (!root) return null;
@@ -1298,12 +1333,9 @@
         nextLayer.style.backgroundImage = 'url("' + url + '")';
 
         void nextLayer.offsetWidth;
-
         nextLayer.classList.add('show');
 
-        if (curLayer) {
-            curLayer.classList.remove('show');
-        }
+        if (curLayer) curLayer.classList.remove('show');
 
         layer.__activeIndex = next;
         layer.__currentURL = url;
@@ -1313,41 +1345,19 @@
         if (!root || !d || !cardEnabled()) return;
 
         var layer = ensureCardBackground(root);
-
         if (!layer) return;
 
         if (activeCard) activeCard.bgLayer = layer;
 
-        if (!d.backdrop_path) {
-            /*
-             * Не очищаємо попередній фон миттєво.
-             * Якщо нова картка не має backdrop_path,
-             * попередній шар не блимає чорним під час переходу.
-             */
-            return;
-        }
+        if (!d.backdrop_path) return;
 
         var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
-
         if (!url) return;
-
-        /*
-         * НАЙВАЖЛИВІШИЙ МОМЕНТ:
-         * Якщо банер уже завантажив цей backdrop,
-         * він присутній у backdropCache.
-         * Тоді відображаємо той самий ресурс негайно.
-         */
 
         if (backdropCache[url]) {
             applyCardBackdrop(layer, url, token);
             return;
         }
-
-        /*
-         * Якщо зображення ще завантажується банером,
-         * preloadBackdrop під'єднає callback до наявного запиту,
-         * а не створюватиме другий запит.
-         */
 
         preloadBackdrop(url, function (ok) {
             if (!ok) return;
@@ -1365,16 +1375,36 @@
     function removeCardBackground(root) {
         if (!root) return;
 
-        var layer = root.querySelector(
-            '.interface-plus-full-card-bg'
-        );
-
+        var layer = root.querySelector('.interface-plus-full-card-bg');
         if (layer) layer.remove();
 
         root.classList.remove('interface-plus-full-card-root');
     }
 
-    /* Логотип і фон картки */
+    /* -------------------------------------------------------
+       CARD LOGO
+    ------------------------------------------------------- */
+
+    function showCardLogoInstant(root, d) {
+        var holder = getLogoHolder(d);
+        var hit = holder.tfeed_logo;
+        var title = hit && findTitle(root);
+
+        if (!title) return false;
+
+        var logo = prepareLogo(title);
+        if (!logo) return false;
+
+        logo.style.transform = 'scale(' + logoScale() + ')';
+        logo.style.transformOrigin = 'left center';
+
+        setAdaptiveLogo(logo, hit, 'fullcard');
+
+        logo.classList.add('ready');
+        title.classList.add('interface-plus-logo-active');
+
+        return true;
+    }
 
     function stopCard(restore) {
         activeCardToken++;
@@ -1394,34 +1424,13 @@
     function cardCurrent(token, key) {
         return !!(
             activeCard &&
+            activeCard.token === token &&
             activeCardToken === token &&
             activeCard.key === key &&
             activeCard.root &&
             activeCard.root.isConnected &&
             cardEnabled()
         );
-    }
-
-    function showCardLogoInstant(root, d) {
-        var holder = getLogoHolder(d);
-        var hit = holder.tfeed_logo;
-        var title = hit && findTitle(root);
-
-        if (!title) return false;
-
-        var logo = prepareLogo(title);
-
-        if (!logo) return false;
-
-        logo.style.transform = 'scale(' + logoScale() + ')';
-        logo.style.transformOrigin = 'left center';
-
-        setAdaptiveLogo(logo, hit, 'card');
-
-        logo.classList.add('ready');
-        title.classList.add('interface-plus-logo-active');
-
-        return true;
     }
 
     function startCard(o, override, force) {
@@ -1455,26 +1464,20 @@
             token: token
         };
 
-        /*
-         * Спочатку створюємо фон і використовуємо кеш.
-         * Це відбувається незалежно від завантаження логотипа.
-         */
+        applyNetflixLayout(root);
         setCardBackdrop(root, d, token);
 
-        /*
-         * Логотип із кешу з'являється без очікування TMDB.
-         */
+        /* Cached logo is painted immediately. */
         if (showCardLogoInstant(root, d)) {
             return;
         }
 
-        /*
-         * Якщо Lampa домальовує заголовок пізніше,
-         * MutationObserver вставить логотип після його появи.
-         */
+        /* Observe late-rendered Lampa title and card structure. */
         if (window.MutationObserver) {
             var observer = new MutationObserver(function () {
                 if (!cardCurrent(token, key)) return;
+
+                applyNetflixLayout(root);
 
                 var title = findTitle(root);
 
@@ -1489,7 +1492,7 @@
                         logo.style.transform = 'scale(' + logoScale() + ')';
                         logo.style.transformOrigin = 'left center';
 
-                        setAdaptiveLogo(logo, activeCard.src, 'card');
+                        setAdaptiveLogo(logo, activeCard.src, 'fullcard');
 
                         logo.classList.add('ready');
                         title.classList.add('interface-plus-logo-active');
@@ -1505,29 +1508,22 @@
             activeCard.observer = observer;
         }
 
-        /*
-         * Лише якщо логотипу немає в кеші,
-         * запитуємо його у TMDB.
-         */
         ensureLogo(d, function (url) {
             if (!cardCurrent(token, key)) return;
 
             activeCard.src = url || '';
-
             if (!url) return;
 
             var title = findTitle(root);
-
             if (!title) return;
 
             var logo = prepareLogo(title);
-
             if (!logo) return;
 
             logo.style.transform = 'scale(' + logoScale() + ')';
             logo.style.transformOrigin = 'left center';
 
-            setAdaptiveLogo(logo, url, 'card');
+            setAdaptiveLogo(logo, url, 'fullcard');
 
             logo.classList.add('ready');
             title.classList.add('interface-plus-logo-active');
@@ -1560,7 +1556,9 @@
         }
     }
 
-    /* Шрифти та розміри */
+    /* -------------------------------------------------------
+       FONT / INTERFACE SIZE
+    ------------------------------------------------------- */
 
     var FONTS = {
         default: {
@@ -1587,7 +1585,6 @@
 
     function applyFont() {
         var name = text(storageGet(S.font, 'default'));
-
         if (currentFont === name) return;
 
         currentFont = name;
@@ -1595,16 +1592,13 @@
         var font = FONTS[name] || FONTS.default;
 
         var oldFace = document.getElementById('interface-plus-font-face');
-
         if (oldFace) oldFace.remove();
 
         var oldStyle = document.getElementById('interface-plus-font-style');
-
         if (oldStyle) oldStyle.remove();
 
         if (font.url) {
             var face = document.createElement('style');
-
             face.id = 'interface-plus-font-face';
 
             face.textContent =
@@ -1618,11 +1612,9 @@
         }
 
         var style = document.createElement('style');
-
         style.id = 'interface-plus-font-style';
-        style.textContent = 'body,.body,*{font-family:' +
-            font.family +
-            '!important}';
+        style.textContent =
+            'body,.body,*{font-family:' + font.family + '!important}';
 
         document.head.appendChild(style);
     }
@@ -1675,7 +1667,6 @@
         if (String(value) === currentSize) return;
 
         currentSize = String(value);
-
         document.body.style.fontSize = value + 'px';
 
         patchMaker(
@@ -1684,7 +1675,9 @@
         );
     }
 
-    /* Налаштування */
+    /* -------------------------------------------------------
+       SETTINGS
+    ------------------------------------------------------- */
 
     function addSettings() {
         if (!Lampa.SettingsApi) return;
@@ -1728,8 +1721,8 @@
             S.card,
             'trigger',
             true,
-            'Логотип у картці фільму',
-            'Логотипи тільки з TMDB',
+            'Netflix-стиль картки фільму',
+            'Повноекранний фон, логотип і кінематографічне компонування',
             null,
             function () {
                 refreshCard(true);
@@ -1797,7 +1790,9 @@
         );
     }
 
-    /* Відстеження стану лівого меню */
+    /* -------------------------------------------------------
+       MENU OBSERVER
+    ------------------------------------------------------- */
 
     function installMenuObserver() {
         if (!window.MutationObserver || menuObserver) return;
@@ -1822,7 +1817,9 @@
         );
     }
 
-    /* Слухачі подій */
+    /* -------------------------------------------------------
+       EVENT LISTENERS
+    ------------------------------------------------------- */
 
     function installListeners() {
         document.addEventListener('hover:focus', onFocus, true);
@@ -1839,7 +1836,6 @@
                         clearTimeout(focusTimer);
 
                         lastFocusKey = '';
-
                         hideHeroBackground();
 
                         stopCard(false);
@@ -1849,9 +1845,7 @@
                         stopCard(false);
                     } else {
                         clearTimeout(focusTimer);
-
                         hideHeroBackground();
-
                         stopCard(false);
                     }
                 });
@@ -1920,7 +1914,9 @@
         } catch (e) {}
     }
 
-    /* Ініціалізація */
+    /* -------------------------------------------------------
+       INIT
+    ------------------------------------------------------- */
 
     function init() {
         if (initialized || !window.Lampa || !Lampa.Storage) return;
@@ -1928,9 +1924,7 @@
         initialized = true;
 
         installStyle();
-
         ensureScreenBackground();
-
         installMenuObserver();
 
         applyFont();
@@ -1938,7 +1932,6 @@
         applyHero();
 
         addSettings();
-
         installListeners();
 
         requestAnimationFrame(function () {
@@ -1954,7 +1947,7 @@
             }
         });
 
-        log('Instant cinematic full card initialized');
+        log('Netflix cinematic full card initialized');
     }
 
     if (window.appready) {
