@@ -3,38 +3,38 @@
     'use strict';
 
     /*
-     * INTERFACE+ CINEMATIC FULL CARD 1.0.1
+     * INTERFACE+ CINEMATIC FULL CARD 1.0.2
      *
      * Lampa / Android TV
      *
-     * FIX 1.0.1:
-     * - Fixed Start.onCreate / draw conflict
-     * - No modifications during activity creation
-     * - Waits for full card completion
-     * - Does not remove native Lampa elements
-     * - Does not hide native buttons
-     * - Safe overlay insertion
-     * - TMDB-only backdrop and logo
-     * - Ukrainian > English metadata preference
+     * CONCEPT:
+     * - Fullscreen cinematic backdrop
+     * - Fixed background while scrolling
+     * - No separate banner
+     * - No duplicated title, logo or metadata
+     * - Native Lampa card content remains
+     * - Native buttons and remote navigation untouched
+     *
+     * FIXES:
+     * - No interference with Start.onCreate
+     * - No replacement of Lampa containers
+     * - Background attached to document.body
+     * - Fixed positioning independent of card scroll
      */
 
-    var VERSION = '1.0.1';
-    var READY_KEY = 'interface_plus_cinematic_full_card_101';
+    var VERSION = '1.0.2';
+    var READY_KEY = 'interface_plus_cinematic_full_card_102';
+    var PREFIX = 'ip-cinematic-card-102';
+    var STYLE_ID = PREFIX + '-style';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
 
-    var PREFIX = 'ip-cinematic-card-101';
-    var STYLE_ID = PREFIX + '-style';
-
-    var activeRoot = null;
-    var activeOverlay = null;
+    var background = null;
+    var activeIdentity = '';
     var requestId = 0;
-    var lastIdentity = '';
-    var retryTimer = null;
-
-    var cache = {};
     var pending = {};
+    var cache = {};
 
     var LANG = 'uk,en,null';
 
@@ -45,10 +45,6 @@
     function text(value) {
         if (value === undefined || value === null) return '';
         return String(value).trim();
-    }
-
-    function clean(value) {
-        return text(value).replace(/<[^>]*>/g, '').trim();
     }
 
     function firstValue() {
@@ -111,44 +107,6 @@
         ));
     }
 
-    function movieTitle(movie) {
-        return clean(firstValue(
-            movie.title,
-            movie.name,
-            movie.original_title,
-            movie.original_name
-        ));
-    }
-
-    function movieOverview(movie) {
-        return clean(firstValue(
-            movie.overview,
-            movie.description,
-            movie.plot
-        ));
-    }
-
-    function movieYear(movie) {
-        var date = text(firstValue(
-            movie.release_date,
-            movie.first_air_date,
-            movie.year
-        ));
-
-        var match = date.match(/\d{4}/);
-
-        return match ? match[0] : '';
-    }
-
-    function movieRating(movie) {
-        var rating = Number(firstValue(
-            movie.vote_average,
-            movie.rating
-        ));
-
-        return rating > 0 ? rating.toFixed(1) : '';
-    }
-
     function identity(movie) {
         if (!movie) return '';
 
@@ -162,32 +120,6 @@
 
         return 'https://image.tmdb.org/t/p/' +
             (size || 'w1280') + path;
-    }
-
-    function getRoot() {
-        var selectors = [
-            '.full-start',
-            '.full-start-new',
-            '.full'
-        ];
-
-        for (var i = 0; i < selectors.length; i++) {
-            var elements = document.querySelectorAll(selectors[i]);
-
-            for (var j = elements.length - 1; j >= 0; j--) {
-                var element = elements[j];
-
-                if (
-                    element &&
-                    element.offsetWidth > 0 &&
-                    element.offsetHeight > 0
-                ) {
-                    return element;
-                }
-            }
-        }
-
-        return null;
     }
 
     function getActiveMovie(eventData) {
@@ -220,139 +152,96 @@
         if (document.getElementById(STYLE_ID)) return;
 
         var css = `
-            .${PREFIX} {
-                position: relative;
+            /*
+             * Fullscreen background layer.
+             * It is outside the scrolling card container.
+             */
+
+            #${PREFIX} {
+                position: fixed;
+                inset: 0;
                 width: 100%;
-                height: 58vh;
-                min-height: 340px;
-                max-height: 650px;
+                height: 100%;
                 overflow: hidden;
                 pointer-events: none;
-                z-index: 2;
-                margin-bottom: 1.5em;
+                z-index: 0;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity .55s ease;
                 background: #080808;
-                isolation: isolate;
             }
 
-            .${PREFIX}__backdrop {
+            #${PREFIX}.active {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            #${PREFIX} .${PREFIX}__image {
                 position: absolute;
                 inset: 0;
-                background-position: center 30%;
+                width: 100%;
+                height: 100%;
                 background-size: cover;
+                background-position: center center;
                 background-repeat: no-repeat;
-                opacity: 0;
-                transition: opacity .55s ease;
                 transform: scale(1.015);
+                opacity: 0;
+                transition: opacity .65s ease;
             }
 
-            .${PREFIX}__backdrop.ready {
+            #${PREFIX} .${PREFIX}__image.ready {
                 opacity: 1;
             }
 
-            .${PREFIX}__shade {
+            #${PREFIX} .${PREFIX}__shade {
                 position: absolute;
                 inset: 0;
                 background:
                     linear-gradient(
                         90deg,
-                        rgba(0,0,0,.94) 0%,
-                        rgba(0,0,0,.75) 25%,
-                        rgba(0,0,0,.28) 65%,
-                        rgba(0,0,0,.10) 100%
+                        rgba(0,0,0,.68) 0%,
+                        rgba(0,0,0,.38) 45%,
+                        rgba(0,0,0,.20) 100%
                     ),
                     linear-gradient(
                         0deg,
-                        #080808 0%,
-                        rgba(8,8,8,.72) 18%,
-                        transparent 65%
+                        rgba(0,0,0,.88) 0%,
+                        rgba(0,0,0,.28) 48%,
+                        rgba(0,0,0,.40) 100%
                     );
             }
 
-            .${PREFIX}__content {
-                position: absolute;
-                left: 5%;
-                bottom: 12%;
-                width: 48%;
-                max-width: 650px;
-                color: #fff;
+            /*
+             * The card content must stay above the background.
+             * No elements are removed or replaced.
+             */
+
+            body.${PREFIX}-enabled .full,
+            body.${PREFIX}-enabled .full-start,
+            body.${PREFIX}-enabled .full-start-new {
+                position: relative;
+                z-index: 1;
+                background-color: transparent !important;
             }
 
-            .${PREFIX}__logo {
-                display: block;
-                width: auto;
-                height: auto;
-                max-width: 100%;
-                max-height: 150px;
-                object-fit: contain;
-                object-position: left bottom;
-                margin-bottom: 22px;
-                opacity: 0;
-                transition: opacity .35s ease;
+            /*
+             * Remove opaque backgrounds from common card wrappers.
+             * This does not hide or remove their content.
+             */
+
+            body.${PREFIX}-enabled .full-start__body,
+            body.${PREFIX}-enabled .full-start-new__body,
+            body.${PREFIX}-enabled .full-start__left,
+            body.${PREFIX}-enabled .full-start-new__left {
+                background-color: transparent !important;
             }
 
-            .${PREFIX}__logo.ready {
-                opacity: 1;
-            }
+            /*
+             * Keep the background fixed during vertical scrolling.
+             */
 
-            .${PREFIX}__title {
-                font-size: 2.5em;
-                line-height: 1.08;
-                font-weight: 700;
-                margin-bottom: 15px;
-                text-shadow: 0 2px 15px rgba(0,0,0,.5);
-            }
-
-            .${PREFIX}__meta {
-                display: flex;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 12px;
-                margin-bottom: 15px;
-                font-size: 1.05em;
-                color: rgba(255,255,255,.85);
-            }
-
-            .${PREFIX}__rating {
-                color: #fff;
-                font-weight: 700;
-            }
-
-            .${PREFIX}__overview {
-                font-size: 1em;
-                line-height: 1.5;
-                color: rgba(255,255,255,.78);
-                display: -webkit-box;
-                -webkit-line-clamp: 3;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-                max-width: 95%;
-            }
-
-            @media (max-width: 700px) {
-                .${PREFIX} {
-                    height: 48vh;
-                    min-height: 260px;
-                }
-
-                .${PREFIX}__content {
-                    left: 5%;
-                    bottom: 10%;
-                    width: 80%;
-                }
-
-                .${PREFIX}__logo {
-                    max-height: 95px;
-                    max-width: 85%;
-                }
-
-                .${PREFIX}__title {
-                    font-size: 1.8em;
-                }
-
-                .${PREFIX}__overview {
-                    font-size: .9em;
-                    -webkit-line-clamp: 2;
-                }
+            body.${PREFIX}-enabled {
+                background-color: #080808 !important;
             }
         `;
 
@@ -364,21 +253,115 @@
     }
 
     /* -------------------------------------------------------
-       TMDB
+       BACKGROUND ELEMENT
     ------------------------------------------------------- */
 
-    function getImages(movie, callback) {
-        var id = movieId(movie);
-
-        if (!id || !window.Lampa || !Lampa.Api || !Lampa.Api.sources) {
-            callback({});
-            return;
+    function createBackground() {
+        if (background && document.body.contains(background)) {
+            return background;
         }
 
+        background = document.createElement('div');
+        background.id = PREFIX;
+
+        var image = document.createElement('div');
+        image.className = PREFIX + '__image';
+
+        var shade = document.createElement('div');
+        shade.className = PREFIX + '__shade';
+
+        background.appendChild(image);
+        background.appendChild(shade);
+
+        /*
+         * Attach directly to BODY.
+         * It is independent of the scrolling full-card element.
+         */
+
+        document.body.insertBefore(
+            background,
+            document.body.firstChild
+        );
+
+        return background;
+    }
+
+    function showBackground(url) {
+        if (!url) return;
+
+        var layer = createBackground();
+        var image = layer.querySelector('.' + PREFIX + '__image');
+
+        if (!image) return;
+
+        image.classList.remove('ready');
+
+        var preload = new Image();
+
+        preload.onload = function () {
+            image.style.backgroundImage = 'url("' + url + '")';
+
+            requestAnimationFrame(function () {
+                image.classList.add('ready');
+                layer.classList.add('active');
+                document.body.classList.add(PREFIX + '-enabled');
+            });
+        };
+
+        preload.onerror = function () {
+            /*
+             * Keep the existing background if the new image fails.
+             */
+        };
+
+        preload.src = url;
+    }
+
+    function hideBackground() {
+        if (background) {
+            background.classList.remove('active');
+        }
+
+        document.body.classList.remove(PREFIX + '-enabled');
+    }
+
+    /* -------------------------------------------------------
+       TMDB BACKDROP
+    ------------------------------------------------------- */
+
+    function getDirectBackdrop(movie) {
+        if (!movie) return '';
+
+        return imageUrl(firstValue(
+            movie.backdrop_path,
+            movie.backdrop,
+            movie.backdrop_url,
+            movie.background
+        ), 'w1280');
+    }
+
+    function getBackdrop(movie, callback) {
+        var id = movieId(movie);
         var type = movieType(movie);
         var key = type + ':' + id;
 
-        if (cache[key]) {
+        if (!id) {
+            callback('');
+            return;
+        }
+
+        /*
+         * Prefer backdrop already present in movie data.
+         */
+
+        var direct = getDirectBackdrop(movie);
+
+        if (direct) {
+            callback(direct);
+            return;
+        }
+
+        if (cache[key] !== undefined) {
             callback(cache[key]);
             return;
         }
@@ -390,17 +373,13 @@
 
         pending[key] = [callback];
 
-        var result = {
-            backdrop: '',
-            logo: ''
-        };
-
+        var result = '';
         var finished = false;
 
         function complete() {
             if (finished) return;
-            finished = true;
 
+            finished = true;
             cache[key] = result;
 
             var callbacks = pending[key] || [];
@@ -414,6 +393,16 @@
         }
 
         try {
+            if (
+                !window.Lampa ||
+                !Lampa.Api ||
+                !Lampa.Api.sources ||
+                !Lampa.Api.sources.tmdb
+            ) {
+                complete();
+                return;
+            }
+
             Lampa.Api.sources.tmdb.get(
                 type + '/' + id + '/images',
                 {
@@ -423,39 +412,20 @@
                 },
                 function (data) {
                     var backdrops = data && data.backdrops || [];
-                    var logos = data && data.logos || [];
 
                     if (backdrops.length) {
-                        var backdrop = backdrops.slice().sort(function (a, b) {
+                        /*
+                         * Prefer the highest-rated backdrop.
+                         */
+
+                        backdrops.sort(function (a, b) {
                             return (b.vote_average || 0) -
                                 (a.vote_average || 0);
-                        })[0];
-
-                        result.backdrop = imageUrl(
-                            backdrop.file_path,
-                            'w1280'
-                        );
-                    }
-
-                    if (logos.length) {
-                        var sorted = logos.slice().sort(function (a, b) {
-                            function score(item) {
-                                var lang = item.iso_639_1;
-
-                                return (
-                                    (lang === 'uk' ? 100 : 0) +
-                                    (lang === 'en' ? 50 : 0) +
-                                    (lang === null ? 20 : 0) +
-                                    (item.vote_average || 0)
-                                );
-                            }
-
-                            return score(b) - score(a);
                         });
 
-                        result.logo = imageUrl(
-                            sorted[0].file_path,
-                            'w500'
+                        result = imageUrl(
+                            backdrops[0].file_path,
+                            'w1280'
                         );
                     }
 
@@ -474,128 +444,7 @@
     }
 
     /* -------------------------------------------------------
-       OVERLAY
-    ------------------------------------------------------- */
-
-    function removeOverlay() {
-        if (activeOverlay && activeOverlay.parentNode) {
-            activeOverlay.parentNode.removeChild(activeOverlay);
-        }
-
-        activeOverlay = null;
-        activeRoot = null;
-    }
-
-    function createElement(tag, className) {
-        var element = document.createElement(tag);
-        element.className = className;
-
-        return element;
-    }
-
-    function createOverlay(root, movie, images) {
-        if (!root || !movie) return;
-
-        if (!document.body.contains(root)) return;
-
-        if (activeRoot === root && activeOverlay) return;
-
-        removeOverlay();
-
-        var overlay = createElement('div', PREFIX);
-        var backdrop = createElement('div', PREFIX + '__backdrop');
-        var shade = createElement('div', PREFIX + '__shade');
-        var content = createElement('div', PREFIX + '__content');
-
-        var title = createElement('div', PREFIX + '__title');
-        var meta = createElement('div', PREFIX + '__meta');
-        var overview = createElement('div', PREFIX + '__overview');
-
-        var logo = createElement('img', PREFIX + '__logo');
-
-        title.textContent = movieTitle(movie);
-
-        var year = movieYear(movie);
-        var rating = movieRating(movie);
-
-        if (year) {
-            var yearEl = document.createElement('span');
-            yearEl.textContent = year;
-            meta.appendChild(yearEl);
-        }
-
-        if (rating) {
-            var ratingEl = createElement('span', PREFIX + '__rating');
-            ratingEl.textContent = '★ ' + rating;
-            meta.appendChild(ratingEl);
-        }
-
-        if (movieType(movie) === 'tv') {
-            var typeEl = document.createElement('span');
-            typeEl.textContent = 'Серіал';
-            meta.appendChild(typeEl);
-        } else {
-            var typeElMovie = document.createElement('span');
-            typeElMovie.textContent = 'Фільм';
-            meta.appendChild(typeElMovie);
-        }
-
-        overview.textContent = movieOverview(movie);
-
-        if (images.backdrop) {
-            backdrop.style.backgroundImage =
-                'url("' + images.backdrop + '")';
-
-            requestAnimationFrame(function () {
-                backdrop.classList.add('ready');
-            });
-        }
-
-        if (images.logo) {
-            logo.onload = function () {
-                logo.classList.add('ready');
-                title.style.display = 'none';
-            };
-
-            logo.onerror = function () {
-                logo.style.display = 'none';
-            };
-
-            logo.src = images.logo;
-        } else {
-            logo.style.display = 'none';
-        }
-
-        content.appendChild(logo);
-        content.appendChild(title);
-
-        if (meta.children.length) {
-            content.appendChild(meta);
-        }
-
-        if (overview.textContent) {
-            content.appendChild(overview);
-        }
-
-        overlay.appendChild(backdrop);
-        overlay.appendChild(shade);
-        overlay.appendChild(content);
-
-        /*
-         * IMPORTANT:
-         * We only append a visual layer.
-         * We do not replace, clear, or modify Start containers.
-         * Native buttons and controls remain untouched.
-         */
-
-        root.insertBefore(overlay, root.firstChild);
-
-        activeRoot = root;
-        activeOverlay = overlay;
-    }
-
-    /* -------------------------------------------------------
-       START AFTER FULL IS CREATED
+       FULL CARD
     ------------------------------------------------------- */
 
     function processFull(eventData) {
@@ -607,54 +456,26 @@
 
         if (!currentIdentity) return;
 
-        if (
-            currentIdentity === lastIdentity &&
-            activeOverlay &&
-            activeRoot &&
-            document.body.contains(activeRoot)
-        ) {
+        if (currentIdentity === activeIdentity && background &&
+            background.classList.contains('active')) {
             return;
         }
 
-        lastIdentity = currentIdentity;
+        activeIdentity = currentIdentity;
 
         var currentRequest = ++requestId;
 
-        var root = getRoot();
-
-        if (!root) {
-            setTimeout(function () {
-                if (currentRequest !== requestId) return;
-
-                root = getRoot();
-
-                if (!root) return;
-
-                loadImagesAndRender(root, movie, currentRequest);
-            }, 350);
-
-            return;
-        }
-
-        loadImagesAndRender(root, movie, currentRequest);
-    }
-
-    function loadImagesAndRender(root, movie, currentRequest) {
-        getImages(movie, function (images) {
+        getBackdrop(movie, function (url) {
             if (currentRequest !== requestId) return;
 
-            var currentRoot = getRoot();
+            if (!url) return;
 
-            if (!currentRoot) return;
-
-            if (!document.body.contains(currentRoot)) return;
-
-            createOverlay(currentRoot, movie, images);
+            showBackground(url);
         });
     }
 
     /* -------------------------------------------------------
-       LAMPA EVENTS
+       EVENTS
     ------------------------------------------------------- */
 
     function init() {
@@ -664,14 +485,10 @@
         }
 
         addStyles();
+        createBackground();
 
         Lampa.Listener.follow('full', function (event) {
             if (!event) return;
-
-            /*
-             * Lampa versions may use either spelling.
-             * Do not run during Start.onCreate.
-             */
 
             if (
                 event.type === 'complite' ||
@@ -687,8 +504,8 @@
                 event.type === 'close'
             ) {
                 requestId++;
-                lastIdentity = '';
-                removeOverlay();
+                activeIdentity = '';
+                hideBackground();
             }
         });
 
@@ -700,8 +517,8 @@
                 event.type === 'destroy'
             ) {
                 requestId++;
-                lastIdentity = '';
-                removeOverlay();
+                activeIdentity = '';
+                hideBackground();
             }
         });
     }
