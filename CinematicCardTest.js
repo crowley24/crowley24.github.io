@@ -3,38 +3,36 @@
     'use strict';
 
     /*
-     * INTERFACE+ CINEMATIC FULL CARD 1.0.2
+     * INTERFACE+ CINEMATIC FULL CARD 1.0.3
      *
      * Lampa / Android TV
      *
-     * CONCEPT:
-     * - Fullscreen cinematic backdrop
-     * - Fixed background while scrolling
-     * - No separate banner
-     * - No duplicated title, logo or metadata
-     * - Native Lampa card content remains
-     * - Native buttons and remote navigation untouched
-     *
-     * FIXES:
-     * - No interference with Start.onCreate
-     * - No replacement of Lampa containers
-     * - Background attached to document.body
-     * - Fixed positioning independent of card scroll
+     * FEATURES:
+     * - Fullscreen fixed TMDB backdrop
+     * - TMDB logo over fullscreen background
+     * - Ukrainian > English > null logo preference
+     * - Adaptive logo sizing
+     * - Original logo proportions preserved
+     * - Logo remains fixed while scrolling
+     * - Native Lampa buttons and navigation preserved
+     * - Native poster and title visually hidden
+     * - Fallback title when TMDB logo is unavailable
      */
 
-    var VERSION = '1.0.2';
-    var READY_KEY = 'interface_plus_cinematic_full_card_102';
-    var PREFIX = 'ip-cinematic-card-102';
+    var READY_KEY = 'interface_plus_cinematic_full_card_103';
+    var PREFIX = 'ip-cinematic-card-103';
     var STYLE_ID = PREFIX + '-style';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
 
     var background = null;
+    var foreground = null;
     var activeIdentity = '';
     var requestId = 0;
-    var pending = {};
+
     var cache = {};
+    var pending = {};
 
     var LANG = 'uk,en,null';
 
@@ -107,6 +105,36 @@
         ));
     }
 
+    function movieTitle(movie) {
+        return text(firstValue(
+            movie.title,
+            movie.name,
+            movie.original_title,
+            movie.original_name
+        ));
+    }
+
+    function movieYear(movie) {
+        var date = text(firstValue(
+            movie.release_date,
+            movie.first_air_date,
+            movie.year
+        ));
+
+        var match = date.match(/\d{4}/);
+
+        return match ? match[0] : '';
+    }
+
+    function movieRating(movie) {
+        var rating = Number(firstValue(
+            movie.vote_average,
+            movie.rating
+        ));
+
+        return rating > 0 ? rating.toFixed(1) : '';
+    }
+
     function identity(movie) {
         if (!movie) return '';
 
@@ -152,11 +180,6 @@
         if (document.getElementById(STYLE_ID)) return;
 
         var css = `
-            /*
-             * Fullscreen background layer.
-             * It is outside the scrolling card container.
-             */
-
             #${PREFIX} {
                 position: fixed;
                 inset: 0;
@@ -186,7 +209,7 @@
                 background-repeat: no-repeat;
                 transform: scale(1.015);
                 opacity: 0;
-                transition: opacity .65s ease;
+                transition: opacity .7s ease;
             }
 
             #${PREFIX} .${PREFIX}__image.ready {
@@ -199,35 +222,99 @@
                 background:
                     linear-gradient(
                         90deg,
-                        rgba(0,0,0,.68) 0%,
-                        rgba(0,0,0,.38) 45%,
-                        rgba(0,0,0,.20) 100%
+                        rgba(0,0,0,.76) 0%,
+                        rgba(0,0,0,.46) 42%,
+                        rgba(0,0,0,.18) 100%
                     ),
                     linear-gradient(
                         0deg,
-                        rgba(0,0,0,.88) 0%,
-                        rgba(0,0,0,.28) 48%,
-                        rgba(0,0,0,.40) 100%
+                        rgba(0,0,0,.86) 0%,
+                        rgba(0,0,0,.18) 48%,
+                        rgba(0,0,0,.34) 100%
                     );
             }
 
             /*
-             * The card content must stay above the background.
-             * No elements are removed or replaced.
+             * Foreground logo and fallback title.
+             * Independent from the scrolling card.
+             */
+
+            #${PREFIX}-foreground {
+                position: fixed;
+                left: 5.5%;
+                bottom: 29%;
+                width: 42%;
+                max-width: 720px;
+                z-index: 5;
+                pointer-events: none;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(12px);
+                transition:
+                    opacity .45s ease,
+                    transform .45s ease;
+            }
+
+            #${PREFIX}-foreground.active {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+
+            #${PREFIX}-foreground .${PREFIX}__logo {
+                display: block;
+                width: auto;
+                height: auto;
+                max-width: 100%;
+                max-height: 190px;
+                object-fit: contain;
+                object-position: left bottom;
+                filter: drop-shadow(0 3px 18px rgba(0,0,0,.45));
+                opacity: 0;
+                transition: opacity .4s ease;
+            }
+
+            #${PREFIX}-foreground .${PREFIX}__logo.ready {
+                opacity: 1;
+            }
+
+            #${PREFIX}-foreground .${PREFIX}__title {
+                color: #fff;
+                font-size: clamp(28px, 3.2vw, 54px);
+                line-height: 1.08;
+                font-weight: 700;
+                text-shadow: 0 3px 18px rgba(0,0,0,.65);
+            }
+
+            #${PREFIX}-foreground .${PREFIX}__meta {
+                display: flex;
+                align-items: center;
+                gap: 13px;
+                flex-wrap: wrap;
+                margin-top: 17px;
+                color: rgba(255,255,255,.85);
+                font-size: 17px;
+                font-weight: 500;
+                text-shadow: 0 2px 8px rgba(0,0,0,.7);
+            }
+
+            #${PREFIX}-foreground .${PREFIX}__rating {
+                color: #fff;
+                font-weight: 700;
+            }
+
+            /*
+             * Card stays above the background.
+             * Native buttons and focus handling remain intact.
              */
 
             body.${PREFIX}-enabled .full,
             body.${PREFIX}-enabled .full-start,
             body.${PREFIX}-enabled .full-start-new {
                 position: relative;
-                z-index: 1;
+                z-index: 2;
                 background-color: transparent !important;
             }
-
-            /*
-             * Remove opaque backgrounds from common card wrappers.
-             * This does not hide or remove their content.
-             */
 
             body.${PREFIX}-enabled .full-start__body,
             body.${PREFIX}-enabled .full-start-new__body,
@@ -237,11 +324,49 @@
             }
 
             /*
-             * Keep the background fixed during vertical scrolling.
+             * Hide only duplicated native poster/title visuals.
+             * Elements are not removed from DOM.
              */
+
+            body.${PREFIX}-enabled .full-start__poster,
+            body.${PREFIX}-enabled .full-start-new__poster,
+            body.${PREFIX}-enabled .full-start__title,
+            body.${PREFIX}-enabled .full-start-new__title,
+            body.${PREFIX}-enabled .full__title,
+            body.${PREFIX}-enabled .full-card__title {
+                opacity: 0 !important;
+                visibility: hidden !important;
+            }
 
             body.${PREFIX}-enabled {
                 background-color: #080808 !important;
+            }
+
+            @media (max-width: 900px) {
+                #${PREFIX}-foreground {
+                    left: 5%;
+                    bottom: 25%;
+                    width: 65%;
+                }
+
+                #${PREFIX}-foreground .${PREFIX}__logo {
+                    max-height: 125px;
+                }
+
+                #${PREFIX}-foreground .${PREFIX}__meta {
+                    font-size: 14px;
+                }
+            }
+
+            @media (max-width: 600px) {
+                #${PREFIX}-foreground {
+                    bottom: 23%;
+                    width: 78%;
+                }
+
+                #${PREFIX}-foreground .${PREFIX}__logo {
+                    max-height: 100px;
+                }
             }
         `;
 
@@ -253,44 +378,50 @@
     }
 
     /* -------------------------------------------------------
-       BACKGROUND ELEMENT
+       BACKGROUND AND FOREGROUND
     ------------------------------------------------------- */
 
-    function createBackground() {
-        if (background && document.body.contains(background)) {
-            return background;
+    function createLayers() {
+        if (!background || !document.body.contains(background)) {
+            background = document.createElement('div');
+            background.id = PREFIX;
+
+            var image = document.createElement('div');
+            image.className = PREFIX + '__image';
+
+            var shade = document.createElement('div');
+            shade.className = PREFIX + '__shade';
+
+            background.appendChild(image);
+            background.appendChild(shade);
+
+            document.body.insertBefore(
+                background,
+                document.body.firstChild
+            );
         }
 
-        background = document.createElement('div');
-        background.id = PREFIX;
+        if (!foreground || !document.body.contains(foreground)) {
+            foreground = document.createElement('div');
+            foreground.id = PREFIX + '-foreground';
 
-        var image = document.createElement('div');
-        image.className = PREFIX + '__image';
+            document.body.appendChild(foreground);
+        }
 
-        var shade = document.createElement('div');
-        shade.className = PREFIX + '__shade';
-
-        background.appendChild(image);
-        background.appendChild(shade);
-
-        /*
-         * Attach directly to BODY.
-         * It is independent of the scrolling full-card element.
-         */
-
-        document.body.insertBefore(
-            background,
-            document.body.firstChild
-        );
-
-        return background;
+        return {
+            background: background,
+            foreground: foreground
+        };
     }
 
     function showBackground(url) {
         if (!url) return;
 
-        var layer = createBackground();
-        var image = layer.querySelector('.' + PREFIX + '__image');
+        var layers = createLayers();
+
+        var image = layers.background.querySelector(
+            '.' + PREFIX + '__image'
+        );
 
         if (!image) return;
 
@@ -303,65 +434,113 @@
 
             requestAnimationFrame(function () {
                 image.classList.add('ready');
-                layer.classList.add('active');
+                layers.background.classList.add('active');
                 document.body.classList.add(PREFIX + '-enabled');
             });
         };
 
-        preload.onerror = function () {
-            /*
-             * Keep the existing background if the new image fails.
-             */
-        };
+        preload.onerror = function () {};
 
         preload.src = url;
     }
 
-    function hideBackground() {
+    function showForeground(movie, logoUrl) {
+        var layers = createLayers();
+        var layer = layers.foreground;
+
+        layer.innerHTML = '';
+
+        if (logoUrl) {
+            var logo = document.createElement('img');
+
+            logo.className = PREFIX + '__logo';
+            logo.alt = movieTitle(movie);
+
+            logo.onload = function () {
+                logo.classList.add('ready');
+                layer.classList.add('active');
+            };
+
+            logo.onerror = function () {
+                logo.remove();
+                showFallbackTitle(layer, movie);
+            };
+
+            logo.src = logoUrl;
+
+            layer.appendChild(logo);
+        } else {
+            showFallbackTitle(layer, movie);
+        }
+
+        var meta = document.createElement('div');
+        meta.className = PREFIX + '__meta';
+
+        var year = movieYear(movie);
+        var rating = movieRating(movie);
+
+        if (year) {
+            var yearEl = document.createElement('span');
+            yearEl.textContent = year;
+            meta.appendChild(yearEl);
+        }
+
+        if (rating) {
+            var ratingEl = document.createElement('span');
+            ratingEl.className = PREFIX + '__rating';
+            ratingEl.textContent = '★ ' + rating;
+            meta.appendChild(ratingEl);
+        }
+
+        var typeEl = document.createElement('span');
+        typeEl.textContent = movieType(movie) === 'tv'
+            ? 'Серіал'
+            : 'Фільм';
+
+        meta.appendChild(typeEl);
+        layer.appendChild(meta);
+    }
+
+    function showFallbackTitle(layer, movie) {
+        var title = document.createElement('div');
+
+        title.className = PREFIX + '__title';
+        title.textContent = movieTitle(movie);
+
+        layer.appendChild(title);
+        layer.classList.add('active');
+    }
+
+    function hideLayers() {
         if (background) {
             background.classList.remove('active');
+        }
+
+        if (foreground) {
+            foreground.classList.remove('active');
         }
 
         document.body.classList.remove(PREFIX + '-enabled');
     }
 
     /* -------------------------------------------------------
-       TMDB BACKDROP
+       TMDB IMAGES
     ------------------------------------------------------- */
 
-    function getDirectBackdrop(movie) {
-        if (!movie) return '';
-
-        return imageUrl(firstValue(
-            movie.backdrop_path,
-            movie.backdrop,
-            movie.backdrop_url,
-            movie.background
-        ), 'w1280');
-    }
-
-    function getBackdrop(movie, callback) {
+    function getImages(movie, callback) {
         var id = movieId(movie);
         var type = movieType(movie);
         var key = type + ':' + id;
 
         if (!id) {
-            callback('');
+            callback({
+                backdrop: '',
+                logo: ''
+            });
             return;
         }
 
-        /*
-         * Prefer backdrop already present in movie data.
-         */
-
-        var direct = getDirectBackdrop(movie);
-
-        if (direct) {
-            callback(direct);
-            return;
-        }
-
-        if (cache[key] !== undefined) {
+        if (cache[key]) {
             callback(cache[key]);
             return;
         }
@@ -373,7 +552,16 @@
 
         pending[key] = [callback];
 
-        var result = '';
+        var result = {
+            backdrop: imageUrl(firstValue(
+                movie.backdrop_path,
+                movie.backdrop,
+                movie.backdrop_url,
+                movie.background
+            ), 'w1280'),
+            logo: ''
+        };
+
         var finished = false;
 
         function complete() {
@@ -412,20 +600,40 @@
                 },
                 function (data) {
                     var backdrops = data && data.backdrops || [];
+                    var logos = data && data.logos || [];
 
-                    if (backdrops.length) {
-                        /*
-                         * Prefer the highest-rated backdrop.
-                         */
-
+                    if (!result.backdrop && backdrops.length) {
                         backdrops.sort(function (a, b) {
                             return (b.vote_average || 0) -
                                 (a.vote_average || 0);
                         });
 
-                        result = imageUrl(
+                        result.backdrop = imageUrl(
                             backdrops[0].file_path,
                             'w1280'
+                        );
+                    }
+
+                    if (logos.length) {
+                        logos.sort(function (a, b) {
+                            function score(item) {
+                                var lang = item.iso_639_1;
+
+                                var languageScore =
+                                    lang === 'uk' ? 300 :
+                                    lang === 'en' ? 200 :
+                                    lang === null ? 100 : 0;
+
+                                return languageScore +
+                                    (item.vote_average || 0);
+                            }
+
+                            return score(b) - score(a);
+                        });
+
+                        result.logo = imageUrl(
+                            logos[0].file_path,
+                            'w500'
                         );
                     }
 
@@ -444,7 +652,7 @@
     }
 
     /* -------------------------------------------------------
-       FULL CARD
+       FULL CARD PROCESSING
     ------------------------------------------------------- */
 
     function processFull(eventData) {
@@ -456,8 +664,13 @@
 
         if (!currentIdentity) return;
 
-        if (currentIdentity === activeIdentity && background &&
-            background.classList.contains('active')) {
+        if (
+            currentIdentity === activeIdentity &&
+            background &&
+            background.classList.contains('active') &&
+            foreground &&
+            foreground.classList.contains('active')
+        ) {
             return;
         }
 
@@ -465,12 +678,16 @@
 
         var currentRequest = ++requestId;
 
-        getBackdrop(movie, function (url) {
+        getImages(movie, function (images) {
             if (currentRequest !== requestId) return;
 
-            if (!url) return;
+            if (!images) return;
 
-            showBackground(url);
+            if (images.backdrop) {
+                showBackground(images.backdrop);
+            }
+
+            showForeground(movie, images.logo);
         });
     }
 
@@ -485,7 +702,7 @@
         }
 
         addStyles();
-        createBackground();
+        createLayers();
 
         Lampa.Listener.follow('full', function (event) {
             if (!event) return;
@@ -505,7 +722,7 @@
             ) {
                 requestId++;
                 activeIdentity = '';
-                hideBackground();
+                hideLayers();
             }
         });
 
@@ -518,7 +735,7 @@
             ) {
                 requestId++;
                 activeIdentity = '';
-                hideBackground();
+                hideLayers();
             }
         });
     }
