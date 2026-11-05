@@ -2,20 +2,17 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.1 — CACHED CARD LOGOS & CINEMATIC SHIFT
+     * INTERFACE+ 1.8.0 — NETFLIX-STYLE FULL CARD & INSTANT CACHE
      * TMDB ONLY
      *
-     * CHANGES 1.7.1:
-     * - Instant logo reuse from hero cache on movie card open
-     * - Synchronized hero and background menu shift
-     * - Background keeps original width and image framing
-     * - Desktop menu shift: 20em
-     * - Mobile menu shift: 16em
-     * - Unified transition timing and easing
+     * CHANGES 1.8.0:
+     * - Netflix-style cinematic full card layout using cached hero background & logo
+     * - Instant full card opening from cache
+     * - Preserved precise menu cinematic shift (20em / 16em)
      */
 
-    var VERSION = '1.7.1';
-    var READY_KEY = 'interface_plus_tmdb_only_171';
+    var VERSION = '1.8.0';
+    var READY_KEY = 'interface_plus_tmdb_only_180';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -659,7 +656,23 @@
         if (layer) layer.style.display = 'block';
     }
 
-    /* CSS стилі */
+    /* МИТТЄВИЙ КІНЕМАТОГРАФІЧНИЙ ФОН ДЛЯ КАРТКИ ФІЛЬМУ (NETFLIX STYLE) */
+    function applyFullCardNetflixBackground(d) {
+        if (!d || !d.backdrop_path) return;
+        var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
+        if (!url) return;
+
+        var layer = ensureScreenBackground();
+        if (layer) layer.style.display = 'block';
+
+        var imgA = layer.querySelector('.banner-screen-bg__image--a');
+        if (imgA) {
+            imgA.style.backgroundImage = 'url("' + url + '")';
+            imgA.classList.add('show');
+        }
+    }
+
+    /* CSS стилі (Включно з Netflix-стилем для картки фільму) */
 
     var CSS = [
         '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
@@ -681,6 +694,12 @@
         '.banner-hero__genre{color:rgba(225,229,235,.82);}',
         '.banner-hero__separator{color:rgba(255,255,255,.38);font-size:.9em;}',
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 10px rgba(0,0,0,.65);}',
+        
+        /* NETFLIX-STYLE FULL CARD */
+        'body.view--full{background:transparent!important;}',
+        'body.view--full #interface-plus-screen-background{display:block!important;z-index:0!important;}',
+        'body.view--full .full-start, body.view--full .full-start-new, body.view--full .full__body, body.view--full .full-card{position:relative;z-index:2;background:transparent!important;}',
+        
         '.interface-plus-logo-title{position:relative;}',
         '.interface-plus-card-logo{display:block;width:auto;height:auto;max-width:100%;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45));}',
         '.interface-plus-card-logo.ready{opacity:1;}',
@@ -1167,6 +1186,7 @@
             restoreTitle(activeCard.root);
         }
 
+        document.body.classList.remove('view--full');
         activeCard = null;
     }
 
@@ -1220,6 +1240,10 @@
 
         stopCard(false);
 
+        // УВІМКНЕННЯ NETFLIX СТИЛЮ ДЛЯ ПОВНОЇ КАРТКИ МИТТЄВО З КЕШУ
+        document.body.classList.add('view--full');
+        applyFullCardNetflixBackground(d);
+
         var token = activeCardToken;
 
         activeCard = {
@@ -1230,7 +1254,6 @@
             observer: null
         };
 
-        /* МИТТЄВЕ ЗОБРАЖЕННЯ З КЕШУ ЯКЩО ВОНО ВЖЕ БУЛО ЗАВАНТАЖЕНО В БАНЕРІ */
         if (showCardLogoInstant(root, d)) return;
 
         if (window.MutationObserver) {
@@ -1711,7 +1734,7 @@
             }
         });
 
-        log('Cached card logos & cinematic shift initialized');
+        log('Netflix-style full card & instant cache initialized');
     }
 
     if (window.appready) {
