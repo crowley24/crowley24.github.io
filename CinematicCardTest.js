@@ -2,23 +2,25 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.8.1 — NETFLIX CINEMATIC FULL CARD
+     * INTERFACE+ 1.8.2 — REAL NETFLIX CINEMATIC FULL CARD
      * TMDB ONLY
      *
-     * FIXES 1.8.1:
-     * - Fixed empty full-card layout
-     * - Does not blindly hide the left content column
-     * - Detects the actual content container
-     * - Preserves native Lampa buttons and actions
-     * - Keeps the full-screen backdrop behind card content
-     * - Supports full-start-new and full-start layouts
-     * - Shared TMDB logo and backdrop cache
-     * - Smooth backdrop transitions
-     * - Preserved home hero and menu shift
+     * 1.8.2:
+     * - Rebuilds the full-card visual layout inside INTERFACE+
+     * - Moves native Lampa DOM elements instead of cloning buttons
+     * - Preserves original Lampa actions and event handlers
+     * - Creates a dedicated cinematic bottom content panel
+     * - Full-screen fixed backdrop using shared TMDB cache
+     * - Shared logo cache with home hero
+     * - Cached logo appears immediately
+     * - Keeps backdrop fixed while navigating inside the card
+     * - Prevents the original card layout from showing underneath
+     * - Restores moved elements when the card is disabled/destroyed
+     * - Preserves home hero, menu shift, font and interface settings
      */
 
-    var VERSION = '1.8.1';
-    var READY_KEY = 'interface_plus_tmdb_only_181';
+    var VERSION = '1.8.2';
+    var READY_KEY = 'interface_plus_tmdb_only_182';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -66,6 +68,27 @@
         '.full-card__title',
         '.left-title__content .full-start__title',
         '.left-title__content .full-start-new__title'
+    ].join(',');
+
+    var DESCRIPTION_SELECTOR = [
+        '.full-start-new__description',
+        '.full-start__description',
+        '.full__description',
+        '.full-card__description',
+        '.left-title__content .full-start__description'
+    ].join(',');
+
+    var BUTTONS_SELECTOR = [
+        '.full-start-new__buttons',
+        '.full-start__buttons',
+        '.full__buttons',
+        '.full-card__buttons'
+    ].join(',');
+
+    var REACTIONS_SELECTOR = [
+        '.full-start-new__reactions',
+        '.full-start__reactions',
+        '.full__reactions'
     ].join(',');
 
     /* -------------------------------------------------------
@@ -852,43 +875,43 @@
         'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
-        /* FULL CARD BACKGROUND */
-        '.interface-plus-full-card-bg{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;overflow:hidden;pointer-events:none!important;z-index:0!important;background:#000;opacity:1;}',
+        /* FULL CARD BACKDROP */
+        '.interface-plus-full-card-bg{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;overflow:hidden;pointer-events:none!important;z-index:0!important;background:#000!important;opacity:1!important;}',
         '.interface-plus-full-card-bg__image{position:absolute;inset:0;width:100%;height:100%;background-size:cover;background-position:center 42%;background-repeat:no-repeat;opacity:0;transition:opacity .38s ease;will-change:opacity;transform:scale(1.015);}',
         '.interface-plus-full-card-bg__image.show{opacity:1;}',
         '.interface-plus-full-card-bg__shade{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.58),rgba(0,0,0,.27) 36%,rgba(0,0,0,.06) 72%),linear-gradient(0deg,#000 0%,rgba(0,0,0,.96) 7%,rgba(0,0,0,.76) 18%,rgba(0,0,0,.30) 39%,rgba(0,0,0,.08) 68%,rgba(0,0,0,.22) 100%);}',
         '.interface-plus-full-card-bg__shade:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 52% 38%,transparent 28%,rgba(0,0,0,.20) 100%);}',
 
-        /* ROOT AND CARD VIEW */
-        '.interface-plus-full-card-root{position:relative!important;min-height:100vh!important;background:transparent!important;overflow:visible!important;}',
+        /* FULL CARD ROOT */
+        '.interface-plus-full-card-root{position:relative!important;min-height:100vh!important;height:100vh!important;background:transparent!important;overflow:visible!important;}',
         '.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start,.interface-plus-full-card-root .full-card{position:relative!important;min-height:100vh!important;height:100vh!important;background:transparent!important;overflow:visible!important;}',
         '.interface-plus-full-card-root .full-start-new__body,.interface-plus-full-card-root .full-start__body{position:relative!important;display:block!important;width:100%!important;min-height:100vh!important;height:100vh!important;margin:0!important;padding:0!important;background:transparent!important;z-index:2!important;}',
 
-        /*
-         * IMPORTANT FIX:
-         * Do not hide the left column unconditionally.
-         * Some Lampa templates place the actual content there.
-         */
-        '.interface-plus-full-card-root .full-start-new__left,.interface-plus-full-card-root .full-start__left{position:relative!important;z-index:3!important;background:transparent!important;}',
-        '.interface-plus-full-card-root .interface-plus-card-poster-hidden{display:none!important;}',
-
-        '.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right{position:absolute!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;min-width:0!important;margin:0!important;padding:0!important;z-index:4!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-end!important;background:transparent!important;}',
-        '.interface-plus-full-card-root .interface-plus-netflix-content{position:absolute!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;z-index:4!important;}',
-
-        '.interface-plus-full-card-root .full-start-new__title,.interface-plus-full-card-root .full-start__title{font-size:clamp(2em,4vw,4.3em)!important;line-height:1.04!important;font-weight:800!important;letter-spacing:-.035em!important;color:#fff!important;margin:0 0 1.05em!important;text-shadow:0 3px 18px rgba(0,0,0,.65)!important;filter:drop-shadow(0 3px 12px rgba(0,0,0,.75));}',
-        '.interface-plus-full-card-root .interface-plus-card-logo{display:block!important;max-width:min(48vw,620px)!important;margin:0 0 .12em!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,.72))!important;}',
-        '.interface-plus-full-card-root .interface-plus-logo-title.interface-plus-logo-active{height:auto!important;min-height:0!important;margin-bottom:1.1em!important;}',
-        '.interface-plus-full-card-root .full-start-new__details,.interface-plus-full-card-root .full-start__details{position:relative!important;z-index:4!important;margin:0 0 1em!important;color:rgba(255,255,255,.92)!important;font-size:1.08em!important;line-height:1.5!important;}',
-        '.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{position:relative!important;z-index:4!important;max-width:760px!important;width:100%!important;margin:0 0 1.25em!important;color:rgba(255,255,255,.88)!important;font-size:1.08em!important;line-height:1.48!important;text-shadow:0 2px 10px rgba(0,0,0,.65)!important;display:-webkit-box!important;-webkit-line-clamp:4!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}',
-        '.interface-plus-full-card-root .full-start-new__buttons,.interface-plus-full-card-root .full-start__buttons{position:relative!important;z-index:5!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:.65em!important;margin:0!important;}',
-        '.interface-plus-full-card-root .full-start-new__buttons .selector,.interface-plus-full-card-root .full-start__buttons .selector{margin:0!important;}',
-        '.interface-plus-full-card-root .full-start-new__buttons .button,.interface-plus-full-card-root .full-start__buttons .button{border-radius:.35em!important;}',
-        '.interface-plus-full-card-root .full-start-new__reactions,.interface-plus-full-card-root .full-start__reactions{position:relative!important;z-index:5!important;}',
+        /* THE NEW CONTENT PANEL */
+        '.interface-plus-netflix-panel{position:fixed!important;left:5.2vw!important;right:auto!important;top:auto!important;bottom:5.5vh!important;width:min(58vw,850px)!important;max-width:850px!important;max-height:88vh!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-end!important;gap:0!important;padding:0!important;margin:0!important;background:transparent!important;z-index:20!important;pointer-events:none!important;}',
+        '.interface-plus-netflix-panel>*{pointer-events:auto;}',
+        '.interface-plus-netflix-panel .full-start-new__title,.interface-plus-netflix-panel .full-start__title,.interface-plus-netflix-panel .full__title,.interface-plus-netflix-panel .full-card__title{display:block!important;width:auto!important;max-width:100%!important;margin:0 0 15px!important;padding:0!important;font-size:clamp(2em,4vw,4.3em)!important;line-height:1.04!important;font-weight:800!important;letter-spacing:-.035em!important;color:#fff!important;text-shadow:0 3px 18px rgba(0,0,0,.65)!important;filter:drop-shadow(0 3px 12px rgba(0,0,0,.75));}',
+        '.interface-plus-netflix-panel .interface-plus-card-logo{display:block!important;max-width:min(48vw,620px)!important;margin:0 0 14px!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,.72))!important;}',
+        '.interface-plus-netflix-panel .interface-plus-logo-title.interface-plus-logo-active{height:auto!important;min-height:0!important;margin-bottom:14px!important;}',
+        '.interface-plus-card-meta{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px!important;margin:0 0 14px!important;color:rgba(255,255,255,.88)!important;font-size:1.04em!important;line-height:1.4!important;font-weight:500!important;text-shadow:0 2px 8px rgba(0,0,0,.7)!important;}',
+        '.interface-plus-card-meta__rating{color:#f0ca78!important;font-weight:800!important;}',
+        '.interface-plus-card-meta__separator{color:rgba(255,255,255,.42)!important;}',
+        '.interface-plus-card-meta__genre{color:rgba(235,238,243,.88)!important;}',
+        '.interface-plus-netflix-panel .full-start-new__description,.interface-plus-netflix-panel .full-start__description,.interface-plus-netflix-panel .full__description,.interface-plus-netflix-panel .full-card__description{display:-webkit-box!important;width:100%!important;max-width:760px!important;margin:0 0 20px!important;padding:0!important;color:rgba(255,255,255,.90)!important;font-size:1.08em!important;line-height:1.48!important;text-shadow:0 2px 10px rgba(0,0,0,.75)!important;-webkit-line-clamp:4!important;-webkit-box-orient:vertical!important;overflow:hidden!important;}',
+        '.interface-plus-netflix-panel .full-start-new__buttons,.interface-plus-netflix-panel .full-start__buttons,.interface-plus-netflix-panel .full__buttons{position:relative!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:.65em!important;width:100%!important;margin:0!important;padding:0!important;z-index:5!important;}',
+        '.interface-plus-netflix-panel .full-start-new__buttons .selector,.interface-plus-netflix-panel .full-start__buttons .selector{margin:0!important;}',
+        '.interface-plus-netflix-panel .full-start-new__buttons .button,.interface-plus-netflix-panel .full-start__buttons .button{border-radius:.35em!important;}',
+        '.interface-plus-netflix-panel .full-start-new__reactions,.interface-plus-netflix-panel .full-start__reactions{position:relative!important;margin-top:12px!important;z-index:5!important;}',
+        '.interface-plus-netflix-panel .full-start-new__details,.interface-plus-netflix-panel .full-start__details{display:none!important;}',
         '.interface-plus-full-card-root .full-start__background{opacity:0!important;visibility:hidden!important;display:none!important;}',
-        '.interface-plus-full-card-root .full-start-new__right>*,.interface-plus-full-card-root .full-start__right>*{max-width:100%;}',
+        '.interface-plus-full-card-root .full-start-new__left,.interface-plus-full-card-root .full-start__left{background:transparent!important;}',
+        '.interface-plus-card-poster-hidden{display:none!important;}',
 
-        '@media(max-width:900px){.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right,.interface-plus-full-card-root .interface-plus-netflix-content{left:4vw!important;width:70vw!important;bottom:4vh!important;}}',
-        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.94) 12%,rgba(0,0,0,.68) 31%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.28) 100%);}.interface-plus-full-card-root .full-start-new,.interface-plus-full-card-root .full-start{height:100vh!important;}.interface-plus-full-card-root .full-start-new__right,.interface-plus-full-card-root .full-start__right,.interface-plus-full-card-root .interface-plus-netflix-content{left:5vw!important;right:5vw!important;width:auto!important;max-width:none!important;bottom:4vh!important;}.interface-plus-full-card-root .interface-plus-card-logo{max-width:82vw!important;}.interface-plus-full-card-root .full-start-new__description,.interface-plus-full-card-root .full-start__description{-webkit-line-clamp:3!important;font-size:1em!important;}}',
+        /* Hide only the empty original layout containers */
+        '.interface-plus-full-card-root .interface-plus-original-empty{display:none!important;}',
+
+        '@media(max-width:900px){.interface-plus-netflix-panel{left:4vw!important;width:70vw!important;bottom:4vh!important;}}',
+        '@media(max-width:700px){.interface-plus-full-card-bg__image{background-position:center center;}.interface-plus-full-card-bg__shade{background:linear-gradient(0deg,#000 0%,rgba(0,0,0,.94) 12%,rgba(0,0,0,.68) 31%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.28) 100%);}.interface-plus-netflix-panel{left:5vw!important;right:5vw!important;width:auto!important;max-width:none!important;bottom:4vh!important;max-height:82vh!important;}.interface-plus-netflix-panel .interface-plus-card-logo{max-width:82vw!important;}.interface-plus-netflix-panel .full-start-new__description,.interface-plus-netflix-panel .full-start__description{-webkit-line-clamp:3!important;font-size:1em!important;}}',
         '@media(max-width:480px){.banner-hero__info{left:1.5em;width:75%;}.banner-screen-bg__image{background-position:center 60%;}}',
         '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}'
     ].join('\n');
@@ -1412,7 +1435,7 @@
     }
 
     /* -------------------------------------------------------
-       NETFLIX CARD LAYOUT
+       NETFLIX PANEL
     ------------------------------------------------------- */
 
     function findCardView(root) {
@@ -1423,90 +1446,299 @@
         ) || root;
     }
 
-    function findCardContent(root) {
+    function ensureNetflixPanel(root) {
         if (!root) return null;
 
-        /*
-         * Prefer the standard right-side content container.
-         */
-        var right = root.querySelector(
-            '.full-start-new__right,.full-start__right'
+        var panel = root.querySelector(
+            '.interface-plus-netflix-panel'
         );
 
-        if (right) return right;
+        if (panel) return panel;
 
-        /*
-         * Some Lampa templates use left-title content.
-         */
-        var leftTitle = root.querySelector(
-            '.left-title__content'
-        );
+        panel = document.createElement('div');
+        panel.className = 'interface-plus-netflix-panel';
 
-        if (leftTitle) return leftTitle;
+        root.appendChild(panel);
 
-        /*
-         * Fallback: search the left column for actual title,
-         * description or buttons before using it.
-         */
-        var left = root.querySelector(
-            '.full-start-new__left,.full-start__left'
-        );
-
-        if (left) {
-            if (
-                left.querySelector(
-                    TITLE_SELECTOR +
-                    ',.full-start-new__description,' +
-                    '.full-start__description,' +
-                    '.full-start-new__buttons,' +
-                    '.full-start__buttons'
-                )
-            ) {
-                return left;
-            }
-        }
-
-        return null;
+        return panel;
     }
 
-    function applyNetflixLayout(root) {
-        if (!root) return;
+    function addMovedNode(nodeToMove, panel) {
+        if (!nodeToMove || !panel) return;
 
-        root.classList.add('interface-plus-full-card-root');
-
-        var view = findCardView(root);
-
-        if (view) {
-            view.classList.add('interface-plus-netflix-card');
+        if (nodeToMove === panel || panel.contains(nodeToMove)) {
+            return;
         }
 
-        var content = findCardContent(root);
+        if (!activeCard) return;
 
-        if (content) {
-            content.classList.add(
-                'interface-plus-netflix-content'
-            );
+        var exists = activeCard.moved.some(function (item) {
+            return item.node === nodeToMove;
+        });
 
-            /*
-             * Do not move or clone the native buttons.
-             * Their original Lampa event handlers remain intact.
-             */
+        if (!exists) {
+            activeCard.moved.push({
+                node: nodeToMove,
+                parent: nodeToMove.parentNode,
+                next: nodeToMove.nextSibling
+            });
+        }
+
+        panel.appendChild(nodeToMove);
+    }
+
+    function queryFirst(root, selector) {
+        if (!root) return null;
+
+        var found = root.querySelector(selector);
+
+        if (
+            found &&
+            found.closest('.interface-plus-netflix-panel')
+        ) {
+            return null;
+        }
+
+        return found;
+    }
+
+    function moveNativeCardElements(root) {
+        if (!root || !activeCard) return;
+
+        var panel = ensureNetflixPanel(root);
+
+        if (!panel) return;
+
+        /*
+         * Move the original Lampa nodes.
+         * No cloneNode(), no replacement buttons.
+         * Existing Lampa event handlers remain attached.
+         */
+
+        var title = queryFirst(root, TITLE_SELECTOR);
+
+        if (title) {
+            addMovedNode(title, panel);
         }
 
         /*
-         * Hide only a clearly separate poster-only element.
-         * Never hide the complete left column by default.
+         * The metadata row is generated from the current TMDB
+         * object. Native details are not moved to avoid duplicate
+         * year/rating information.
          */
+
+        var tagline = queryFirst(
+            root,
+            '.full-start-new__tagline,.full-start__tagline,.full__tagline'
+        );
+
+        if (tagline) {
+            addMovedNode(tagline, panel);
+        }
+
+        var description = queryFirst(
+            root,
+            DESCRIPTION_SELECTOR
+        );
+
+        if (description) {
+            addMovedNode(description, panel);
+        }
+
+        var buttons = queryFirst(
+            root,
+            BUTTONS_SELECTOR
+        );
+
+        if (buttons) {
+            addMovedNode(buttons, panel);
+        }
+
+        var reactions = queryFirst(
+            root,
+            REACTIONS_SELECTOR
+        );
+
+        if (reactions) {
+            addMovedNode(reactions, panel);
+        }
+
         var poster = root.querySelector(
             '.full-start-new__left .full-start__poster,' +
             '.full-start__left .full-start__poster,' +
-            '.full-start-new__left .full-start-new__poster'
+            '.full-start-new__left .full-start-new__poster,' +
+            '.full-start__poster'
         );
 
         if (poster) {
             poster.classList.add(
                 'interface-plus-card-poster-hidden'
             );
+        }
+
+        /*
+         * Mark only empty original columns as hidden.
+         * The native content has already been moved to the panel.
+         */
+        var columns = root.querySelectorAll(
+            '.full-start-new__left,.full-start-new__right,' +
+            '.full-start__left,.full-start__right'
+        );
+
+        Array.prototype.forEach.call(columns, function (column) {
+            if (
+                !column.querySelector(
+                    TITLE_SELECTOR + ',' +
+                    DESCRIPTION_SELECTOR + ',' +
+                    BUTTONS_SELECTOR + ',' +
+                    REACTIONS_SELECTOR
+                ) &&
+                !column.querySelector(
+                    '.selector,.button'
+                )
+            ) {
+                column.classList.add(
+                    'interface-plus-original-empty'
+                );
+            }
+        });
+    }
+
+    function applyNetflixLayout(root) {
+        if (!root) return;
+
+        root.classList.add(
+            'interface-plus-full-card-root'
+        );
+
+        var view = findCardView(root);
+
+        if (view) {
+            view.classList.add(
+                'interface-plus-netflix-card'
+            );
+        }
+
+        moveNativeCardElements(root);
+        updateCardMeta();
+    }
+
+    function restoreMovedNodes(card) {
+        if (!card || !card.moved) return;
+
+        for (var i = card.moved.length - 1; i >= 0; i--) {
+            var item = card.moved[i];
+
+            if (
+                !item.node ||
+                !item.parent ||
+                !item.parent.isConnected
+            ) {
+                continue;
+            }
+
+            try {
+                if (
+                    item.next &&
+                    item.next.parentNode === item.parent
+                ) {
+                    item.parent.insertBefore(
+                        item.node,
+                        item.next
+                    );
+                } else {
+                    item.parent.appendChild(item.node);
+                }
+            } catch (e) {}
+        }
+
+        card.moved = [];
+    }
+
+    /* -------------------------------------------------------
+       CARD META
+    ------------------------------------------------------- */
+
+    function updateCardMeta() {
+        if (!activeCard || !activeCard.root) return;
+
+        var panel = ensureNetflixPanel(activeCard.root);
+
+        if (!panel) return;
+
+        var meta = panel.querySelector(
+            '.interface-plus-card-meta'
+        );
+
+        if (!meta) {
+            meta = document.createElement('div');
+            meta.className = 'interface-plus-card-meta';
+
+            var title = panel.querySelector(TITLE_SELECTOR);
+
+            if (title && title.nextSibling) {
+                panel.insertBefore(meta, title.nextSibling);
+            } else {
+                panel.insertBefore(meta, panel.firstChild);
+            }
+        }
+
+        meta.textContent = '';
+
+        var d = activeCard.data || {};
+        var parts = [];
+
+        var rating = Number(d.vote_average) || 0;
+
+        if (rating > 0) {
+            parts.push({
+                text: '★ ' + rating.toFixed(1),
+                cls: 'interface-plus-card-meta__rating'
+            });
+        }
+
+        var year = movieYear(d);
+
+        if (year) {
+            parts.push({
+                text: year,
+                cls: ''
+            });
+        }
+
+        var genres = movieGenres(d);
+
+        if (genres.length) {
+            parts.push({
+                text: genres.join(' / '),
+                cls: 'interface-plus-card-meta__genre'
+            });
+        }
+
+        parts.forEach(function (part, index) {
+            if (index) {
+                var separator = document.createElement('span');
+
+                separator.className =
+                    'interface-plus-card-meta__separator';
+
+                separator.textContent = '·';
+
+                meta.appendChild(separator);
+            }
+
+            var item = document.createElement('span');
+
+            item.className = part.cls;
+            item.textContent = part.text;
+
+            meta.appendChild(item);
+        });
+
+        if (!parts.length) {
+            meta.style.display = 'none';
+        } else {
+            meta.style.display = 'flex';
         }
     }
 
@@ -1640,8 +1872,28 @@
 
         if (layer) layer.remove();
 
+        var panel = root.querySelector(
+            '.interface-plus-netflix-panel'
+        );
+
+        if (panel) panel.remove();
+
         root.classList.remove(
-            'interface-plus-full-card-root'
+            'interface-plus-full-card-root',
+            'interface-plus-netflix-card'
+        );
+
+        Array.prototype.forEach.call(
+            root.querySelectorAll(
+                '.interface-plus-card-poster-hidden,' +
+                '.interface-plus-original-empty'
+            ),
+            function (el) {
+                el.classList.remove(
+                    'interface-plus-card-poster-hidden',
+                    'interface-plus-original-empty'
+                );
+            }
         );
     }
 
@@ -1652,9 +1904,9 @@
     function showCardLogoInstant(root, d) {
         var holder = getLogoHolder(d);
         var hit = holder.tfeed_logo;
-        var title = hit && findTitle(root);
+        var title = findTitle(root);
 
-        if (!title) return false;
+        if (!hit || !title) return false;
 
         var logo = prepareLogo(title);
 
@@ -1683,9 +1935,13 @@
             activeCard.observer.disconnect();
         }
 
-        if (restore && activeCard && activeCard.root) {
-            restoreTitle(activeCard.root);
-            removeCardBackground(activeCard.root);
+        if (restore && activeCard) {
+            restoreMovedNodes(activeCard);
+
+            if (activeCard.root) {
+                restoreTitle(activeCard.root);
+                removeCardBackground(activeCard.root);
+            }
         }
 
         activeCard = null;
@@ -1730,6 +1986,42 @@
         return true;
     }
 
+    function installCardObserver(root, token, key) {
+        if (!window.MutationObserver || !root) return;
+
+        var observer = new MutationObserver(function () {
+            if (!cardCurrent(token, key)) return;
+
+            /*
+             * If Lampa redraws part of the card, move the new
+             * native elements into the same Netflix panel.
+             */
+            applyNetflixLayout(root);
+
+            var title = findTitle(root);
+
+            if (
+                title &&
+                activeCard.src &&
+                !title.querySelector(
+                    '.interface-plus-card-logo'
+                )
+            ) {
+                applyLogoToCard(
+                    root,
+                    activeCard.src
+                );
+            }
+        });
+
+        observer.observe(root, {
+            childList: true,
+            subtree: true
+        });
+
+        activeCard.observer = observer;
+    }
+
     function startCard(o, override, force) {
         if (!cardEnabled() || !isFull(o)) return;
 
@@ -1760,52 +2052,22 @@
             src: '',
             observer: null,
             bgLayer: null,
-            token: token
+            token: token,
+            moved: []
         };
 
         applyNetflixLayout(root);
 
         setCardBackdrop(root, d, token);
 
+        installCardObserver(root, token, key);
+
         /*
-         * Cached logo is displayed immediately.
+         * Cached logo appears immediately.
          */
         if (showCardLogoInstant(root, d)) {
+            updateCardMeta();
             return;
-        }
-
-        /*
-         * Wait for the native Lampa card template to finish
-         * rendering its title and content.
-         */
-        if (window.MutationObserver) {
-            var observer = new MutationObserver(function () {
-                if (!cardCurrent(token, key)) return;
-
-                applyNetflixLayout(root);
-
-                var title = findTitle(root);
-
-                if (
-                    title &&
-                    activeCard.src &&
-                    !title.querySelector(
-                        '.interface-plus-card-logo'
-                    )
-                ) {
-                    applyLogoToCard(
-                        root,
-                        activeCard.src
-                    );
-                }
-            });
-
-            observer.observe(root, {
-                childList: true,
-                subtree: true
-            });
-
-            activeCard.observer = observer;
         }
 
         ensureLogo(d, function (url) {
@@ -1815,7 +2077,9 @@
 
             if (!url) return;
 
+            applyNetflixLayout(root);
             applyLogoToCard(root, url);
+            updateCardMeta();
         });
     }
 
@@ -2309,7 +2573,7 @@
             }
         });
 
-        log('Netflix cinematic full card initialized');
+        log('Real Netflix cinematic full card initialized');
     }
 
     if (window.appready) {
