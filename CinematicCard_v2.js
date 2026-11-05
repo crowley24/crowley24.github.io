@@ -2,21 +2,20 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.6.9 — MENU CINEMATIC SHIFT
+     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT
      * TMDB ONLY
      *
-     * CHANGES 1.6.9:
-     * - Cinematic banner shift when Lampa menu opens
-     * - Background shifts together with hero
-     * - Smooth menu transition
-     * - Black area revealed behind left navigation
-     * - Banner hidden on non-main activities
-     * - Hero restoration after returning from full card
-     * - Preserved TMDB logo cache and adaptive sizing
+     * CHANGES 1.7.0:
+     * - Synchronized hero and background menu shift
+     * - Background keeps original width and image framing
+     * - Desktop menu shift: 20em
+     * - Mobile menu shift: 16em
+     * - Unified transition timing and easing
+     * - Preserved all 1.6.9 functionality
      */
 
-    var VERSION = '1.6.9';
-    var READY_KEY = 'interface_plus_tmdb_only_169';
+    var VERSION = '1.7.0';
+    var READY_KEY = 'interface_plus_tmdb_only_170';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -36,7 +35,8 @@
     var LOGO_PREFETCH_AHEAD = 10;
     var BACKDROP_CACHE_LIMIT = 12;
 
-    var MENU_SHIFT = '18em';
+    var MENU_SHIFT = '20em';
+    var MENU_SHIFT_MOBILE = '16em';
 
     var logoItems = {};
     var backdropCache = {};
@@ -662,8 +662,8 @@
     /* CSS стилі */
 
     var CSS = [
-        '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease,width .28s ease;will-change:transform;}',
-        '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease,transform .28s ease;will-change:opacity,transform;}',
+        '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
+        '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease;will-change:opacity;}',
         '.banner-screen-bg__image.show{opacity:1;}',
         '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30) 0vh,rgba(0,0,0,.20) 8vh,rgba(0,0,0,.09) 17vh,rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 0vh,rgba(0,0,0,0) 35vh,rgba(0,0,0,.04) 40vh,rgba(0,0,0,.12) 45vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.60) 55vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
         '.banner-host{position:relative;z-index:1;}',
@@ -688,12 +688,12 @@
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
-        /* MENU CINEMATIC SHIFT */
-        'body.menu--open #interface-plus-screen-background{width:calc(100% - ' + MENU_SHIFT + ');transform:translateX(' + MENU_SHIFT + ');}',
+        /* MENU CINEMATIC SHIFT — однакова геометрія для банера і фону */
+        'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
         '@media(max-width:480px){.banner-hero__info{left:1.5em;width:75%;}.banner-screen-bg__image{background-position:center 60%;}}',
-        '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:calc(100% - 14em);transform:translateX(14em);}body.menu--open .banner-host .banner-hero{transform:translateX(14em);}}'
+        '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}'
     ].join('\n');
 
     function installStyle() {
@@ -1709,7 +1709,7 @@
             }
         });
 
-        log('Kinotraylery logo engine initialized');
+        log('Precise menu cinematic shift initialized');
     }
 
     if (window.appready) {
