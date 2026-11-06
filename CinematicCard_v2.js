@@ -2,1721 +2,1798 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT
-     * TMDB ONLY
-     *
-     * CHANGES 1.7.0:
-     * - Synchronized hero and background menu shift
-     * - Background keeps original width and image framing
-     * - Desktop menu shift: 20em
-     * - Mobile menu shift: 16em
-     * - Unified transition timing and easing
-     * - Preserved all 1.6.9 functionality
+     * @name NEWCARD
+     * @version 3.3.7 + Interface+ Bridge
+     * @author Crowley24
+     * @description Cinematic TV interface with Trailer Feed logo behavior and Interface+ cache integration
+     * @platforms Lampa | Android TV
      */
 
-    var VERSION = '1.7.0';
-    var READY_KEY = 'interface_plus_tmdb_only_170';
+    const PLUGIN_NAME = 'NewCard';
+    const PLUGIN_ID = 'new_card_style';
 
-    if (window[READY_KEY]) return;
-    window[READY_KEY] = true;
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;
+    const LOGO_CACHE_TIMEOUT = CACHE_LIFETIME;
+    const REQUEST_TIMEOUT = 12000;
 
-    var P = 'interface_plus_';
-    var S = {
-        hero: 'banner_hero_enabled',
-        size: 'interface_size',
-        font: 'fontchanger_selected',
-        card: P + 'card_logo',
-        scale: P + 'logo_scale'
+    let currentInterval = null;
+    let logoRequestId = 0;
+    let cardRequestId = 0;
+    let logoRequests = {};
+    let detailsRequests = {};
+    let debounceTimer = null;
+    let slideshowGeneration = 0;
+
+    const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
+
+    const TRANSLATIONS = {
+        'settings_cas_meta_size': 'Розмір шрифту',
+        'settings_cas_blocks_gap': 'Відступи між блоками',
+        'settings_cas_bg_animation': 'Анімація фону',
+        'settings_cas_animation_style': 'Стиль анімації появи',
+        'settings_cas_slideshow_enabled': 'Слайд-шоу фону',
+        'settings_cas_show_studios': 'Показувати студії',
+        'settings_cas_show_tagline': 'Показувати слоган'
     };
 
-    var LOGO_SIZE = 'w500';
-    var BACKDROP_SIZE = 'w1280';
-    var LOGO_CACHE_TIMEOUT = 20000;
-    var LOGO_PREFETCH_AHEAD = 10;
-    var BACKDROP_CACHE_LIMIT = 12;
+    // =====================================================
+    // HELPERS
+    // =====================================================
 
-    var MENU_SHIFT = '20em';
-    var MENU_SHIFT_MOBILE = '16em';
+    function debounce(func, delay) {
+        return function () {
+            const context = this;
+            const args = arguments;
 
-    var logoItems = {};
-    var backdropCache = {};
-    var backdropCacheOrder = [];
-    var backdropPending = {};
-    var generation = 0;
+            clearTimeout(debounceTimer);
 
-    var initialized = false;
-    var focusTimer = null;
-    var restoreTimer = null;
-    var activeHero = null;
-    var activeCard = null;
-    var activeCardToken = 0;
-    var lastFocusKey = '';
-    var screenBackground = null;
-    var currentFont = '';
-    var currentSize = '';
-    var menuObserver = null;
-
-    var TITLE_SELECTOR = '.full-start__title, .full-start-new__title, .full__title, .full-card__title';
-
-    /* Утиліти */
-
-    function log() {
-        try {
-            console.log.apply(console, ['[INTERFACE+ ' + VERSION + ']'].concat([].slice.call(arguments)));
-        } catch (e) {}
+            debounceTimer = setTimeout(
+                () => func.apply(context, args),
+                delay
+            );
+        };
     }
 
-    function storageGet(k, f) {
-        try { return Lampa.Storage.get(k, f); } catch (e) { return f; }
+    function preloadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
     }
 
-    function enabled(k, f) {
-        var v = storageGet(k, f);
-        return v === true || v === 'true' || v === 1 || v === '1';
+    function formatTime(mins) {
+        mins = parseInt(mins) || 0;
+
+        if (!mins) return '';
+
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
-    function text(v) {
-        return String(v == null ? '' : v).trim();
-    }
+    function getRating(data) {
+        if (!data) return 0;
 
-    function first() {
-        for (var i = 0; i < arguments.length; i++) {
-            var v = text(arguments[i]);
-            if (v) return v;
+        let rating = parseFloat(data.vote_average);
+
+        if (!rating && data.rating) {
+            rating = parseFloat(data.rating);
         }
+
+        if (!isFinite(rating) || rating <= 0) return 0;
+
+        return Math.min(rating, 10);
+    }
+
+    function getYear(data) {
+        const date = data.release_date || data.first_air_date;
+
+        if (!date) return '';
+
+        const year = parseInt(String(date).substring(0, 4));
+
+        return year > 1800 ? year : '';
+    }
+
+    function getCountry(data) {
+        if (
+            data.production_countries &&
+            data.production_countries.length
+        ) {
+            return data.production_countries
+                .map(item => item.name)
+                .filter(Boolean)
+                .slice(0, 2)
+                .join(', ');
+        }
+
+        if (
+            data.origin_country &&
+            data.origin_country.length
+        ) {
+            return data.origin_country.join(', ');
+        }
+
         return '';
     }
 
-    function node(v) {
-        return v && v.nodeType === 1 ? v :
-            (v && v[0] && v[0].nodeType === 1 ? v[0] : null);
-    }
+    function getRuntime(data) {
+        if (data.runtime) return data.runtime;
 
-    function renderActivity(o) {
-        var r = null;
-        try {
-            if (o && o.activity && o.activity.render) r = o.activity.render(true);
-        } catch (e) {}
-
-        if (!r) {
-            try {
-                if (o && o.render) r = o.render(true);
-            } catch (e) {}
+        if (
+            data.episode_run_time &&
+            data.episode_run_time.length
+        ) {
+            return data.episode_run_time[0];
         }
 
-        return node(r);
+        return 0;
     }
 
-    function activeActivity() {
-        try { return Lampa.Activity.active(); } catch (e) { return null; }
+    function initializePlugin() {
+        addCustomTemplate();
+        addStyles();
+        addSettings();
+        attachLoader();
     }
 
-    function isFull(o) {
-        var c = text(o && o.component).toLowerCase();
-        return c === 'full' || c === 'full_start' || c === 'fullstart';
-    }
+    // =====================================================
+    // SETTINGS
+    // =====================================================
 
-    function isMain(o) {
-        var c = text(o && o.component).toLowerCase();
-        return c === 'main';
-    }
+    function addSettings() {
+        const defaults = {
+            'cas_bg_animation': 'kenburns',
+            'cas_animation_style': 'slide',
+            'cas_slideshow_enabled': true,
+            'cas_blocks_gap': '20',
+            'cas_meta_size': '1.3',
+            'cas_show_studios': true,
+            'cas_show_tagline': true
+        };
 
-    function movieType(d) {
-        if (!d) return 'movie';
-
-        return (
-            d.media_type === 'tv' ||
-            d.type === 'tv' ||
-            d.type === 'series' ||
-            d.first_air_date ||
-            d.number_of_seasons ||
-            (d.name && !d.title)
-        ) ? 'tv' : 'movie';
-    }
-
-    function movieYear(d) {
-        var m = first(
-            d && d.release_date,
-            d && d.first_air_date,
-            d && d.year
-        ).match(/\b(19|20)\d{2}\b/);
-
-        return m ? m[0] : '';
-    }
-
-    function movieTitle(d) {
-        return first(
-            d && d.title,
-            d && d.name,
-            d && d.original_title,
-            d && d.original_name
-        );
-    }
-
-    function normalizeTitle(s) {
-        return text(s)
-            .toLowerCase()
-            .normalize('NFKD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\p{L}\p{N}]+/gu, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    function identity(d) {
-        if (!d) return '';
-
-        return [
-            movieType(d),
-            first(d.tmdb_id, d.tmdbId, d.id),
-            normalizeTitle(movieTitle(d)),
-            movieYear(d)
-        ].join('|');
-    }
-
-    function getMovie(o) {
-        if (!o) return null;
-
-        var list = [
-            o.movie,
-            o.data && o.data.movie,
-            o.data,
-            o.card,
-            o.card_data,
-            o.params && o.params.movie,
-            o.params && o.params.data,
-            o.activity && o.activity.movie,
-            o.activity && o.activity.data
-        ];
-
-        var best = null;
-        var score = -1;
-
-        list.forEach(function (d) {
-            if (!d || typeof d !== 'object') return;
-
-            var s =
-                (movieTitle(d) ? 10 : 0) +
-                (movieYear(d) ? 4 : 0) +
-                (d.tmdb_id || d.tmdbId ? 5 : d.id ? 2 : 0);
-
-            if (s > score && movieTitle(d)) {
-                best = d;
-                score = s;
+        Object.keys(defaults).forEach(key => {
+            if (Lampa.Storage.get(key) === undefined) {
+                Lampa.Storage.set(key, defaults[key]);
             }
         });
 
-        return best;
-    }
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: SETTINGS_ICON
+        });
 
-    var MOVIE_GENRES = {
-        28:'Бойовик', 12:'Пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 14:'Фентезі',
-        36:'Історичний', 27:'Жахи', 10402:'Музика',
-        9648:'Детектив', 10749:'Мелодрама', 878:'Фантастика',
-        10770:'Телефільм', 53:'Трилер', 10752:'Військовий',
-        37:'Вестерн'
-    };
-
-    var TV_GENRES = {
-        10759:'Бойовик і пригоди', 16:'Анімація',
-        35:'Комедія', 80:'Кримінал', 99:'Документальний',
-        18:'Драма', 10751:'Сімейний', 10762:'Дитячий',
-        9648:'Детектив', 10763:'Новини', 10764:'Реаліті-шоу',
-        10765:'Фантастика', 10766:'Мильна опера',
-        10767:'Ток-шоу', 10768:'Війна і політика',
-        37:'Вестерн'
-    };
-
-    function movieGenres(d) {
-        if (!d) return [];
-
-        var res = [];
-        var src = d.genres;
-
-        if (Array.isArray(src) && src.length) {
-            src.forEach(function (g) {
-                var name = typeof g === 'string'
-                    ? g
-                    : first(g && g.name, g && g.ua_name, g && g.title);
-
-                if (name && res.indexOf(name) === -1) res.push(name);
-            });
-        }
-
-        if (!res.length) {
-            var ids = d.genre_ids || d.genres_ids || [];
-            var dict = movieType(d) === 'tv' ? TV_GENRES : MOVIE_GENRES;
-
-            (Array.isArray(ids) ? ids : []).forEach(function (id) {
-                var name = dict[Number(id)];
-                if (name && res.indexOf(name) === -1) res.push(name);
-            });
-        }
-
-        return res.slice(0, 2);
-    }
-
-    function heroEnabled() {
-        return enabled(S.hero, true);
-    }
-
-    function cardEnabled() {
-        return enabled(S.card, true);
-    }
-
-    function logoScale() {
-        var v = parseInt(storageGet(S.scale, '100'), 10);
-        return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
-    }
-
-    /* Адаптивне масштабування логотипів */
-
-    function adaptiveLogoHeight(img, mode) {
-        if (!img || !img.naturalWidth || !img.naturalHeight) return;
-
-        var r = img.naturalWidth / img.naturalHeight;
-
-        var factor =
-            r >= 3.5 ? 1.00 :
-            r >= 3.0 ? 1.04 :
-            r >= 2.5 ? 1.08 :
-            r >= 2.0 ? 1.12 :
-            r >= 1.5 ? 1.16 :
-            r >= 1.1 ? 1.21 : 1.26;
-
-        if (mode === 'hero') {
-            img.style.height = (
-                (window.innerWidth <= 480 ? 5 : 7) * factor
-            ) + 'em';
-        } else {
-            img.style.height = Math.round(
-                (window.innerWidth <= 480 ? 75 : 105) * factor
-            ) + 'px';
-        }
-
-        img.style.width = 'auto';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = 'none';
-        img.style.objectFit = 'contain';
-        img.style.objectPosition = 'left center';
-    }
-
-    function setAdaptiveLogo(img, src, mode) {
-        if (!img || !src) return;
-
-        img.onload = function () {
-            adaptiveLogoHeight(img, mode);
-        };
-
-        img.src = src;
-
-        if (img.complete && img.naturalWidth) {
-            adaptiveLogoHeight(img, mode);
-        }
-    }
-
-    function pickLogo(logos) {
-        var lang = '';
-
-        try {
-            lang = Lampa.Storage.field('tmdb_lang');
-        } catch (e) {}
-
-        var order = [lang || 'en', 'en', null];
-
-        for (var i = 0; i < order.length; i++) {
-            var found = (logos || []).filter(function (l) {
-                return l.iso_639_1 === order[i] && l.file_path;
-            })[0];
-
-            if (found) return found;
-        }
-
-        return (logos || []).filter(function (l) {
-            return l && l.file_path;
-        })[0] || null;
-    }
-
-    function getLogoHolder(item) {
-        var key = identity(item);
-
-        if (!key) return {};
-
-        if (!logoItems[key]) logoItems[key] = {};
-
-        return logoItems[key];
-    }
-
-    function cached(item, key, request, cb) {
-        if (item[key] !== undefined) {
-            cb(item[key]);
-            return;
-        }
-
-        if (item[key + '_wait']) {
-            item[key + '_wait'].push(cb);
-            return;
-        }
-
-        item[key + '_wait'] = [cb];
-
-        var completed = false;
-
-        var timer = setTimeout(function () {
-            finish(null);
-        }, LOGO_CACHE_TIMEOUT);
-
-        function finish(val) {
-            if (completed) return;
-
-            completed = true;
-            clearTimeout(timer);
-
-            item[key] = val || null;
-
-            var list = item[key + '_wait'] || [];
-            item[key + '_wait'] = null;
-
-            list.forEach(function (f) {
-                try { f(item[key]); } catch (e) {}
-            });
-        }
-
-        try {
-            request(finish);
-        } catch (e) {
-            finish(null);
-        }
-    }
-
-    function ensureLogo(item, cb) {
-        cb = cb || function () {};
-
-        if (!item) {
-            cb(null);
-            return;
-        }
-
-        var type = movieType(item);
-        var holder = getLogoHolder(item);
-
-        cached(holder, 'tfeed_logo', function (done) {
-            var id = first(item.tmdb_id, item.tmdbId, item.id);
-
-            if (id && typeof id === 'object') id = id.id;
-
-            id = text(id);
-
-            if (!/^\d+$/.test(id)) {
-                done(null);
-                return;
-            }
-
-            var lang = 'en';
-
-            try {
-                lang = Lampa.Storage.field('tmdb_lang') || 'en';
-            } catch (e) {}
-
-            var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
-
-            if (!tmdb || !tmdb.get) {
-                done(null);
-                return;
-            }
-
-            tmdb.get(
-                type + '/' + id + '/images',
-                {
-                    filter: {
-                        include_image_language: lang + ',en,null'
-                    }
-                },
-                function (json) {
-                    var logo = json && json.logos && json.logos.length
-                        ? pickLogo(json.logos)
-                        : null;
-
-                    done(logo ? Lampa.Api.img(logo.file_path, LOGO_SIZE) : null);
-                },
-                function () {
-                    done(null);
+        const params = [
+            {
+                name: 'cas_meta_size',
+                type: 'select',
+                values: {
+                    '1.1': 'Міні',
+                    '1.2': 'Малий',
+                    '1.3': 'Стандартний',
+                    '1.4': 'Збільшений',
+                    '1.5': 'Великий'
                 }
-            );
-        }, cb);
-    }
-
-    function clearLogoCache() {
-        generation++;
-        logoItems = {};
-
-        refreshAll(true);
-
-        try {
-            Lampa.Noty.show('Кеш логотипів TMDB очищено');
-        } catch (e) {}
-    }
-
-    function preload(url, cb) {
-        if (!url) {
-            cb(false);
-            return;
-        }
-
-        var img = new Image();
-
-        var done = function (ok) {
-            img.onload = null;
-            img.onerror = null;
-            cb(ok);
-        };
-
-        img.onload = function () { done(true); };
-        img.onerror = function () { done(false); };
-        img.src = url;
-
-        if (img.complete && img.naturalWidth) done(true);
-    }
-
-    function rememberBackdrop(url) {
-        if (!url) return;
-
-        var idx = backdropCacheOrder.indexOf(url);
-
-        if (idx !== -1) backdropCacheOrder.splice(idx, 1);
-
-        backdropCache[url] = true;
-        backdropCacheOrder.push(url);
-
-        while (backdropCacheOrder.length > BACKDROP_CACHE_LIMIT) {
-            var old = backdropCacheOrder.shift();
-            if (old) delete backdropCache[old];
-        }
-    }
-
-    function preloadBackdrop(url, cb) {
-        cb = cb || function () {};
-
-        if (!url) {
-            cb(false);
-            return;
-        }
-
-        if (backdropCache[url]) {
-            cb(true);
-            return;
-        }
-
-        if (backdropPending[url]) {
-            backdropPending[url].push(cb);
-            return;
-        }
-
-        backdropPending[url] = [cb];
-
-        var img = new Image();
-
-        var finish = function (ok) {
-            img.onload = null;
-            img.onerror = null;
-
-            if (ok) rememberBackdrop(url);
-
-            var list = backdropPending[url] || [];
-            delete backdropPending[url];
-
-            list.forEach(function (fn) {
-                try { fn(ok); } catch (e) {}
-            });
-        };
-
-        img.onload = function () { finish(true); };
-        img.onerror = function () { finish(false); };
-        img.src = url;
-
-        if (img.complete && img.naturalWidth) finish(true);
-    }
-
-    function imageURL(path, size) {
-        if (!path) return '';
-
-        var p = text(path);
-
-        return 'https://image.tmdb.org/t/p/' +
-            (size || 'w500') +
-            (p.charAt(0) === '/' ? '' : '/') +
-            p;
-    }
-
-    function prefetchHeroBackdrop(d) {
-        if (!d || !d.backdrop_path) return;
-
-        var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
-
-        if (url && !backdropCache[url]) {
-            preloadBackdrop(url, function () {});
-        }
-    }
-
-    function prefetchLogoItem(item) {
-        if (item) {
-            ensureLogo(item, function (url) {
-                if (url) new Image().src = url;
-            });
-        }
-    }
-
-    function prefetchNearbyLogos(card, root) {
-        if (!card || !root) return;
-
-        var cards = root.querySelectorAll('.card');
-        var idx = Array.prototype.indexOf.call(cards, card);
-
-        if (idx < 0) return;
-
-        var end = Math.min(cards.length, idx + 1 + LOGO_PREFETCH_AHEAD);
-
-        for (var i = idx; i < end; i++) {
-            if (cards[i] && cards[i].card_data) {
-                prefetchLogoItem(cards[i].card_data);
-            }
-        }
-    }
-
-    /* Фоновий шар */
-
-    function ensureBackgroundLayers(layer) {
-        if (!layer || layer.querySelector('.banner-screen-bg__image--a')) return;
-
-        layer.innerHTML =
-            '<div class="banner-screen-bg__image banner-screen-bg__image--a"></div>' +
-            '<div class="banner-screen-bg__image banner-screen-bg__image--b"></div>' +
-            '<div class="banner-screen-bg__vignette"></div>';
-    }
-
-    function ensureScreenBackground() {
-        if (screenBackground && screenBackground.isConnected) {
-            ensureBackgroundLayers(screenBackground);
-            return screenBackground;
-        }
-
-        var existing = document.getElementById('interface-plus-screen-background');
-
-        if (existing) {
-            screenBackground = existing;
-            ensureBackgroundLayers(screenBackground);
-            return screenBackground;
-        }
-
-        var layer = document.createElement('div');
-
-        layer.id = 'interface-plus-screen-background';
-        layer.className = 'banner-screen-bg';
-
-        ensureBackgroundLayers(layer);
-
-        document.body.appendChild(layer);
-
-        screenBackground = layer;
-
-        return screenBackground;
-    }
-
-    function clearHeroBackgrounds() {
-        if (!screenBackground) {
-            screenBackground = document.getElementById('interface-plus-screen-background');
-        }
-
-        if (!screenBackground) return;
-
-        Array.prototype.forEach.call(
-            screenBackground.querySelectorAll('.banner-screen-bg__image'),
-            function (bg) {
-                bg.classList.remove('show');
-                bg.style.backgroundImage = 'none';
-            }
-        );
-
-        if (activeHero) activeHero.activeBgIndex = 0;
-    }
-
-    function hideHeroBackground() {
-        if (!screenBackground) {
-            screenBackground = document.getElementById('interface-plus-screen-background');
-        }
-
-        if (screenBackground) {
-            screenBackground.style.display = 'none';
-            clearHeroBackgrounds();
-        }
-    }
-
-    function showHeroBackground() {
-        var layer = ensureScreenBackground();
-
-        if (layer) layer.style.display = 'block';
-    }
-
-    /* CSS стилі */
-
-    var CSS = [
-        '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
-        '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease;will-change:opacity;}',
-        '.banner-screen-bg__image.show{opacity:1;}',
-        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30) 0vh,rgba(0,0,0,.20) 8vh,rgba(0,0,0,.09) 17vh,rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 0vh,rgba(0,0,0,0) 35vh,rgba(0,0,0,.04) 40vh,rgba(0,0,0,.12) 45vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.60) 55vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
-        '.banner-host{position:relative;z-index:1;}',
-        '.banner-enabled .banner-host .activity__body{padding-top:42vh!important;box-sizing:border-box;}',
-        '.banner-hero{position:absolute;top:0;left:0;right:0;height:50vh;overflow:visible;pointer-events:none;z-index:2;transition:transform .28s ease;will-change:transform;}',
-        '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:2;}',
-        '.banner-hero__logo{display:none;width:auto;height:auto;max-width:100%;margin-bottom:1em;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));}',
-        '.banner-hero__logo.ready{opacity:1;}',
-        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7);}',
-        '.banner-hero__meta{font-size:1.08em;color:rgba(245,245,241,.88);margin-bottom:.75em;display:flex;gap:.58em;align-items:center;flex-wrap:wrap;font-weight:500;line-height:1.4;text-shadow:0 2px 8px rgba(0,0,0,.65);}',
-        '.banner-hero__meta-item{display:inline-flex;align-items:center;white-space:nowrap;}',
-        '.banner-hero__rate{display:inline-flex;align-items:center;gap:.32em;background:transparent;color:#f0ca78;font-weight:800;}',
-        '.banner-hero__rate-star{font-size:1.05em;color:#e9bd65;}',
-        '.banner-hero__year{color:rgba(245,245,241,.90);}',
-        '.banner-hero__genre{color:rgba(225,229,235,.82);}',
-        '.banner-hero__separator{color:rgba(255,255,255,.38);font-size:.9em;}',
-        '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 10px rgba(0,0,0,.65);}',
-        '.interface-plus-logo-title{position:relative;}',
-        '.interface-plus-card-logo{display:block;width:auto;height:auto;max-width:100%;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45));}',
-        '.interface-plus-card-logo.ready{opacity:1;}',
-        '.interface-plus-logo-title.interface-plus-logo-active{font-size:0!important;line-height:0!important;}',
-        '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
-        '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
-
-        /* MENU CINEMATIC SHIFT — однакова геометрія для банера і фону */
-        'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
-        'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
-
-        '@media(max-width:480px){.banner-hero__info{left:1.5em;width:75%;}.banner-screen-bg__image{background-position:center 60%;}}',
-        '@media(max-width:480px){body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT_MOBILE + ');}body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT_MOBILE + ');}}'
-    ].join('\n');
-
-    function installStyle() {
-        var el = document.getElementById('interface-plus-tmdb-only-style') ||
-            document.createElement('style');
-
-        el.id = 'interface-plus-tmdb-only-style';
-        el.textContent = CSS;
-
-        if (!el.parentNode) document.head.appendChild(el);
-    }
-
-    /* Герой (Банер) */
-
-    function createHero(root) {
-        if (!root) return null;
-
-        if (root.__interfacePlusHero && root.contains(root.__interfacePlusHero)) {
-            ensureScreenBackground();
-            return root.__interfacePlusHero;
-        }
-
-        var layer = ensureScreenBackground();
-
-        var hero = document.createElement('div');
-        hero.className = 'banner-hero';
-
-        hero.innerHTML =
-            '<div class="banner-hero__info">' +
-                '<img class="banner-hero__logo" alt=""/>' +
-                '<div class="banner-hero__title"></div>' +
-                '<div class="banner-hero__meta"></div>' +
-                '<div class="banner-hero__descr"></div>' +
-            '</div>';
-
-        root.insertBefore(hero, root.firstChild);
-        root.classList.add('banner-host');
-
-        hero.parts = {
-            bgA: layer.querySelector('.banner-screen-bg__image--a'),
-            bgB: layer.querySelector('.banner-screen-bg__image--b'),
-            logo: hero.querySelector('.banner-hero__logo'),
-            title: hero.querySelector('.banner-hero__title'),
-            meta: hero.querySelector('.banner-hero__meta'),
-            descr: hero.querySelector('.banner-hero__descr')
-        };
-
-        hero.token = 0;
-        hero.root = root;
-        hero.activeBgIndex = 0;
-        hero.lastMovieData = null;
-
-        root.__interfacePlusHero = hero;
-
-        return hero;
-    }
-
-    function switchHeroBackdrop(hero, url, token) {
-        if (!hero || !url) return;
-
-        if (backdropCache[url]) {
-            applyBackdrop(hero, url, token);
-            return;
-        }
-
-        preloadBackdrop(url, function (ok) {
-            if (ok && hero.token === token) {
-                applyBackdrop(hero, url, token);
-            }
-        });
-    }
-
-    function applyBackdrop(hero, url, token) {
-        if (!hero || hero.token !== token) return;
-
-        var p = hero.parts;
-        var cur = hero.activeBgIndex || 0;
-        var next = cur === 0 ? 1 : 0;
-
-        var curLayer = cur === 0 ? p.bgA : p.bgB;
-        var nextLayer = next === 0 ? p.bgA : p.bgB;
-
-        if (!nextLayer) return;
-
-        nextLayer.classList.remove('show');
-        nextLayer.style.backgroundImage = 'url("' + url + '")';
-
-        void nextLayer.offsetWidth;
-
-        nextLayer.classList.add('show');
-
-        if (curLayer && curLayer !== nextLayer) {
-            curLayer.classList.remove('show');
-        }
-
-        hero.activeBgIndex = next;
-    }
-
-    function buildHeroMeta(container, d) {
-        container.textContent = '';
-
-        var rating = Number(d.vote_average) || 0;
-
-        if (rating > 0) {
-            var rate = document.createElement('span');
-
-            rate.className = 'banner-hero__meta-item banner-hero__rate';
-            rate.innerHTML =
-                '<span class="banner-hero__rate-star">★</span>' +
-                '<span>' + rating.toFixed(1) + '</span>';
-
-            container.appendChild(rate);
-        }
-
-        var year = movieYear(d);
-
-        if (year) {
-            if (container.children.length) {
-                container.appendChild(
-                    Object.assign(document.createElement('span'), {
-                        className: 'banner-hero__separator',
-                        textContent: '·'
-                    })
-                );
-            }
-
-            container.appendChild(
-                Object.assign(document.createElement('span'), {
-                    className: 'banner-hero__meta-item banner-hero__year',
-                    textContent: year
-                })
-            );
-        }
-
-        var genres = movieGenres(d);
-
-        if (genres.length) {
-            if (container.children.length) {
-                container.appendChild(
-                    Object.assign(document.createElement('span'), {
-                        className: 'banner-hero__separator',
-                        textContent: '·'
-                    })
-                );
-            }
-
-            container.appendChild(
-                Object.assign(document.createElement('span'), {
-                    className: 'banner-hero__meta-item banner-hero__genre',
-                    textContent: genres.join(' / ')
-                })
-            );
-        }
-    }
-
-    function showHero(hero, d, force) {
-        if (!hero || !d) return;
-
-        var key = identity(d);
-
-        if (!force && hero.movieKey === key) return;
-
-        hero.movieKey = key;
-        hero.lastMovieData = d;
-        hero.token++;
-
-        var token = hero.token;
-        var p = hero.parts;
-
-        showHeroBackground();
-
-        p.logo.classList.remove('ready');
-        p.logo.style.display = 'none';
-        p.logo.removeAttribute('src');
-
-        p.title.style.display = '';
-        p.title.textContent = movieTitle(d);
-
-        p.logo.style.transform = 'scale(' + logoScale() + ')';
-        p.logo.style.transformOrigin = 'left center';
-
-        buildHeroMeta(p.meta, d);
-
-        p.descr.textContent = d.overview || '';
-
-        if (d.backdrop_path) {
-            switchHeroBackdrop(
-                hero,
-                imageURL(d.backdrop_path, BACKDROP_SIZE),
-                token
-            );
-        } else {
-            if (p.bgA) {
-                p.bgA.classList.remove('show');
-                p.bgA.style.backgroundImage = 'none';
-            }
-
-            if (p.bgB) {
-                p.bgB.classList.remove('show');
-                p.bgB.style.backgroundImage = 'none';
-            }
-
-            hero.activeBgIndex = 0;
-        }
-
-        ensureLogo(d, function (url) {
-            if (hero.token !== token || !url) return;
-
-            preload(url, function (ok) {
-                if (!ok || hero.token !== token) return;
-
-                setAdaptiveLogo(p.logo, url, 'hero');
-
-                p.logo.style.transform = 'scale(' + logoScale() + ')';
-                p.logo.style.transformOrigin = 'left center';
-                p.logo.style.display = 'block';
-
-                requestAnimationFrame(function () {
-                    if (hero.token === token) {
-                        p.logo.classList.add('ready');
-                        p.title.style.display = 'none';
-                    }
-                });
-            });
-        });
-    }
-
-    function attachHero(o) {
-        if (!heroEnabled() || !o) return;
-
-        if (!isMain(o)) {
-            hideHeroBackground();
-            return;
-        }
-
-        var root = renderActivity(o);
-
-        if (!root) return;
-
-        if (activeHero && activeHero.root !== root) {
-            clearHeroBackgrounds();
-            lastFocusKey = '';
-        }
-
-        activeHero = createHero(root);
-
-        showHeroBackground();
-    }
-
-    function findFocusedMovie(root) {
-        if (!root) return null;
-
-        var selectors = [
-            '.card.focus',
-            '.card.hover',
-            '.card.selected',
-            '.card.is-focused',
-            '.card.focused',
-            '.card'
+            },
+            {
+                name: 'cas_blocks_gap',
+                type: 'select',
+                values: {
+                    '10': 'Дуже тісно',
+                    '15': 'Тісно',
+                    '20': 'Стандарт',
+                    '25': 'Просторе',
+                    '30': 'Дуже просторе'
+                }
+            },
+            {
+                name: 'cas_bg_animation',
+                type: 'select',
+                values: {
+                    'off': 'Вимкнено',
+                    'kenburns': 'Ken Burns (Зум + Паралакс)',
+                    'panscan': 'Кінематографічний дрейф (Pan & Scan)',
+                    'tiltzoom': 'Динамічний кут (Tilt Zoom)'
+                }
+            },
+            {
+                name: 'cas_animation_style',
+                type: 'select',
+                values: {
+                    'slide': 'Slide from Left (Виїзд зліва)',
+                    'spring': 'Elastic Spring (Жива пружина)'
+                }
+            },
+            { name: 'cas_slideshow_enabled', type: 'trigger' },
+            { name: 'cas_show_studios', type: 'trigger' },
+            { name: 'cas_show_tagline', type: 'trigger' }
         ];
 
-        for (var i = 0; i < selectors.length; i++) {
-            var f = root.querySelector(selectors[i]);
+        params.forEach(p => {
+            Lampa.SettingsApi.addParam({
+                component: PLUGIN_ID,
+                param: {
+                    name: p.name,
+                    type: p.type,
+                    values: p.values,
+                    default: defaults[p.name]
+                },
+                field: {
+                    name: TRANSLATIONS['settings_' + p.name]
+                },
+                onChange: applySettings
+            });
+        });
 
-            if (f && f.card_data) return f;
+        applySettings();
+    }
+
+    function applySettings() {
+        const root = document.documentElement;
+
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'kenburns';
+
+        root.style.setProperty('--cas-blocks-gap', gap + 'px');
+        root.style.setProperty('--cas-meta-size', metaSize + 'em');
+
+        const bodyEl = $('body');
+
+        bodyEl.removeClass(
+            'cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom'
+        );
+
+        if (bgAnim !== 'off') {
+            bodyEl.addClass('cas--zoom-' + bgAnim);
         }
 
-        var active = document.activeElement;
+        const currentCard = $('.full-start-new.left-title');
 
-        if (active && root.contains(active) && active.closest) {
-            var f2 = active.closest('.card');
+        if (currentCard.length) {
+            currentCard
+                .removeClass('cas-anim-slide cas-anim-spring')
+                .addClass('cas-anim-' + animStyle);
 
-            if (f2 && f2.card_data) return f2;
+            const showTag = !!Lampa.Storage.get('cas_show_tagline');
+
+            currentCard.find('.cas-tagline').toggle(showTag);
+
+            currentCard.find('.cas-studios-row').toggle(
+                !!Lampa.Storage.get('cas_show_studios')
+            );
+
+            stopSlideshow();
+
+            if (Lampa.Storage.get('cas_slideshow_enabled')) {
+                const movieData = currentCard.data('movie');
+
+                if (movieData && movieData.id) {
+                    const cached = getCachedData(
+                        'tmdb_' + movieData.id
+                    );
+
+                    if (cached && cached.backdrops?.length > 1) {
+                        startSlideshow(
+                            currentCard,
+                            cached.backdrops,
+                            Lampa.Storage.field('tmdb_lang') || 'uk'
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // =====================================================
+    // TEMPLATE
+    // =====================================================
+
+    function addCustomTemplate() {
+        const animStyle =
+            Lampa.Storage.get('cas_animation_style') || 'slide';
+
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">
+
+            <div class="full-start-new__body">
+
+                <div class="full-start-new__left hide">
+                    <div class="full-start-new__poster">
+                        <img class="full-start-new__img full--poster" />
+                    </div>
+                </div>
+
+                <div class="full-start-new__right">
+                    <div class="left-title__content">
+
+                        <div class="cas-logo-container">
+                            <div class="cas-studios-row"></div>
+                            <div class="cas-logo"></div>
+                        </div>
+
+                        <div class="cas-tagline" style="display:none;"></div>
+
+                        <div class="cas-meta-line">
+                            <div class="cas-meta-info"></div>
+                        </div>
+
+                        <div class="cas-description"></div>
+
+                        <div class="cas-details-wrapper">
+                            <div class="full-start-new__head hide"></div>
+                            <div class="full-start-new__details hide"></div>
+                        </div>
+
+                        <div class="full-start-new__buttons">
+
+                            <div class="full-start__button selector button--play">
+                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
+                                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_watch}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--book">
+                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{settings_input_links}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--reaction">
+                                <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
+                                    <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_reactions}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--subscribe hide">
+                                <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6.01892 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
+                                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{title_subscribe}</span>
+                            </div>
+
+                            <div class="full-start__button selector button--options">
+                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                </svg>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="full-start-new__reactions selector hide"></div>
+                    <div class="rating--modss" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div class="hide buttons--container">
+
+                <div class="full-start__button view--torrent hide">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24">
+                        <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
+                    </svg>
+                    <span>#{full_torrents}</span>
+                </div>
+
+                <div class="full-start__button selector view--trailer">
+                    <svg height="24" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>
+                    </svg>
+                    <span>#{full_trailers}</span>
+                </div>
+
+            </div>
+        </div>`;
+
+        Lampa.Template.add('full_start_new', template);
+    }
+
+    // =====================================================
+    // STYLES
+    // =====================================================
+
+    function addStyles() {
+        if ($('#cas-main-styles').length) return;
+
+        const styles = `<style id="cas-main-styles">
+
+        :root {
+            --cas-blocks-gap: 20px;
+            --cas-meta-size: 1.3em;
+            --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1);
+            --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .full-start__background {
+            height: calc(100% + 6em);
+            left: 0 !important;
+            opacity: 0 !important;
+            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+            will-change: opacity;
+            overflow: hidden !important;
+            transform: translateZ(0);
+        }
+
+        .full-start__background.loaded {
+            opacity: 1 !important;
+        }
+
+        .full-start__background.dim {
+            opacity: 0.35 !important;
+        }
+
+        @keyframes casKenBurnsParallax {
+            0% { transform: scale(1.02) translate3d(0,0,0); }
+            50% { transform: scale(1.10) translate3d(5px,-15px,0); }
+            100% { transform: scale(1.02) translate3d(0,0,0); }
+        }
+
+        @keyframes casCinematicPanScan {
+            0% { transform: scale(1.06) translate3d(0,0,0); }
+            33% { transform: scale(1.12) translate3d(-25px,-12px,0); }
+            66% { transform: scale(1.10) translate3d(20px,15px,0); }
+            100% { transform: scale(1.06) translate3d(0,0,0); }
+        }
+
+        @keyframes casDynamicTiltZoom {
+            0% { transform: scale(1.08) rotate(0deg) translate3d(0,0,0); }
+            33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px,10px,0); }
+            66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px,-10px,0); }
+            100% { transform: scale(1.08) rotate(0deg) translate3d(0,0,0); }
+        }
+
+        body.cas--zoom-kenburns .full-start__background img,
+        body.cas--zoom-kenburns img.full-start__background {
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        body.cas--zoom-panscan .full-start__background img,
+        body.cas--zoom-panscan img.full-start__background {
+            animation: casCinematicPanScan 35s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        body.cas--zoom-tiltzoom .full-start__background img,
+        body.cas--zoom-tiltzoom img.full-start__background {
+            animation: casDynamicTiltZoom 25s ease-in-out infinite !important;
+            will-change: transform;
+            transform-origin: center center;
+        }
+
+        /* TRAILER FEED INFORMATION BLOCK */
+
+        .cas-tagline,
+        .cas-studios-row,
+        .cas-description,
+        .cas-details-wrapper,
+        .full-start-new__buttons {
+            opacity: 0 !important;
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+
+        .left-title .full-start-new__body {
+            height: 85vh;
+            position: relative;
+        }
+
+        .left-title .full-start-new__right {
+            position: static !important;
+            width: 100% !important;
+            height: 100%;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
+        .left-title__content {
+            position: absolute !important;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 7em 12em 2.5em 1.5em;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            text-align: left !important;
+            background: transparent !important;
+            cursor: pointer;
+        }
+
+        .cas-logo-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+            justify-content: flex-end;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: none;
+            overflow: visible;
+            margin: 0 0 .5em 0;
+            gap: 0;
+        }
+
+        /* STUDIOS */
+
+        .cas-studios-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start !important;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 8px 0;
+        }
+
+        .cas-studio-item {
+            height: 24px !important;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 2px;
+        }
+
+        .cas-studio-item img {
+            height: 100%;
+            width: auto;
+            max-width: 140px;
+            object-fit: contain;
+            filter: none;
+            opacity: 0.95;
+        }
+
+        /* LOGO — SAME DISPLAY RULES AS TRAILER FEED 2.3 */
+
+        .cas-logo {
+            display: block;
+            width: 30em;
+            max-width: 100%;
+            height: 8em;
+            max-height: 8em;
+            overflow: visible;
+            margin-bottom: .5em;
+        }
+
+        .cas-logo img {
+            display: block;
+            width: auto;
+            height: auto;
+            max-width: 30em;
+            max-height: 8em;
+            object-fit: contain;
+            object-position: left center;
+            border: none;
+            background: transparent;
+        }
+
+        .cas-logo-fallback {
+            max-width: 30em;
+            max-height: 8em;
+            overflow: hidden;
+            font-size: 3em;
+            font-weight: 800;
+            line-height: 1.05;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        /* TAGLINE */
+
+        .cas-tagline {
+            font-size: calc(var(--cas-meta-size) * 0.95);
+            font-style: italic;
+            color: rgba(255,255,255,0.85);
+            margin: 0 0 16px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            max-width: 70%;
+            text-align: left !important;
+        }
+
+        /* SINGLE-LINE METADATA */
+
+        .cas-meta-line {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            white-space: nowrap !important;
+            gap: 0 !important;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            margin: 0 0 8px 0;
+            opacity: 0.82 !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
+        }
+
+        .cas-meta-info {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            white-space: nowrap !important;
+            gap: 0 !important;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            font-size: var(--cas-meta-size);
+            font-weight: 400;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.82);
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
+        }
+
+        .cas-meta-item {
+            display: inline-block;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .cas-meta-separator {
+            display: inline-block;
+            flex: 0 0 auto;
+            margin: 0 9px;
+            color: rgba(255,255,255,0.45);
+        }
+
+        .cas-wave-rating {
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+            white-space: nowrap;
+            color: rgba(255,255,255,0.95);
+            font-weight: 600;
+        }
+
+        .cas-wave-rating-star {
+            margin-right: 4px;
+            font-size: 0.95em;
+        }
+
+        .cas-wave-rating-value {
+            font-weight: 600;
+        }
+
+        .cas-wave-genre {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* DESCRIPTION — THREE LINES */
+
+        .cas-description {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+            font-size: var(--cas-meta-size) !important;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.75);
+            width: 70%;
+            max-width: 70%;
+            margin: 2px 0 10px 0;
+            text-align: left !important;
+        }
+
+        /* BUTTONS */
+
+        .full-start-new__buttons {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            flex-wrap: wrap;
+            width: 100%;
+            margin: 0 !important;
+            padding: 0;
+        }
+
+        /* CONTENT ANIMATION — LOGO AND METADATA EXCLUDED */
+
+        .cas-anim-slide .cas-tagline,
+        .cas-anim-slide .cas-studios-row,
+        .cas-anim-slide .cas-description,
+        .cas-anim-slide .cas-details-wrapper,
+        .cas-anim-slide .full-start-new__buttons {
+            transform: translate3d(0,8px,0);
+            transition:
+                opacity 0.35s var(--cas-curve-slide),
+                transform 0.35s var(--cas-curve-slide);
+        }
+
+        .cas-anim-slide.cas-animated .cas-studios-row {
+            opacity: 0.9 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.03s;
+        }
+
+        .cas-anim-slide.cas-animated .cas-tagline {
+            opacity: 0.85 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.06s;
+        }
+
+        .cas-anim-slide.cas-animated .cas-description {
+            opacity: 0.75 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.12s;
+        }
+
+        .cas-anim-slide.cas-animated .full-start-new__buttons {
+            opacity: 1 !important;
+            transform: translate3d(0,0,0);
+            transition-delay: 0.16s;
+        }
+
+        .cas-anim-spring .cas-tagline,
+        .cas-anim-spring .cas-studios-row,
+        .cas-anim-spring .cas-description,
+        .cas-anim-spring .cas-details-wrapper,
+        .cas-anim-spring .full-start-new__buttons {
+            transform: scale3d(0.92,0.92,1) translate3d(0,6px,0);
+            transition:
+                opacity 0.4s cubic-bezier(0.175,0.885,0.32,1.275),
+                transform 0.4s var(--cas-curve-spring);
+        }
+
+        .cas-anim-spring.cas-animated .cas-studios-row {
+            opacity: 0.9 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.03s;
+        }
+
+        .cas-anim-spring.cas-animated .cas-tagline {
+            opacity: 0.85 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.06s;
+        }
+
+        .cas-anim-spring.cas-animated .cas-description {
+            opacity: 0.75 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.12s;
+        }
+
+        .cas-anim-spring.cas-animated .full-start-new__buttons {
+            opacity: 1 !important;
+            transform: scale3d(1,1,1) translate3d(0,0,0);
+            transition-delay: 0.16s;
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 767px) {
+            .left-title .full-start-new__body {
+                height: 100vh;
+            }
+
+            .left-title__content {
+                padding: 4em 8em 12.5em 1.5em;
+                right: 0;
+            }
+
+            .cas-logo-container {
+                width: 100%;
+                margin-bottom: .5em;
+            }
+
+            .cas-logo {
+                width: 80%;
+                max-width: 80%;
+                height: 5em;
+                max-height: 5em;
+            }
+
+            .cas-logo img {
+                max-width: 80%;
+                max-height: 5em;
+            }
+
+            .cas-logo-fallback {
+                max-width: 80%;
+                max-height: 5em;
+                font-size: 2em;
+            }
+
+            .cas-tagline {
+                max-width: 95%;
+            }
+
+            .cas-description {
+                width: 95%;
+                max-width: 95%;
+                -webkit-line-clamp: 3;
+            }
+
+            .cas-meta-line,
+            .cas-meta-info {
+                max-width: 100%;
+            }
+
+            .cas-meta-info {
+                font-size: min(var(--cas-meta-size), 1em);
+            }
+
+            .cas-meta-separator {
+                margin: 0 5px;
+            }
+
+            .cas-studio-item {
+                height: 20px !important;
+            }
+
+            .full-start-new__buttons {
+                flex-wrap: wrap;
+            }
+        }
+
+        </style>`;
+
+        Lampa.Template.add('left_title_css', styles);
+
+        $('body').append(
+            Lampa.Template.get('left_title_css', {}, true)
+        );
+    }
+
+    // =====================================================
+    // BACKDROP CACHE
+    // =====================================================
+
+    function getCachedData(id) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
+        const item = cache[id];
+
+        if (item && Date.now() - item.time < CACHE_LIFETIME) {
+            return item.data;
         }
 
         return null;
     }
 
-    function restoreHeroAfterFull() {
-        if (!heroEnabled()) return;
+    function setCachedData(id, data) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
 
-        var activity = activeActivity();
+        cache[id] = {
+            time: Date.now(),
+            data: data
+        };
 
-        if (!isMain(activity)) return;
+        const keys = Object.keys(cache);
 
-        var root = renderActivity(activity);
-
-        if (!root) return;
-
-        attachHero(activity);
-
-        activeHero = root.__interfacePlusHero;
-
-        if (!activeHero) return;
-
-        showHeroBackground();
-
-        var focusedCard = findFocusedMovie(root);
-
-        if (focusedCard && focusedCard.card_data) {
-            lastFocusKey = identity(focusedCard.card_data);
-
-            prefetchHeroBackdrop(focusedCard.card_data);
-
-            showHero(activeHero, focusedCard.card_data, true);
-
-            prefetchNearbyLogos(focusedCard, root);
-
-            return;
+        if (keys.length > 100) {
+            delete cache[keys[0]];
         }
 
-        if (activeHero.lastMovieData) {
-            lastFocusKey = identity(activeHero.lastMovieData);
+        Lampa.Storage.set('cas_images_cache', cache);
+    }
 
-            showHero(activeHero, activeHero.lastMovieData, true);
+    // =====================================================
+    // CLEANUP / SLIDESHOW
+    // =====================================================
 
-            return;
+    function cleanup() {
+        stopSlideshow();
+
+        logoRequestId++;
+        cardRequestId++;
+
+        $('.left-title__content')
+            .parent()
+            .parent()
+            .removeClass('cas-animated');
+    }
+
+    function stopSlideshow() {
+        slideshowGeneration++;
+
+        if (currentInterval) {
+            clearInterval(currentInterval);
+            currentInterval = null;
         }
 
-        var firstCard = root.querySelector('.card');
-
-        if (firstCard && firstCard.card_data) {
-            lastFocusKey = identity(firstCard.card_data);
-
-            showHero(activeHero, firstCard.card_data, true);
+        if (window.casBgInterval) {
+            clearInterval(window.casBgInterval);
+            window.casBgInterval = null;
         }
     }
 
-    function scheduleHeroRestore() {
-        clearTimeout(restoreTimer);
+    function startSlideshow(render, backdrops, currentLang) {
+        stopSlideshow();
 
-        restoreTimer = setTimeout(function () {
-            requestAnimationFrame(restoreHeroAfterFull);
-        }, 100);
-    }
+        if (!backdrops || backdrops.length <= 1) return;
 
-    function onFocus(e) {
-        if (!heroEnabled()) return;
+        const generation = slideshowGeneration;
 
-        var target = e.target;
+        let langBackdrops = [];
+        let noLangBackdrops = [];
+        let otherBackdrops = [];
 
-        if (!target || !target.closest) return;
+        backdrops.forEach(b => {
+            const lang = b.iso_639_1;
 
-        var item = target.closest('.card');
+            if (lang === currentLang) {
+                langBackdrops.push(b);
+            } else if (!lang || lang === 'xx' || lang === 'null') {
+                noLangBackdrops.push(b);
+            } else {
+                otherBackdrops.push(b);
+            }
+        });
 
-        if (!item || !item.card_data) return;
+        let finalBackdrops = [].concat(noLangBackdrops);
 
-        var root = item.closest('.activity');
-
-        if (!root || !root.__interfacePlusHero) return;
-
-        var d = item.card_data;
-        var key = identity(d);
-
-        if (lastFocusKey === key) return;
-
-        prefetchHeroBackdrop(d);
-        prefetchNearbyLogos(item, root);
-
-        clearTimeout(focusTimer);
-
-        focusTimer = setTimeout(function () {
-            if (!heroEnabled()) return;
-
-            lastFocusKey = key;
-            activeHero = root.__interfacePlusHero;
-
-            showHero(activeHero, d);
-        }, 50);
-    }
-
-    function applyHero() {
-        var on = heroEnabled();
-
-        document.body.classList.toggle('banner-enabled', on);
-
-        if (!on) {
-            clearTimeout(focusTimer);
-            clearTimeout(restoreTimer);
-
-            lastFocusKey = '';
-
-            hideHeroBackground();
-
-            return;
+        if (finalBackdrops.length < 3 && langBackdrops.length) {
+            finalBackdrops = finalBackdrops.concat(langBackdrops);
         }
 
-        attachHero(activeActivity());
-    }
-
-    /* Картки */
-
-    function restoreTitle(root) {
-        if (!root) return;
-
-        var titles = root.classList &&
-            root.classList.contains('interface-plus-logo-title')
-            ? [root] : [];
-
-        if (root.querySelectorAll) {
-            [].push.apply(
-                titles,
-                root.querySelectorAll('.interface-plus-logo-title')
+        if (finalBackdrops.length < 3 && otherBackdrops.length) {
+            otherBackdrops.sort(
+                (a, b) => (b.vote_average || 0) - (a.vote_average || 0)
             );
+
+            finalBackdrops = finalBackdrops.concat(otherBackdrops);
         }
 
-        titles.forEach(function (t) {
-            var logo = t.querySelector('.interface-plus-card-logo');
+        finalBackdrops = finalBackdrops.slice(0, 15);
 
-            if (logo) logo.remove();
+        if (finalBackdrops.length <= 1) return;
 
-            var original = t.querySelector('.interface-plus-original-title');
+        let idx = 0;
 
-            if (original) {
-                while (original.firstChild) {
-                    t.insertBefore(original.firstChild, original);
+        currentInterval = setInterval(() => {
+            if (generation !== slideshowGeneration) return;
+
+            idx = (idx + 1) % finalBackdrops.length;
+
+            const nextSrc = Lampa.TMDB.image(
+                '/t/p/original' + finalBackdrops[idx].file_path
+            );
+
+            const $bgImg = render.find(
+                '.full-start__background img, img.full-start__background'
+            ).last();
+
+            if (!$bgImg.length) return;
+
+            const img = new Image();
+
+            img.onload = () => {
+                if (generation !== slideshowGeneration) return;
+
+                const $container = render.find('.full-start__background');
+
+                $container.css({
+                    transition: 'opacity 0.4s ease',
+                    opacity: 0
+                });
+
+                setTimeout(() => {
+                    if (generation !== slideshowGeneration) return;
+
+                    $bgImg.attr('src', nextSrc);
+
+                    setTimeout(() => {
+                        if (generation !== slideshowGeneration) return;
+
+                        $container.css('opacity', 0.35);
+
+                    }, 100);
+
+                }, 400);
+            };
+
+            img.onerror = () => {};
+            img.src = nextSrc;
+
+        }, 15000);
+
+        window.casBgInterval = currentInterval;
+    }
+
+    // =====================================================
+    // TMDB LOGO SYSTEM — INTERFACE+ BRIDGE + TRAILER FEED
+    // =====================================================
+
+    function getPreferredLogoLanguage() {
+        let lang = '';
+
+        try {
+            if (Lampa.Storage.field) {
+                lang = Lampa.Storage.field('tmdb_lang') || '';
+            }
+        } catch (e) {}
+
+        if (!lang) {
+            lang = Lampa.Storage.get('tmdb_lang') || 'en';
+        }
+
+        return String(lang).toLowerCase();
+    }
+
+    function pickLogo(logos) {
+        if (!Array.isArray(logos) || !logos.length) return null;
+
+        const preferred = getPreferredLogoLanguage();
+
+        const languages = [
+            preferred,
+            'en',
+            null
+        ];
+
+        for (let i = 0; i < languages.length; i++) {
+            const lang = languages[i];
+
+            const found = logos.find(logo => {
+                if (!logo || !logo.file_path) return false;
+
+                if (lang === null) {
+                    return !logo.iso_639_1 ||
+                        logo.iso_639_1 === 'xx' ||
+                        logo.iso_639_1 === 'null';
                 }
 
-                original.remove();
-            }
+                return String(logo.iso_639_1 || '').toLowerCase() === lang;
+            });
 
-            t.classList.remove(
-                'interface-plus-logo-title',
-                'interface-plus-logo-active'
-            );
-        });
-    }
-
-    function findTitle(root) {
-        return root && root.querySelector
-            ? root.querySelector(TITLE_SELECTOR)
-            : null;
-    }
-
-    function prepareLogo(title) {
-        var logo = title.querySelector('.interface-plus-card-logo');
-
-        if (logo) return logo;
-
-        title.classList.add('interface-plus-logo-title');
-
-        var original = document.createElement('span');
-
-        original.className = 'interface-plus-original-title';
-
-        while (title.firstChild) {
-            original.appendChild(title.firstChild);
+            if (found) return found;
         }
 
-        title.appendChild(original);
-
-        logo = document.createElement('img');
-
-        logo.className = 'interface-plus-card-logo';
-        logo.alt = '';
-        logo.draggable = false;
-
-        title.appendChild(logo);
-
-        return logo;
+        return logos.find(logo => logo && logo.file_path) || null;
     }
 
-    function stopCard(restore) {
-        activeCardToken++;
-
-        if (activeCard && activeCard.observer) {
-            activeCard.observer.disconnect();
-        }
-
-        if (restore && activeCard && activeCard.root) {
-            restoreTitle(activeCard.root);
-        }
-
-        activeCard = null;
+    function getLogoCache() {
+        return Lampa.Storage.get('cas_logo_cache') || {};
     }
 
-    function cardCurrent(token, key) {
-        return !!(
-            activeCard &&
-            activeCardToken === token &&
-            activeCard.key === key &&
-            activeCard.root &&
-            activeCard.root.isConnected &&
-            cardEnabled()
+    function getCachedLogo(cacheId) {
+        const cache = getLogoCache();
+        const item = cache[cacheId];
+
+        if (!item || !item.time) return null;
+
+        if (Date.now() - item.time > LOGO_CACHE_TIMEOUT) {
+            return null;
+        }
+
+        return item.data || null;
+    }
+
+    function setCachedLogo(cacheId, data) {
+        const cache = getLogoCache();
+
+        cache[cacheId] = {
+            time: Date.now(),
+            data: data
+        };
+
+        const keys = Object.keys(cache);
+
+        if (keys.length > 100) {
+            delete cache[keys[0]];
+        }
+
+        Lampa.Storage.set('cas_logo_cache', cache);
+    }
+
+    function getLogoUrl(logo) {
+        if (!logo || !logo.file_path) return '';
+
+        return Lampa.TMDB.image(
+            '/t/p/w500' + logo.file_path
         );
     }
 
-    function showCardLogoInstant(root, d) {
-        var hit = getLogoHolder(d).tfeed_logo;
-        var title = hit && findTitle(root);
+    function showLogoFallback(render, data, requestId) {
+        if (requestId !== logoRequestId) return;
 
-        if (!title) return false;
+        const title = data.title || data.name || '';
+        const logoContainer = render.find('.cas-logo');
 
-        var logo = prepareLogo(title);
+        logoContainer.empty();
 
-        logo.style.transform = 'scale(' + logoScale() + ')';
-        logo.style.transformOrigin = 'left center';
+        if (!title) return;
 
-        setAdaptiveLogo(logo, hit, 'card');
-
-        logo.classList.add('ready');
-        title.classList.add('interface-plus-logo-active');
-
-        return true;
+        logoContainer.html(
+            $('<div class="cas-logo-fallback"></div>').text(title)
+        );
     }
 
-    function startCard(o, override, force) {
-        if (!cardEnabled() || !isFull(o)) return;
+    async function displayMovieLogo(render, data, logos, requestId) {
+        if (requestId !== logoRequestId) return;
 
-        var d = override || getMovie(o);
-        var root = renderActivity(o);
+        const logoContainer = render.find('.cas-logo');
+        const selectedLogo = pickLogo(logos);
 
-        if (!d || !root) return;
-
-        var key = identity(d);
-
-        if (
-            !force &&
-            activeCard &&
-            activeCard.key === key &&
-            activeCard.root === root
-        ) return;
-
-        stopCard(false);
-
-        var token = activeCardToken;
-
-        activeCard = {
-            root: root,
-            key: key,
-            data: d,
-            src: '',
-            observer: null
-        };
-
-        if (showCardLogoInstant(root, d)) return;
-
-        if (window.MutationObserver) {
-            var observer = new MutationObserver(function () {
-                if (!cardCurrent(token, key)) return;
-
-                var title = findTitle(root);
-
-                if (
-                    title &&
-                    activeCard.src &&
-                    !title.querySelector('.interface-plus-card-logo')
-                ) {
-                    var logo = prepareLogo(title);
-
-                    if (logo) {
-                        logo.style.transform = 'scale(' + logoScale() + ')';
-                        logo.style.transformOrigin = 'left center';
-
-                        setAdaptiveLogo(logo, activeCard.src, 'card');
-
-                        logo.classList.add('ready');
-                        title.classList.add('interface-plus-logo-active');
-                    }
-                }
-            });
-
-            observer.observe(root, {
-                childList: true,
-                subtree: true
-            });
-
-            activeCard.observer = observer;
-        }
-
-        ensureLogo(d, function (url) {
-            if (!cardCurrent(token, key)) return;
-
-            activeCard.src = url || '';
-
-            if (!url) return;
-
-            var title = findTitle(root);
-
-            if (!title) return;
-
-            var logo = prepareLogo(title);
-
-            if (!logo) return;
-
-            logo.style.transform = 'scale(' + logoScale() + ')';
-            logo.style.transformOrigin = 'left center';
-
-            setAdaptiveLogo(logo, url, 'card');
-
-            logo.classList.add('ready');
-            title.classList.add('interface-plus-logo-active');
-        });
-    }
-
-    function refreshCard(force) {
-        if (!cardEnabled()) {
-            stopCard(true);
+        if (!selectedLogo) {
+            showLogoFallback(render, data, requestId);
             return;
         }
 
-        var a = activeActivity();
+        const logoUrl = getLogoUrl(selectedLogo);
 
-        if (isFull(a)) {
-            startCard(a, null, !!force);
+        if (!logoUrl) {
+            showLogoFallback(render, data, requestId);
+            return;
+        }
+
+        try {
+            await preloadImage(logoUrl);
+
+            if (requestId !== logoRequestId) return;
+
+            logoContainer.empty();
+
+            const image = $('<img>');
+
+            image.attr('alt', data.title || data.name || '');
+            image.attr('src', logoUrl);
+
+            logoContainer.append(image);
+            image.show();
+
+        } catch (e) {
+            showLogoFallback(render, data, requestId);
         }
     }
 
-    function refreshAll(force) {
-        lastFocusKey = '';
+    function buildImagesUrl(data) {
+        const type = data.name ? 'tv/' : 'movie/';
+        const language = getPreferredLogoLanguage() || 'en';
+        const includeLanguage = language + ',en,null';
 
-        if (activeHero) activeHero.movieKey = '';
-
-        var a = activeActivity();
-
-        if (isFull(a)) {
-            stopCard(true);
-            startCard(a, null, !!force);
-        }
+        return Lampa.TMDB.api(
+            type + data.id +
+            '/images?api_key=' + Lampa.TMDB.key() +
+            '&include_image_language=' +
+            encodeURIComponent(includeLanguage)
+        );
     }
 
-    /* Шрифти та розміри */
+    function loadMovieLogo(render, data, imagesData) {
+        const requestId = ++logoRequestId;
+        const cacheId = 'tmdb_logo_' + data.id;
 
-    var FONTS = {
-        default: {
-            family: 'Roboto, Arial, sans-serif',
-            url: ''
-        },
-        netflix: {
-            family: '"Netflix Sans", Arial, sans-serif',
-            url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'
-        },
-        montserrat: {
-            family: '"Montserrat", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'
-        },
-        inter: {
-            family: '"Inter", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
-        },
-        nunito: {
-            family: '"Nunito", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap'
-        }
-    };
+        const logoContainer = render.find('.cas-logo');
+        logoContainer.empty();
 
-    function applyFont() {
-        var name = text(storageGet(S.font, 'default'));
-
-        if (currentFont === name) return;
-
-        currentFont = name;
-
-        var font = FONTS[name] || FONTS.default;
-
-        var oldFace = document.getElementById('interface-plus-font-face');
-
-        if (oldFace) oldFace.remove();
-
-        var oldStyle = document.getElementById('interface-plus-font-style');
-
-        if (oldStyle) oldStyle.remove();
-
-        if (font.url) {
-            var face = document.createElement('style');
-
-            face.id = 'interface-plus-font-face';
-
-            face.textContent =
-                font.url.indexOf('googleapis.com') !== -1
-                    ? '@import url("' + font.url + '");'
-                    : '@font-face{font-family:"Netflix Sans";src:url("' +
-                      font.url +
-                      '") format("woff2");font-weight:400}';
-
-            document.head.appendChild(face);
+        // 1. СПРОБА ОТРИМАТИ ЛОГОТИП З КЕШУ INTERFACE+
+        let bridgeLogoUrl = null;
+        if (window.InterfacePlusBridge && typeof window.InterfacePlusBridge.getLogo === 'function') {
+            bridgeLogoUrl = window.InterfacePlusBridge.getLogo(data);
         }
 
-        var style = document.createElement('style');
+        if (bridgeLogoUrl) {
+            preloadImage(bridgeLogoUrl).then(() => {
+                if (requestId !== logoRequestId) return;
+                logoContainer.empty();
+                const image = $('<img>');
+                image.attr('alt', data.title || data.name || '');
+                image.attr('src', bridgeLogoUrl);
+                logoContainer.append(image);
+                image.show();
+            }).catch(() => {
+                showLogoFallback(render, data, requestId);
+            });
+            return;
+        }
 
-        style.id = 'interface-plus-font-style';
-        style.textContent = 'body,.body,*{font-family:' +
-            font.family +
-            '!important}';
+        // 2. ВЛАСНИЙ КЕШ / TMDB ЗАПИТ
+        const cachedLogo = getCachedLogo(cacheId);
 
-        document.head.appendChild(style);
+        if (cachedLogo && cachedLogo.file_path) {
+            displayMovieLogo(render, data, [cachedLogo], requestId);
+            return;
+        }
+
+        if (imagesData && Array.isArray(imagesData.logos)) {
+            const selected = pickLogo(imagesData.logos);
+
+            if (selected) {
+                setCachedLogo(cacheId, selected);
+
+                displayMovieLogo(
+                    render,
+                    data,
+                    imagesData.logos,
+                    requestId
+                );
+            } else {
+                showLogoFallback(render, data, requestId);
+            }
+
+            return;
+        }
+
+        if (logoRequests[cacheId]) {
+            logoRequests[cacheId].then(result => {
+                if (requestId !== logoRequestId) return;
+
+                if (result && Array.isArray(result.logos)) {
+                    const selected = pickLogo(result.logos);
+
+                    if (selected) {
+                        setCachedLogo(cacheId, selected);
+
+                        displayMovieLogo(
+                            render,
+                            data,
+                            result.logos,
+                            requestId
+                        );
+                    } else {
+                        showLogoFallback(render, data, requestId);
+                    }
+                } else {
+                    showLogoFallback(render, data, requestId);
+                }
+            });
+
+            return;
+        }
+
+        const request = new Promise(resolve => {
+            let completed = false;
+
+            const timeout = setTimeout(() => {
+                if (completed) return;
+
+                completed = true;
+                resolve(null);
+
+            }, REQUEST_TIMEOUT);
+
+            $.getJSON(buildImagesUrl(data), result => {
+                if (completed) return;
+
+                completed = true;
+                clearTimeout(timeout);
+                resolve(result || null);
+
+            }).fail(() => {
+                if (completed) return;
+
+                completed = true;
+                clearTimeout(timeout);
+                resolve(null);
+            });
+        });
+
+        logoRequests[cacheId] = request;
+
+        request.then(result => {
+            delete logoRequests[cacheId];
+
+            if (requestId !== logoRequestId) return;
+
+            if (result && Array.isArray(result.logos)) {
+                const selected = pickLogo(result.logos);
+
+                if (selected) {
+                    setCachedLogo(cacheId, selected);
+
+                    displayMovieLogo(
+                        render,
+                        data,
+                        result.logos,
+                        requestId
+                    );
+                } else {
+                    showLogoFallback(render, data, requestId);
+                }
+            } else {
+                showLogoFallback(render, data, requestId);
+            }
+        });
     }
 
-    function patchMaker(count) {
-        if (!Lampa.Maker || !Lampa.Maker.map) return;
+    // =====================================================
+    // STUDIO LOGOS
+    // =====================================================
 
-        ['Line', 'Category'].forEach(function (type) {
-            var maker = Lampa.Maker.map(type);
+    function renderStudioLogosWithColorAnalysis(container, data) {
+        container.empty();
 
-            if (!maker || !maker.Items || !maker.Items.onInit) return;
+        const studios = (
+            data.networks || data.production_companies || []
+        ).filter(s => s.logo_path).slice(0, 1);
 
-            if (maker.Items.__interfacePlusPatched) {
-                maker.Items.__interfacePlusCount = count;
+        studios.forEach(studio => {
+            const logoUrl = Lampa.TMDB.image(
+                '/t/p/w200' + studio.logo_path
+            );
+
+            const item = $('<div class="cas-studio-item cas-wave-studio"></div>');
+            const image = $('<img>');
+
+            image.attr('src', logoUrl);
+            image.attr('alt', studio.name || '');
+
+            item.append(image);
+            container.append(item);
+        });
+    }
+
+    // =====================================================
+    // METADATA RENDERER
+    // =====================================================
+
+    function appendMetaItem(container, value, className) {
+        if (!value) return;
+
+        if (container.children().length) {
+            container.append(
+                '<span class="cas-meta-separator">·</span>'
+            );
+        }
+
+        const item = $('<span></span>')
+            .addClass('cas-meta-item')
+            .addClass(className || '')
+            .text(value);
+
+        container.append(item);
+    }
+
+    function renderMetadata(render, data) {
+        const container = render.find('.cas-meta-info');
+
+        container.empty();
+
+        const year = getYear(data);
+        const country = getCountry(data);
+        const runtime = formatTime(getRuntime(data));
+        const rating = getRating(data);
+
+        const genres = (data.genres || [])
+            .map(g => g.name)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(', ');
+
+        if (rating > 0) {
+            const ratingElement = $(`
+                <span class="cas-meta-item cas-wave-rating">
+                    <span class="cas-wave-rating-star">★</span>
+                    <span class="cas-wave-rating-value"></span>
+                </span>
+            `);
+
+            ratingElement
+                .find('.cas-wave-rating-value')
+                .text(rating.toFixed(1));
+
+            container.append(ratingElement);
+        }
+
+        appendMetaItem(container, year, 'cas-wave-year');
+        appendMetaItem(container, country, 'cas-wave-country');
+        appendMetaItem(container, runtime, 'cas-wave-time');
+        appendMetaItem(container, genres, 'cas-wave-genre');
+
+        container.css('display', 'flex');
+    }
+
+    // =====================================================
+    // TMDB DETAILS FALLBACK
+    // =====================================================
+
+    function needsDetails(data) {
+        return !getCountry(data) ||
+            !getRuntime(data) ||
+            !(data.genres && data.genres.length) ||
+            !getRating(data) ||
+            !data.overview ||
+            (
+                Lampa.Storage.get('cas_show_tagline') &&
+                !data.tagline
+            );
+    }
+
+    function loadTMDBDetails(data) {
+        return new Promise(resolve => {
+            if (!data || !data.id) {
+                resolve(null);
                 return;
             }
 
-            var original = maker.Items.onInit;
+            const type = data.name ? 'tv/' : 'movie/';
+            const requestId = type + data.id;
 
-            maker.Items.onInit = function () {
-                original.apply(this, arguments);
+            if (detailsRequests[requestId]) {
+                detailsRequests[requestId].then(resolve);
+                return;
+            }
 
-                if (type === 'Line') {
-                    this.view = maker.Items.__interfacePlusCount || count;
-                } else {
-                    this.limit_view = maker.Items.__interfacePlusCount || count;
-                }
-            };
+            const language = getPreferredLogoLanguage() || 'uk';
 
-            maker.Items.__interfacePlusPatched = true;
-            maker.Items.__interfacePlusCount = count;
-        });
-    }
-
-    function applySize() {
-        var value = parseFloat(storageGet(S.size, '10.6')) || 10.6;
-
-        var mobile = false;
-
-        try {
-            mobile = !!(
-                Lampa.Platform &&
-                Lampa.Platform.screen &&
-                Lampa.Platform.screen('mobile')
+            const url = Lampa.TMDB.api(
+                type + data.id + '?api_key=' +
+                Lampa.TMDB.key() +
+                '&language=' + encodeURIComponent(language)
             );
-        } catch (e) {}
 
-        if (mobile) value = 10.1;
+            const request = new Promise(done => {
+                let completed = false;
 
-        if (String(value) === currentSize) return;
+                const timeout = setTimeout(() => {
+                    if (completed) return;
 
-        currentSize = String(value);
+                    completed = true;
+                    done(null);
+                }, REQUEST_TIMEOUT);
 
-        document.body.style.fontSize = value + 'px';
+                $.getJSON(url, result => {
+                    if (completed) return;
 
-        patchMaker(
-            value <= 9.6 ? 8 :
-            value <= 11.1 ? 7 : 6
-        );
+                    completed = true;
+                    clearTimeout(timeout);
+                    done(result || null);
+
+                }).fail(() => {
+                    if (completed) return;
+
+                    completed = true;
+                    clearTimeout(timeout);
+                    done(null);
+                });
+            });
+
+            detailsRequests[requestId] = request;
+
+            request.then(result => {
+                delete detailsRequests[requestId];
+                resolve(result);
+            });
+        });
     }
 
-    /* Налаштування */
+    // =====================================================
+    // MOVIE METADATA + DESCRIPTION
+    // =====================================================
 
-    function addSettings() {
-        if (!Lampa.SettingsApi) return;
+    async function loadMovieDataOptimized(render, data, requestId) {
+        if (!data || requestId !== cardRequestId) return;
 
-        var api = Lampa.SettingsApi;
-
-        api.addComponent({
-            component: 'interface_plus_settings',
-            name: 'Інтерфейс +',
-            icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 5h2v5h-2z"/></svg>'
-        });
-
-        function add(key, type, def, name, desc, values, change) {
-            api.addParam({
-                component: 'interface_plus_settings',
-                param: {
-                    name: key,
-                    type: type,
-                    default: def,
-                    values: values
-                },
-                field: {
-                    name: name,
-                    description: desc || ''
-                },
-                onChange: change
-            });
+        if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
+            render.find('.cas-tagline')
+                .text('«' + data.tagline + '»')
+                .show();
+        } else {
+            render.find('.cas-tagline').hide();
         }
 
-        add(
-            S.hero,
-            'trigger',
-            true,
-            'Динамічні банери',
-            'Преміальні банери на головній сторінці',
-            null,
-            applyHero
-        );
+        const description = String(data.overview || '').trim();
 
-        add(
-            S.card,
-            'trigger',
-            true,
-            'Логотип у картці фільму',
-            'Логотипи тільки з TMDB',
-            null,
-            function () {
-                refreshCard(true);
-            }
-        );
+        render.find('.cas-description')
+            .text(description)
+            .css('display', description ? '-webkit-box' : 'none');
 
-        add(
-            S.scale,
-            'select',
-            '100',
-            'Розмір логотипів',
-            'Додатковий масштаб після автоматичного підбору',
-            {
-                '70':'70%',
-                '80':'80%',
-                '90':'90%',
-                '100':'100%',
-                '110':'110%',
-                '120':'120%'
-            },
-            function () {
-                refreshAll(false);
-            }
-        );
+        renderMetadata(render, data);
 
-        add(
-            'interface_plus_clear_logo_cache',
-            'button',
-            '',
-            'Очистити кеш логотипів',
-            'Повторно отримати логотипи з TMDB',
-            null,
-            clearLogoCache
-        );
+        if (needsDetails(data)) {
+            const details = await loadTMDBDetails(data);
 
-        add(
-            S.size,
-            'select',
-            '10.6',
-            'Розмір інтерфейсу',
-            'Масштаб елементів інтерфейсу',
-            {
-                '09.1':'Міні',
-                '09.6':'Дуже малий',
-                '10.1':'Малий',
-                '10.6':'Середній'
-            },
-            applySize
-        );
-
-        add(
-            S.font,
-            'select',
-            'default',
-            'Шрифт інтерфейсу',
-            'Стиль тексту',
-            {
-                default:'Roboto',
-                netflix:'Netflix Sans',
-                montserrat:'Montserrat',
-                inter:'Inter',
-                nunito:'Nunito'
-            },
-            applyFont
-        );
-    }
-
-    /* Відстеження стану лівого меню */
-
-    function installMenuObserver() {
-        if (!window.MutationObserver || menuObserver) return;
-
-        menuObserver = new MutationObserver(function () {
-            var opened = document.body.classList.contains('menu--open');
-
-            document.body.classList.toggle(
-                'interface-plus-menu-open',
-                opened
-            );
-        });
-
-        menuObserver.observe(document.body, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
-
-        document.body.classList.toggle(
-            'interface-plus-menu-open',
-            document.body.classList.contains('menu--open')
-        );
-    }
-
-    /* Слухачі подій */
-
-    function installListeners() {
-        document.addEventListener('hover:focus', onFocus, true);
-
-        if (!Lampa.Listener) return;
-
-        Lampa.Listener.follow('activity', function (e) {
-            if (!e) return;
-
-            if (e.type === 'start') {
-                requestAnimationFrame(function () {
-                    if (isFull(e.object)) {
-                        clearTimeout(restoreTimer);
-                        clearTimeout(focusTimer);
-
-                        lastFocusKey = '';
-
-                        hideHeroBackground();
-
-                        stopCard(false);
-                        startCard(e.object);
-                    } else if (isMain(e.object)) {
-                        attachHero(e.object);
-                        stopCard(false);
-                    } else {
-                        clearTimeout(focusTimer);
-
-                        hideHeroBackground();
-
-                        stopCard(false);
-                    }
-                });
-            }
-
-            if (e.type === 'destroy' && isFull(e.object)) {
-                stopCard(false);
-                scheduleHeroRestore();
-            }
-
-            if (e.type === 'destroy') {
-                var comp = text(
-                    e.object && e.object.component
-                ).toLowerCase();
-
-                if (comp === 'main' || comp === 'category') {
-                    hideHeroBackground();
-                }
-            }
-        });
-
-        Lampa.Listener.follow('full', function (e) {
             if (
-                !e ||
-                (e.type !== 'complete' && e.type !== 'complite')
-            ) return;
+                !details ||
+                requestId !== cardRequestId
+            ) {
+                return;
+            }
 
-            var d = e.data && e.data.movie;
+            const merged = Object.assign({}, data);
 
-            requestAnimationFrame(function () {
-                hideHeroBackground();
+            if (!getRating(merged)) {
+                merged.vote_average = details.vote_average;
+            }
 
-                var a = activeActivity();
+            if (!getCountry(merged)) {
+                merged.production_countries =
+                    details.production_countries;
 
-                if (isFull(a)) {
-                    startCard(a, d || null, true);
+                if (!merged.origin_country) {
+                    merged.origin_country = details.origin_country;
                 }
-            });
-        });
+            }
+
+            if (!getRuntime(merged)) {
+                merged.runtime = details.runtime;
+                merged.episode_run_time = details.episode_run_time;
+            }
+
+            if (!(merged.genres && merged.genres.length)) {
+                merged.genres = details.genres;
+            }
+
+            if (!merged.overview && details.overview) {
+                merged.overview = details.overview;
+
+                render.find('.cas-description')
+                    .text(String(details.overview).trim())
+                    .css(
+                        'display',
+                        details.overview ? '-webkit-box' : 'none'
+                    );
+            }
+
+            if (!merged.tagline && details.tagline) {
+                merged.tagline = details.tagline;
+
+                if (Lampa.Storage.get('cas_show_tagline')) {
+                    render.find('.cas-tagline')
+                        .text('«' + details.tagline + '»')
+                        .show();
+                }
+            }
+
+            renderMetadata(render, merged);
+
+            if (
+                Lampa.Storage.get('cas_show_studios') &&
+                (
+                    !data.production_companies ||
+                    !data.production_companies.length
+                ) &&
+                details.production_companies &&
+                details.production_companies.length
+            ) {
+                renderStudioLogosWithColorAnalysis(
+                    render.find('.cas-studios-row'),
+                    details
+                );
+            }
+        }
+
+        if (requestId !== cardRequestId) return;
+
+        if (Lampa.Storage.get('cas_show_studios')) {
+            renderStudioLogosWithColorAnalysis(
+                render.find('.cas-studios-row'),
+                data
+            );
+        } else {
+            render.find('.cas-studios-row').empty();
+        }
+    }
+
+    const debouncedLoadMovieData = debounce(
+        (render, data, requestId) => {
+            loadMovieDataOptimized(
+                render,
+                data,
+                requestId
+            ).catch(() => {});
+        },
+        150
+    );
+
+    // =====================================================
+    // IMAGE PROCESSING
+    // =====================================================
+
+    async function processImages(render, data, res, requestId) {
+        if (requestId !== cardRequestId) return;
 
         try {
+            loadMovieLogo(render, data, res);
+
+            stopSlideshow();
+
             if (
-                Lampa.Storage.listener &&
-                Lampa.Storage.listener.follow
+                Lampa.Storage.get('cas_slideshow_enabled') &&
+                res.backdrops &&
+                res.backdrops.length > 1
             ) {
-                Lampa.Storage.listener.follow('change', function (e) {
-                    if (!e || !e.name) return;
+                const currentLang =
+                    Lampa.Storage.field('tmdb_lang') || 'uk';
 
-                    if (e.name === S.hero) applyHero();
-
-                    if (e.name === S.card) refreshCard(true);
-
-                    if (e.name === S.font) {
-                        currentFont = '';
-                        applyFont();
-                    }
-
-                    if (e.name === S.size) {
-                        currentSize = '';
-                        applySize();
-                    }
-
-                    if (e.name === S.scale) refreshAll(false);
-                });
+                startSlideshow(
+                    render,
+                    res.backdrops,
+                    currentLang
+                );
             }
-        } catch (e) {}
+
+        } catch (error) {
+            showLogoFallback(render, data, logoRequestId);
+        }
     }
 
-    /* Ініціалізація */
+    // =====================================================
+    // LAMPA EVENT LISTENER
+    // =====================================================
 
-    function init() {
-        if (initialized || !window.Lampa || !Lampa.Storage) return;
+    function attachLoader() {
+        Lampa.Listener.follow('full', event => {
+            if (event.type !== 'complite') return;
 
-        initialized = true;
+            const data = event.data.movie;
+            const render = event.object.activity.render();
 
-        installStyle();
+            const cardRoot = render.find(
+                '.full-start-new.left-title'
+            );
 
-        ensureScreenBackground();
+            const thisCardRequest = ++cardRequestId;
 
-        installMenuObserver();
+            logoRequestId++;
 
-        applyFont();
-        applySize();
-        applyHero();
+            cardRoot.removeClass('cas-animated');
 
-        addSettings();
+            render.find('.cas-description').empty().hide();
+            render.find('.cas-meta-info').empty();
+            render.find('.cas-logo').empty();
+            render.find('.cas-tagline').empty().hide();
+            render.find('.cas-studios-row').empty();
 
-        installListeners();
+            render.find(
+                '.full-start-new__details, ' +
+                '.full-start-new__description, ' +
+                '.full-start-new__overview, ' +
+                '.full-start-new__text, ' +
+                '.full-start-new__head, ' +
+                '.full-descr, ' +
+                '.full-start__description, ' +
+                '.full-start__descr, ' +
+                '.full-description'
+            ).hide();
 
-        requestAnimationFrame(function () {
-            var a = activeActivity();
+            event.object.activity.onBeforeDestroy = cleanup;
 
-            if (isFull(a)) {
-                hideHeroBackground();
-                startCard(a);
-            } else if (isMain(a)) {
-                attachHero(a);
+            if (data && data.id) {
+                render.data('movie', data);
+
+                const cacheId = 'tmdb_' + data.id;
+                const cached = getCachedData(cacheId);
+
+                const processImagesWrapper = async res => {
+                    if (thisCardRequest !== cardRequestId) return;
+
+                    try {
+                        await processImages(
+                            render,
+                            data,
+                            res,
+                            thisCardRequest
+                        );
+
+                    } catch (e) {
+                        showLogoFallback(
+                            render,
+                            data,
+                            logoRequestId
+                        );
+
+                    } finally {
+                        if (thisCardRequest === cardRequestId) {
+                            requestAnimationFrame(() => {
+                                if (thisCardRequest !== cardRequestId) return;
+
+                                cardRoot.addClass('cas-animated');
+                            });
+                        }
+                    }
+                };
+
+                if (cached) {
+                    processImagesWrapper(cached);
+
+                } else {
+                    const imagesUrl = buildImagesUrl(data);
+
+                    $.getJSON(imagesUrl, res => {
+                        if (thisCardRequest !== cardRequestId) return;
+
+                        setCachedData(cacheId, res);
+                        processImagesWrapper(res);
+
+                    }).fail(() => {
+                        if (thisCardRequest !== cardRequestId) return;
+
+                        showLogoFallback(
+                            render,
+                            data,
+                            logoRequestId
+                        );
+
+                        requestAnimationFrame(() => {
+                            if (thisCardRequest !== cardRequestId) return;
+
+                            cardRoot.addClass('cas-animated');
+                        });
+                    });
+                }
+
+                debouncedLoadMovieData(
+                    render,
+                    data,
+                    thisCardRequest
+                );
+
             } else {
-                hideHeroBackground();
-            }
-        });
+                requestAnimationFrame(() => {
+                    if (thisCardRequest !== cardRequestId) return;
 
-        log('Precise menu cinematic shift initialized');
+                    cardRoot.addClass('cas-animated');
+                });
+            }
+
+            setTimeout(() => {
+                if (thisCardRequest !== cardRequestId) return;
+
+                const firstButton = render.find(
+                    '.full-start-new__buttons .full-start__button'
+                ).first();
+
+                if (firstButton.length) {
+                    render.find('.full-start__button')
+                        .removeClass('focus');
+
+                    firstButton
+                        .addClass('focus')
+                        .trigger('focus');
+                }
+            }, 200);
+        });
+    }
+
+    // =====================================================
+    // START
+    // =====================================================
+
+    function startPlugin() {
+        try {
+            initializePlugin();
+
+            console.log(
+                'NewCard 3.3.7 + Interface+ Bridge initialized successfully'
+            );
+
+        } catch (error) {
+            console.error(
+                'Failed to initialize NewCard plugin:',
+                error
+            );
+        }
     }
 
     if (window.appready) {
-        setTimeout(init, 150);
-    } else if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') setTimeout(init, 150);
+        startPlugin();
+
+    } else {
+        Lampa.Listener.follow('app', e => {
+            if (e.type === 'ready') {
+                startPlugin();
+            }
         });
     }
 
