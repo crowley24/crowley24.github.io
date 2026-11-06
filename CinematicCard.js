@@ -555,15 +555,16 @@
         }
 
         .cas-studio-item img {
-            height: 100%;
-            width: auto;
-            max-width: 100%;
-            max-height: 22px;
+            display: block;
+            height: 1.3em !important;
+            width: auto !important;
+            max-height: 1.3em !important;
+            max-width: 6.5em !important;
             object-fit: contain;
             object-position: left center;
             opacity: 0.9;
-            filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8));
-            transition: opacity 0.3s ease;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+            transition: opacity 0.3s ease, filter 0.25s ease;
         }
 
         .cas-studio-item img:hover {
