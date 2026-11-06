@@ -3,25 +3,23 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.2.2
+     * @version 3.2.3
      * @author Crowley24
      * @description Fixed Cinematic Background + Minimal Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.2.2 CHANGES:
-     * - Fixed background lifecycle cleanup
-     * - MutationObserver for card visibility and removal
-     * - Cleanup when returning to home screen
-     * - Cleanup when another activity replaces movie card
-     * - Independent fixed background layer
+     * 3.2.3 FIXES:
+     * - Fixed background disappearing during poster animation
+     * - Removed opacity from background visibility detection
+     * - Improved poster image URL detection
+     * - Fixed image crossfade logic
+     * - Background cleanup when card is actually removed
+     * - TMDB backdrop slideshow
      * - Smooth fade while scrolling
-     * - Background restores when scrolling up
-     * - TMDB slideshow in independent background
-     * - Preserved original 3.1.2 interface
      */
 
-    if (window.MOB_INTERFACE_V322_READY) return;
-    window.MOB_INTERFACE_V322_READY = true;
+    if (window.MOB_INTERFACE_V323_READY) return;
+    window.MOB_INTERFACE_V323_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -37,6 +35,7 @@
     var backgroundInitialTop = 0;
     var backgroundHeight = 0;
     var backgroundScrollFrame = null;
+    var backgroundActiveImage = 0;
 
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
@@ -114,6 +113,7 @@
         backgroundInitialTop = 0;
         backgroundHeight = 0;
         backgroundRenderToken = 0;
+        backgroundActiveImage = 0;
     }
 
     function addBackgroundListener(target, event, handler, options) {
@@ -130,6 +130,67 @@
     }
 
     /*
+     * GET POSTER IMAGE URL
+     */
+
+    function getPosterImageUrl(posterElement) {
+        if (!posterElement) return '';
+
+        var img = posterElement.querySelector('img');
+
+        if (img) {
+            var url =
+                img.currentSrc ||
+                img.src ||
+                img.getAttribute('data-src') ||
+                img.getAttribute('data-original') ||
+                img.getAttribute('data-lazy-src') ||
+                '';
+
+            if (url && url.indexOf('data:image') !== 0) {
+                return url;
+            }
+        }
+
+        var posterStyle = window.getComputedStyle(posterElement);
+        var backgroundImage = posterStyle.backgroundImage || '';
+
+        if (
+            backgroundImage &&
+            backgroundImage !== 'none'
+        ) {
+            var match = backgroundImage.match(
+                /url\(["']?(.*?)["']?\)/
+            );
+
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+
+        var posterChild = posterElement.querySelector(
+            '[style*="background-image"]'
+        );
+
+        if (posterChild) {
+            var childStyle = window.getComputedStyle(posterChild);
+            var childBackground = childStyle.backgroundImage || '';
+
+            if (childBackground && childBackground !== 'none') {
+                var childMatch = childBackground.match(
+                    /url\(["']?(.*?)["']?\)/
+                );
+
+                if (childMatch && childMatch[1]) {
+                    return childMatch[1];
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /*
      * FIXED BACKGROUND IMAGE
      */
 
@@ -143,9 +204,21 @@
             return;
         }
 
-        var nextImage = new Image();
+        var images = fixedBackground.querySelectorAll(
+            '.mi323-fixed-image'
+        );
 
-        nextImage.onload = function () {
+        if (images.length < 2) return;
+
+        var nextIndex = backgroundActiveImage === 0 ? 1 : 0;
+        var currentIndex = backgroundActiveImage;
+
+        var nextImage = images[nextIndex];
+        var currentImage = images[currentIndex];
+
+        var preload = new Image();
+
+        preload.onload = function () {
             if (
                 renderToken !== activeRenderToken ||
                 renderToken !== backgroundRenderToken ||
@@ -155,41 +228,28 @@
                 return;
             }
 
-            var images = fixedBackground.querySelectorAll(
-                '.mi322-fixed-image'
-            );
-
-            if (images.length < 2) return;
-
-            var current = images[0];
-            var next = images[1];
-
-            if (current.classList.contains('mi322-image-active')) {
-                current = images[0];
-                next = images[1];
-            } else {
-                current = images[1];
-                next = images[0];
-            }
-
-            next.src = url;
+            nextImage.src = url;
 
             requestAnimationFrame(function () {
                 if (
                     renderToken !== activeRenderToken ||
-                    !fixedBackground
+                    renderToken !== backgroundRenderToken ||
+                    !fixedBackground ||
+                    !document.body.contains(fixedBackground)
                 ) {
                     return;
                 }
 
-                next.classList.add('mi322-image-active');
-                current.classList.remove('mi322-image-active');
+                nextImage.classList.add('mi323-image-active');
+                currentImage.classList.remove('mi323-image-active');
+
+                backgroundActiveImage = nextIndex;
             });
         };
 
-        nextImage.onerror = function () {};
+        preload.onerror = function () {};
 
-        nextImage.src = url;
+        preload.src = url;
     }
 
     /*
@@ -215,6 +275,7 @@
 
         backgroundPoster = posterElement;
         backgroundRenderToken = renderToken;
+        backgroundActiveImage = 0;
 
         var rect = posterElement.getBoundingClientRect();
 
@@ -223,25 +284,29 @@
 
         var layer = document.createElement('div');
 
-        layer.id = 'mi322-fixed-background';
+        layer.id = 'mi323-fixed-background';
 
         layer.innerHTML =
-            '<div class="mi322-fixed-background__images">' +
-                '<img class="mi322-fixed-image mi322-image-active" alt="">' +
-                '<img class="mi322-fixed-image" alt="">' +
+            '<div class="mi323-fixed-background__images">' +
+                '<img class="mi323-fixed-image mi323-image-active" alt="">' +
+                '<img class="mi323-fixed-image" alt="">' +
             '</div>' +
-            '<div class="mi322-fixed-background__gradient"></div>' +
-            '<div class="mi322-fixed-background__shade"></div>';
+            '<div class="mi323-fixed-background__gradient"></div>' +
+            '<div class="mi323-fixed-background__shade"></div>';
 
         document.body.appendChild(layer);
 
         fixedBackground = layer;
 
-        var originalImage = posterElement.querySelector('img');
+        /*
+         * INITIAL IMAGE
+         */
 
-        if (originalImage && originalImage.src) {
+        var originalImageUrl = getPosterImageUrl(posterElement);
+
+        if (originalImageUrl) {
             setFixedBackgroundImage(
-                originalImage.src,
+                originalImageUrl,
                 renderToken
             );
         }
@@ -285,12 +350,12 @@
             var shadeOpacity = progress * 0.30;
 
             fixedBackground.style.setProperty(
-                '--mi322-image-opacity',
+                '--mi323-image-opacity',
                 imageOpacity.toFixed(3)
             );
 
             fixedBackground.style.setProperty(
-                '--mi322-shade-opacity',
+                '--mi323-shade-opacity',
                 shadeOpacity.toFixed(3)
             );
         }
@@ -328,6 +393,11 @@
 
     /*
      * BACKGROUND ACTIVITY WATCHER
+     *
+     * IMPORTANT:
+     * Do not use opacity here.
+     * The poster has an entrance animation that starts at opacity:0.
+     * Checking opacity would remove the background immediately.
      */
 
     function watchBackgroundActivity(renderToken) {
@@ -359,10 +429,14 @@
             while (element && element !== document.body) {
                 var style = window.getComputedStyle(element);
 
+                /*
+                 * Only actual visibility states are checked.
+                 * Opacity is deliberately ignored.
+                 */
+
                 if (
                     style.display === 'none' ||
-                    style.visibility === 'hidden' ||
-                    parseFloat(style.opacity) <= 0.01
+                    style.visibility === 'hidden'
                 ) {
                     hidden = true;
                     break;
@@ -390,6 +464,11 @@
                 'hidden'
             ]
         });
+
+        /*
+         * Initial check is safe now:
+         * opacity is not used as a removal condition.
+         */
 
         checkBackground();
     }
@@ -501,7 +580,10 @@
                 return true;
             }
 
-            if (element.querySelector && element.querySelector(protectedSelector)) {
+            if (
+                element.querySelector &&
+                element.querySelector(protectedSelector)
+            ) {
                 return true;
             }
 
@@ -546,7 +628,6 @@
             if (!isYearCountryLine(element)) continue;
 
             var position = element.compareDocumentPosition(title);
-
             var beforeTitle = !!(position & 4);
 
             if (!beforeTitle) continue;
@@ -564,7 +645,6 @@
                 var parent = current.parentElement;
 
                 if (!parent || parent === root) break;
-
                 if (isProtected(parent)) break;
 
                 var parentText = String(parent.textContent || '')
@@ -663,7 +743,7 @@
          * FIXED BACKGROUND
          */
 
-        css += '#mi322-fixed-background{';
+        css += '#mi323-fixed-background{';
         css += 'position:fixed!important;';
         css += 'top:0!important;';
         css += 'left:0!important;';
@@ -675,17 +755,17 @@
         css += 'pointer-events:none!important;';
         css += 'z-index:0!important;';
         css += 'background:#050608;';
-        css += '--mi322-image-opacity:1;';
-        css += '--mi322-shade-opacity:0;';
+        css += '--mi323-image-opacity:1;';
+        css += '--mi323-shade-opacity:0;';
         css += '}';
 
-        css += '#mi322-fixed-background .mi322-fixed-background__images{';
+        css += '#mi323-fixed-background .mi323-fixed-background__images{';
         css += 'position:absolute;';
         css += 'inset:0;';
         css += 'overflow:hidden;';
         css += '}';
 
-        css += '#mi322-fixed-background .mi322-fixed-image{';
+        css += '#mi323-fixed-background .mi323-fixed-image{';
         css += 'position:absolute;';
         css += 'inset:0;';
         css += 'width:100%;';
@@ -699,17 +779,17 @@
         css += 'will-change:opacity,transform;';
         css += '}';
 
-        css += '#mi322-fixed-background .mi322-fixed-image.mi322-image-active{';
-        css += 'opacity:var(--mi322-image-opacity,1);';
+        css += '#mi323-fixed-background .mi323-fixed-image.mi323-image-active{';
+        css += 'opacity:var(--mi323-image-opacity,1);';
         css += '}';
 
         if (isPosterAnim) {
-            css += '#mi322-fixed-background .mi322-fixed-image{';
+            css += '#mi323-fixed-background .mi323-fixed-image{';
             css += 'animation:kenBurnsEffect 28s ease-in-out infinite;';
             css += '}';
         }
 
-        css += '#mi322-fixed-background .mi322-fixed-background__gradient{';
+        css += '#mi323-fixed-background .mi323-fixed-background__gradient{';
         css += 'position:absolute;';
         css += 'inset:0;';
         css += 'z-index:2;';
@@ -723,11 +803,11 @@
         css += ');';
         css += '}';
 
-        css += '#mi322-fixed-background .mi322-fixed-background__shade{';
+        css += '#mi323-fixed-background .mi323-fixed-background__shade{';
         css += 'position:absolute;';
         css += 'inset:0;';
         css += 'z-index:3;';
-        css += 'background:rgba(0,0,0,var(--mi322-shade-opacity,0));';
+        css += 'background:rgba(0,0,0,var(--mi323-shade-opacity,0));';
         css += '}';
 
         /*
@@ -1839,7 +1919,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.2.2 Fixed Background Lifecycle initialized'
+            '[MOB_INTERFACE] 3.2.3 Background Animation Fix initialized'
         );
     }
 
