@@ -2,16 +2,20 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.8.1 — TRUE NETFLIX FULL CARD LAYOUT
+     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT
      * TMDB ONLY
      *
-     * CHANGES 1.8.1:
-     * - Advanced Netflix-style CSS layout for full card view
-     * - Immersive backdrop positioning & clean button integration
+     * CHANGES 1.7.0:
+     * - Synchronized hero and background menu shift
+     * - Background keeps original width and image framing
+     * - Desktop menu shift: 20em
+     * - Mobile menu shift: 16em
+     * - Unified transition timing and easing
+     * - Preserved all 1.6.9 functionality
      */
 
-    var VERSION = '1.8.1';
-    var READY_KEY = 'interface_plus_tmdb_only_181';
+    var VERSION = '1.7.0';
+    var READY_KEY = 'interface_plus_tmdb_only_170';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -266,6 +270,8 @@
         var v = parseInt(storageGet(S.scale, '100'), 10);
         return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
     }
+
+    /* Адаптивне масштабування логотипів */
 
     function adaptiveLogoHeight(img, mode) {
         if (!img || !img.naturalWidth || !img.naturalHeight) return;
@@ -653,28 +659,13 @@
         if (layer) layer.style.display = 'block';
     }
 
-    function applyFullCardNetflixBackground(d) {
-        if (!d || !d.backdrop_path) return;
-        var url = imageURL(d.backdrop_path, BACKDROP_SIZE);
-        if (!url) return;
-
-        var layer = ensureScreenBackground();
-        if (layer) layer.style.display = 'block';
-
-        var imgA = layer.querySelector('.banner-screen-bg__image--a');
-        if (imgA) {
-            imgA.style.backgroundImage = 'url("' + url + '")';
-            imgA.classList.add('show');
-        }
-    }
-
-    /* РЕАЛЬНІ NETFLIX-СТИЛІ ДЛЯ КАРТКИ ФІЛЬМУ */
+    /* CSS стилі */
 
     var CSS = [
         '#interface-plus-screen-background{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;display:none;background:#000;transition:transform .28s ease;will-change:transform;}',
         '.banner-screen-bg__image{position:absolute;inset:0;width:100%;height:100%;background-position:center 65%;background-repeat:no-repeat;background-size:cover;opacity:0;transition:opacity .18s ease;will-change:opacity;}',
         '.banner-screen-bg__image.show{opacity:1;}',
-        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.65) 0%,rgba(0,0,0,.45) 20%,rgba(0,0,0,.15) 45%,rgba(0,0,0,0) 70%),linear-gradient(to bottom,rgba(0,0,0,.30) 0vh,rgba(0,0,0,0) 25vh,rgba(0,0,0,.20) 45vh,rgba(0,0,0,.85) 75vh,#000 100%);}',
+        '.banner-screen-bg__vignette{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.48) 0%,rgba(0,0,0,.36) 12%,rgba(0,0,0,.23) 24%,rgba(0,0,0,.10) 38%,rgba(0,0,0,0) 56%),linear-gradient(to bottom,rgba(0,0,0,.30) 0vh,rgba(0,0,0,.20) 8vh,rgba(0,0,0,.09) 17vh,rgba(0,0,0,0) 30vh),linear-gradient(to bottom,rgba(0,0,0,0) 0vh,rgba(0,0,0,0) 35vh,rgba(0,0,0,.04) 40vh,rgba(0,0,0,.12) 45vh,rgba(0,0,0,.30) 50vh,rgba(0,0,0,.60) 55vh,rgba(0,0,0,.88) 59vh,#000 63vh,#000 100%);}',
         '.banner-host{position:relative;z-index:1;}',
         '.banner-enabled .banner-host .activity__body{padding-top:42vh!important;box-sizing:border-box;}',
         '.banner-hero{position:absolute;top:0;left:0;right:0;height:50vh;overflow:visible;pointer-events:none;z-index:2;transition:transform .28s ease;will-change:transform;}',
@@ -690,24 +681,14 @@
         '.banner-hero__genre{color:rgba(225,229,235,.82);}',
         '.banner-hero__separator{color:rgba(255,255,255,.38);font-size:.9em;}',
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 10px rgba(0,0,0,.65);}',
-
-        /* 🎬 КІНЕМАТОГРАФІЧНИЙ NETFLIX ЛЕАУТ ДЛЯ ПОВНОЇ КАРТКИ */
-        'body.view--full{background:transparent!important;}',
-        'body.view--full #interface-plus-screen-background{display:block!important;z-index:0!important;}',
-        'body.view--full .activity__body{background:transparent!important;padding-top:0!important;}',
-        'body.view--full .full-start, body.view--full .full-start-new, body.view--full .full__body, body.view--full .full-card{position:relative;z-index:2;background:transparent!important;box-shadow:none!important;}',
-        'body.view--full .full-start__background, body.view--full .full-start-new__background{display:none!important;}',
-        'body.view--full .full-start__body, body.view--full .full-start-new__body{background:linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%)!important;padding-top:30vh!important;}',
-
-        /* Логотип у картці фільму у стилі Netflix */
         '.interface-plus-logo-title{position:relative;}',
-        '.interface-plus-card-logo{display:block;width:auto;height:auto;max-width:100%;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 4px 16px rgba(0,0,0,.7));margin-bottom:1.2em;}',
+        '.interface-plus-card-logo{display:block;width:auto;height:auto;max-width:100%;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45));}',
         '.interface-plus-card-logo.ready{opacity:1;}',
         '.interface-plus-logo-title.interface-plus-logo-active{font-size:0!important;line-height:0!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
-        /* MENU CINEMATIC SHIFT */
+        /* MENU CINEMATIC SHIFT — однакова геометрія для банера і фону */
         'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
@@ -724,6 +705,8 @@
 
         if (!el.parentNode) document.head.appendChild(el);
     }
+
+    /* Герой (Банер) */
 
     function createHero(root) {
         if (!root) return null;
@@ -1101,6 +1084,8 @@
         attachHero(activeActivity());
     }
 
+    /* Картки */
+
     function restoreTitle(root) {
         if (!root) return;
 
@@ -1182,7 +1167,6 @@
             restoreTitle(activeCard.root);
         }
 
-        document.body.classList.remove('view--full');
         activeCard = null;
     }
 
@@ -1198,8 +1182,7 @@
     }
 
     function showCardLogoInstant(root, d) {
-        var holder = getLogoHolder(d);
-        var hit = holder && holder.tfeed_logo;
+        var hit = getLogoHolder(d).tfeed_logo;
         var title = hit && findTitle(root);
 
         if (!title) return false;
@@ -1235,10 +1218,6 @@
         ) return;
 
         stopCard(false);
-
-        // ВМИКАЄМО КІНЕМАТОГРАФІЧНИЙ NETFLIX ЛЕАУТ
-        document.body.classList.add('view--full');
-        applyFullCardNetflixBackground(d);
 
         var token = activeCardToken;
 
@@ -1336,56 +1315,98 @@
         }
     }
 
+    /* Шрифти та розміри */
+
     var FONTS = {
-        default: { family: 'Roboto, Arial, sans-serif', url: '' },
-        netflix: { family: '"Netflix Sans", Arial, sans-serif', url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2' },
-        montserrat: { family: '"Montserrat", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap' },
-        inter: { family: '"Inter", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap' },
-        nunito: { family: '"Nunito", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap' }
+        default: {
+            family: 'Roboto, Arial, sans-serif',
+            url: ''
+        },
+        netflix: {
+            family: '"Netflix Sans", Arial, sans-serif',
+            url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'
+        },
+        montserrat: {
+            family: '"Montserrat", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'
+        },
+        inter: {
+            family: '"Inter", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+        },
+        nunito: {
+            family: '"Nunito", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap'
+        }
     };
 
     function applyFont() {
         var name = text(storageGet(S.font, 'default'));
+
         if (currentFont === name) return;
+
         currentFont = name;
+
         var font = FONTS[name] || FONTS.default;
 
         var oldFace = document.getElementById('interface-plus-font-face');
+
         if (oldFace) oldFace.remove();
+
         var oldStyle = document.getElementById('interface-plus-font-style');
+
         if (oldStyle) oldStyle.remove();
 
         if (font.url) {
             var face = document.createElement('style');
+
             face.id = 'interface-plus-font-face';
-            face.textContent = font.url.indexOf('googleapis.com') !== -1 ? '@import url("' + font.url + '");' : '@font-face{font-family:"Netflix Sans";src:url("' + font.url + '") format("woff2");font-weight:400}';
+
+            face.textContent =
+                font.url.indexOf('googleapis.com') !== -1
+                    ? '@import url("' + font.url + '");'
+                    : '@font-face{font-family:"Netflix Sans";src:url("' +
+                      font.url +
+                      '") format("woff2");font-weight:400}';
+
             document.head.appendChild(face);
         }
 
         var style = document.createElement('style');
+
         style.id = 'interface-plus-font-style';
-        style.textContent = 'body,.body,*{font-family:' + font.family + '!important}';
+        style.textContent = 'body,.body,*{font-family:' +
+            font.family +
+            '!important}';
+
         document.head.appendChild(style);
     }
 
     function patchMaker(count) {
         if (!Lampa.Maker || !Lampa.Maker.map) return;
+
         ['Line', 'Category'].forEach(function (type) {
             var maker = Lampa.Maker.map(type);
+
             if (!maker || !maker.Items || !maker.Items.onInit) return;
+
             if (maker.Items.__interfacePlusPatched) {
                 maker.Items.__interfacePlusCount = count;
                 return;
             }
+
             var original = maker.Items.onInit;
+
             maker.Items.onInit = function () {
                 original.apply(this, arguments);
+
                 if (type === 'Line') {
                     this.view = maker.Items.__interfacePlusCount || count;
                 } else {
                     this.limit_view = maker.Items.__interfacePlusCount || count;
                 }
             };
+
             maker.Items.__interfacePlusPatched = true;
             maker.Items.__interfacePlusCount = count;
         });
@@ -1393,20 +1414,38 @@
 
     function applySize() {
         var value = parseFloat(storageGet(S.size, '10.6')) || 10.6;
+
         var mobile = false;
+
         try {
-            mobile = !!(Lampa.Platform && Lampa.Platform.screen && Lampa.Platform.screen('mobile'));
+            mobile = !!(
+                Lampa.Platform &&
+                Lampa.Platform.screen &&
+                Lampa.Platform.screen('mobile')
+            );
         } catch (e) {}
+
         if (mobile) value = 10.1;
+
         if (String(value) === currentSize) return;
+
         currentSize = String(value);
+
         document.body.style.fontSize = value + 'px';
-        patchMaker(value <= 9.6 ? 8 : value <= 11.1 ? 7 : 6);
+
+        patchMaker(
+            value <= 9.6 ? 8 :
+            value <= 11.1 ? 7 : 6
+        );
     }
+
+    /* Налаштування */
 
     function addSettings() {
         if (!Lampa.SettingsApi) return;
+
         var api = Lampa.SettingsApi;
+
         api.addComponent({
             component: 'interface_plus_settings',
             name: 'Інтерфейс +',
@@ -1416,43 +1455,148 @@
         function add(key, type, def, name, desc, values, change) {
             api.addParam({
                 component: 'interface_plus_settings',
-                param: { name: key, type: type, default: def, values: values },
-                field: { name: name, description: desc || '' },
+                param: {
+                    name: key,
+                    type: type,
+                    default: def,
+                    values: values
+                },
+                field: {
+                    name: name,
+                    description: desc || ''
+                },
                 onChange: change
             });
         }
 
-        add(S.hero, 'trigger', true, 'Динамічні банери', 'Преміальні банери на головній сторінці', null, applyHero);
-        add(S.card, 'trigger', true, 'Логотип у картці фільму', 'Логотипи тільки з TMDB', null, function () { refreshCard(true); });
-        add(S.scale, 'select', '100', 'Розмір логотипів', 'Додатковий масштаб після автоматичного підбору', {'70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%'}, function () { refreshAll(false); });
-        add('interface_plus_clear_logo_cache', 'button', '', 'Очистити кеш логотипів', 'Повторно отримати логотипи з TMDB', null, clearLogoCache);
-        add(S.size, 'select', '10.6', 'Розмір інтерфейсу', 'Масштаб елементів інтерфейсу', {'09.1':'Міні','09.6':'Дуже малий','10.1':'Малий','10.6':'Середній'}, applySize);
-        add(S.font, 'select', 'default', 'Шрифт інтерфейсу', 'Стиль тексту', {default:'Roboto',netflix:'Netflix Sans',montserrat:'Montserrat',inter:'Inter',nunito:'Nunito'}, applyFont);
+        add(
+            S.hero,
+            'trigger',
+            true,
+            'Динамічні банери',
+            'Преміальні банери на головній сторінці',
+            null,
+            applyHero
+        );
+
+        add(
+            S.card,
+            'trigger',
+            true,
+            'Логотип у картці фільму',
+            'Логотипи тільки з TMDB',
+            null,
+            function () {
+                refreshCard(true);
+            }
+        );
+
+        add(
+            S.scale,
+            'select',
+            '100',
+            'Розмір логотипів',
+            'Додатковий масштаб після автоматичного підбору',
+            {
+                '70':'70%',
+                '80':'80%',
+                '90':'90%',
+                '100':'100%',
+                '110':'110%',
+                '120':'120%'
+            },
+            function () {
+                refreshAll(false);
+            }
+        );
+
+        add(
+            'interface_plus_clear_logo_cache',
+            'button',
+            '',
+            'Очистити кеш логотипів',
+            'Повторно отримати логотипи з TMDB',
+            null,
+            clearLogoCache
+        );
+
+        add(
+            S.size,
+            'select',
+            '10.6',
+            'Розмір інтерфейсу',
+            'Масштаб елементів інтерфейсу',
+            {
+                '09.1':'Міні',
+                '09.6':'Дуже малий',
+                '10.1':'Малий',
+                '10.6':'Середній'
+            },
+            applySize
+        );
+
+        add(
+            S.font,
+            'select',
+            'default',
+            'Шрифт інтерфейсу',
+            'Стиль тексту',
+            {
+                default:'Roboto',
+                netflix:'Netflix Sans',
+                montserrat:'Montserrat',
+                inter:'Inter',
+                nunito:'Nunito'
+            },
+            applyFont
+        );
     }
+
+    /* Відстеження стану лівого меню */
 
     function installMenuObserver() {
         if (!window.MutationObserver || menuObserver) return;
+
         menuObserver = new MutationObserver(function () {
             var opened = document.body.classList.contains('menu--open');
-            document.body.classList.toggle('interface-plus-menu-open', opened);
+
+            document.body.classList.toggle(
+                'interface-plus-menu-open',
+                opened
+            );
         });
-        menuObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-        document.body.classList.toggle('interface-plus-menu-open', document.body.classList.contains('menu--open'));
+
+        menuObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        document.body.classList.toggle(
+            'interface-plus-menu-open',
+            document.body.classList.contains('menu--open')
+        );
     }
+
+    /* Слухачі подій */
 
     function installListeners() {
         document.addEventListener('hover:focus', onFocus, true);
+
         if (!Lampa.Listener) return;
 
         Lampa.Listener.follow('activity', function (e) {
             if (!e) return;
+
             if (e.type === 'start') {
                 requestAnimationFrame(function () {
                     if (isFull(e.object)) {
                         clearTimeout(restoreTimer);
                         clearTimeout(focusTimer);
+
                         lastFocusKey = '';
+
                         hideHeroBackground();
+
                         stopCard(false);
                         startCard(e.object);
                     } else if (isMain(e.object)) {
@@ -1460,60 +1604,113 @@
                         stopCard(false);
                     } else {
                         clearTimeout(focusTimer);
+
                         hideHeroBackground();
+
                         stopCard(false);
                     }
                 });
             }
+
             if (e.type === 'destroy' && isFull(e.object)) {
                 stopCard(false);
                 scheduleHeroRestore();
             }
+
             if (e.type === 'destroy') {
-                var comp = text(e.object && e.object.component).toLowerCase();
-                if (comp === 'main' || comp === 'category') hideHeroBackground();
+                var comp = text(
+                    e.object && e.object.component
+                ).toLowerCase();
+
+                if (comp === 'main' || comp === 'category') {
+                    hideHeroBackground();
+                }
             }
         });
 
         Lampa.Listener.follow('full', function (e) {
-            if (!e || (e.type !== 'complete' && e.type !== 'complite')) return;
+            if (
+                !e ||
+                (e.type !== 'complete' && e.type !== 'complite')
+            ) return;
+
             var d = e.data && e.data.movie;
+
             requestAnimationFrame(function () {
                 hideHeroBackground();
+
                 var a = activeActivity();
-                if (isFull(a)) startCard(a, d || null, true);
+
+                if (isFull(a)) {
+                    startCard(a, d || null, true);
+                }
             });
         });
 
         try {
-            if (Lampa.Storage.listener && Lampa.Storage.listener.follow) {
+            if (
+                Lampa.Storage.listener &&
+                Lampa.Storage.listener.follow
+            ) {
                 Lampa.Storage.listener.follow('change', function (e) {
                     if (!e || !e.name) return;
+
                     if (e.name === S.hero) applyHero();
+
                     if (e.name === S.card) refreshCard(true);
-                    if (e.name === S.font) { currentFont = ''; applyFont(); }
-                    if (e.name === S.size) { currentSize = ''; applySize(); }
+
+                    if (e.name === S.font) {
+                        currentFont = '';
+                        applyFont();
+                    }
+
+                    if (e.name === S.size) {
+                        currentSize = '';
+                        applySize();
+                    }
+
                     if (e.name === S.scale) refreshAll(false);
                 });
             }
         } catch (e) {}
     }
 
+    /* Експорт містка для інших плагінів */
+    window.InterfacePlusBridge = {
+        getVersion: function() { return VERSION; },
+        getLogo: function(item) {
+            var holder = getLogoHolder(item);
+            return holder ? holder.tfeed_logo : null;
+        },
+        getLastMovie: function() {
+            return activeHero ? activeHero.lastMovieData : null;
+        }
+    };
+
+    /* Ініціалізація */
+
     function init() {
         if (initialized || !window.Lampa || !Lampa.Storage) return;
+
         initialized = true;
 
         installStyle();
+
         ensureScreenBackground();
+
         installMenuObserver();
+
         applyFont();
         applySize();
         applyHero();
+
         addSettings();
+
         installListeners();
 
         requestAnimationFrame(function () {
             var a = activeActivity();
+
             if (isFull(a)) {
                 hideHeroBackground();
                 startCard(a);
@@ -1524,7 +1721,7 @@
             }
         });
 
-        log('True Netflix full card layout initialized');
+        log('Precise menu cinematic shift initialized');
     }
 
     if (window.appready) {
