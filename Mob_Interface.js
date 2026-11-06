@@ -3,33 +3,20 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.2
+     * @version 3.1.3
      * @author Crowley24
-     * @description Minimal Cinematic Premium Mobile Interface
+     * @description Minimal Cinematic Premium Mobile Interface with Fixed Background & Scroll Blur
      * @platforms Lampa | Mobile
      *
-     * 3.1.2 CHANGES:
-     * - Removed duplicate year/country above movie logo
-     * - Preserved year/country in metadata row
-     * - Minimal transparent metadata design
-     * - Removed metadata glass panel, background and border
-     * - Thin elegant metadata separators
-     * - Minimal transparent buttons
-     * - Removed button backgrounds, borders and heavy shadows
-     * - Subtle button press animation
-     * - Improved logo shadows and glow
-     * - Refined tagline typography
-     * - Improved poster gradients
-     * - Improved animations
-     * - Age rating completely hidden
-     * - No custom badges or custom ratings
-     * - Native Lampa ratings preserved
-     * - TMDB cache and async request protection
-     * - Safe slideshow timer management
+     * 3.1.3 CHANGES:
+     * - Fixed poster background position on scroll (position: fixed)
+     * - Dynamic scroll-based backdrop blur & zoom effect
+     * - Optimized content container margins and gradient overlay
+     * - Preserved all 3.1.2 styling, caching, and safety improvements
      */
 
-    if (window.MOB_INTERFACE_V312_READY) return;
-    window.MOB_INTERFACE_V312_READY = true;
+    if (window.MOB_INTERFACE_V313_READY) return;
+    window.MOB_INTERFACE_V313_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -367,11 +354,6 @@
         css += '100%{opacity:1;transform:scale(1)}';
         css += '}';
 
-        css += '@keyframes premium_glow{';
-        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
-        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
-        css += '}';
-
         css += '@media screen and (max-width:480px){';
 
         /*
@@ -426,16 +408,20 @@
         css += '}';
 
         /*
-         * CINEMATIC POSTER
+         * CINEMATIC POSTER (FIXED ON SCROLL)
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:relative!important;';
+        css += 'position:fixed!important;';
+        css += 'top:0!important;';
+        css += 'left:0!important;';
+        css += 'width:100%!important;';
         css += 'overflow:hidden!important;';
         css += 'background:#050608;';
-        css += 'z-index:1;';
+        css += 'z-index:0!important;';
         css += 'height:62vh!important;';
         css += 'min-height:390px;';
+        css += 'will-change:transform,filter;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -467,7 +453,7 @@
         css += 'object-fit:cover;';
         css += 'filter:saturate(1.06) contrast(1.045)!important;';
         css += 'transform-origin:center center!important;';
-        css += 'transition:opacity 1.35s ease-in-out!important;';
+        css += 'transition:filter 0.15s ease-out, transform 0.15s ease-out!important;';
 
         if (isPosterAnim) {
             css += 'animation:kenBurnsEffect 28s ease-in-out infinite!important;';
@@ -478,7 +464,7 @@
         css += '}';
 
         /*
-         * MAIN CONTENT
+         * MAIN CONTENT (OVERLAYING FIXED BACKGROUND)
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -488,9 +474,9 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:0 14px!important;';
-        css += 'margin-top:-168px!important;';
-        css += 'background:none!important;';
+        css += 'padding:0 14px 50px!important;';
+        css += 'margin-top:calc(62vh - 140px)!important;';
+        css += 'background:linear-gradient(180deg, rgba(5,7,11,0) 0%, rgba(5,7,11,0.75) 12%, #050608 22%)!important;';
         css += '}';
 
         /*
@@ -703,18 +689,10 @@
         css += 'opacity:.9;';
         css += '}';
 
-        /*
-         * REMOVE BUTTON DECORATIVE GLASS
-         */
-
         css += '.full-start-new .full-start__button:before{';
         css += 'display:none!important;';
         css += 'content:none!important;';
         css += '}';
-
-        /*
-         * SUBTLE PRESS EFFECT
-         */
 
         css += '.full-start-new .full-start__button:active{';
         css += 'transform:scale(.94);';
@@ -723,10 +701,6 @@
         css += 'box-shadow:none!important;';
         css += 'opacity:1;';
         css += '}';
-
-        /*
-         * BUTTON ICONS
-         */
 
         css += '.full-start-new .full-start__button svg,';
         css += '.full-start-new .full-start__button img{';
@@ -739,10 +713,6 @@
         css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
         css += 'transition:transform .22s ease,filter .22s ease;';
         css += '}';
-
-        /*
-         * BUTTON LABELS
-         */
 
         css += '.full-start-new .full-start__button span{';
         css += 'position:relative;';
@@ -767,10 +737,6 @@
         css += '}';
 
         css += '}';
-
-        /*
-         * REDUCED MOTION
-         */
 
         css += '@media (prefers-reduced-motion:reduce){';
         css += '.full-start-new *{';
@@ -826,19 +792,11 @@
                 .appendTo($metaRow);
         }
 
-        /*
-         * YEAR
-         */
-
         var date = movie.release_date ||
             movie.first_air_date ||
             '';
 
         addText(date ? date.substring(0, 4) : '');
-
-        /*
-         * COUNTRY
-         */
 
         var country = '';
 
@@ -859,10 +817,6 @@
 
         addText(country);
 
-        /*
-         * RUNTIME
-         */
-
         var runtime = movie.runtime || (
             movie.episode_run_time &&
             movie.episode_run_time.length
@@ -873,10 +827,6 @@
         if (runtime) {
             addText(formatTime(runtime));
         }
-
-        /*
-         * GENRES
-         */
 
         if (movie.genres && movie.genres.length) {
             addText(
@@ -889,10 +839,6 @@
                     .join(', ')
             );
         }
-
-        /*
-         * NATIVE LAMPA RATINGS
-         */
 
         var $card = container.closest('.full-start-new');
         var $nativeRates = $card.find('.full-start__rates').first();
@@ -927,6 +873,41 @@
     }
 
     /*
+     * SCROLL BLUR HANDLER
+     */
+
+    function initScrollBlur($render) {
+        if (window.innerWidth > 480) return;
+
+        var $scrollContainer = $render.closest('.scroll');
+        if (!$scrollContainer.length) {
+            $scrollContainer = $render.parent();
+        }
+
+        $scrollContainer.off('scroll.mi313').on('scroll.mi313', function() {
+            var scrollTop = $(this).scrollTop();
+            var $posterImg = $render.find('.full-start-new__poster img');
+            
+            if (!$posterImg.length) return;
+
+            if (scrollTop > 5) {
+                var blurAmount = Math.min(scrollTop / 35, 10);
+                var scaleAmount = 1 + (scrollTop / 1200);
+                
+                $posterImg.css({
+                    'filter': 'saturate(1.06) contrast(1.045) blur(' + blurAmount + 'px)',
+                    'transform': 'scale(' + scaleAmount + ')'
+                });
+            } else {
+                $posterImg.css({
+                    'filter': 'saturate(1.06) contrast(1.045) blur(0px)',
+                    'transform': 'scale(1)'
+                });
+            }
+        });
+    }
+
+    /*
      * TMDB DETAILS
      */
 
@@ -943,10 +924,6 @@
         ) {
             return;
         }
-
-        /*
-         * MOVIE LOGO
-         */
 
         if (
             data.images &&
@@ -979,10 +956,6 @@
                     );
             }
         }
-
-        /*
-         * STUDIO LOGO
-         */
 
         if (Lampa.Storage.get('mobile_interface_studios')) {
             $render.find('.studio-header-brand').remove();
@@ -1045,10 +1018,6 @@
             }
         }
 
-        /*
-         * BACKDROPS
-         */
-
         if (data.images && data.images.backdrops) {
             var backdrops = data.images.backdrops.filter(
                 function (elem) {
@@ -1085,11 +1054,8 @@
             }
         }
 
-        /*
-         * RECHECK DUPLICATE METADATA
-         */
-
         hideDuplicateHeaderMetadata($render);
+        initScrollBlur($render);
     }
 
     /*
@@ -1159,9 +1125,7 @@
                 );
             },
 
-            error: function () {
-                // Помилка TMDB не повинна порушувати роботу картки.
-            }
+            error: function () {}
         });
     }
 
@@ -1220,14 +1184,6 @@
             var nextImg = new Image();
 
             nextImg.onload = function () {
-                if (
-                    renderToken !== activeRenderToken ||
-                    !$poster[0] ||
-                    !document.body.contains($poster[0])
-                ) {
-                    return;
-                }
-
                 var $current = $poster.find('img').first();
 
                 var $next = $('<img>')
@@ -1240,9 +1196,7 @@
                 $poster.append($next);
 
                 requestAnimationFrame(function () {
-                    if (renderToken !== activeRenderToken) {
-                        return;
-                    }
+                    if (renderToken !== activeRenderToken) return;
 
                     $next.css('opacity', 1);
                     $current.css('opacity', 0);
@@ -1312,24 +1266,13 @@
                 window.lampa_settings.blur_poster = false;
             }
 
-            /*
-             * METADATA
-             */
-
             renderMeta(
                 $render.find('.full-start-new__right'),
                 e
             );
 
-            /*
-             * HIDE DUPLICATE YEAR/COUNTRY
-             */
-
             hideDuplicateHeaderMetadata($render);
-
-            /*
-             * TMDB
-             */
+            initScrollBlur($render);
 
             loadMovieDetails(
                 movie,
@@ -1529,7 +1472,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.2 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.3 Fixed Background & Scroll Blur initialized'
         );
     }
 
