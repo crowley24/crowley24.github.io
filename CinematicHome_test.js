@@ -2,12 +2,16 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.1 — PRECISE MENU CINEMATIC SHIFT + SMART HERO STUDIOS
+     * INTERFACE+ 1.7.2 — STUDIO LOGO IN HERO META
      * TMDB ONLY
+     *
+     * CHANGES 1.7.2:
+     * - Added studio logo in the hero banner metadata row next to ratings/year
+     * - Preserved all previous features and precise menu shift
      */
 
-    var VERSION = '1.7.1';
-    var READY_KEY = 'interface_plus_tmdb_only_171';
+    var VERSION = '1.7.2';
+    var READY_KEY = 'interface_plus_tmdb_only_172';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -18,8 +22,7 @@
         size: 'interface_size',
         font: 'fontchanger_selected',
         card: P + 'card_logo',
-        scale: P + 'logo_scale',
-        studios: P + 'hero_studios'
+        scale: P + 'logo_scale'
     };
 
     var LOGO_SIZE = 'w500';
@@ -35,7 +38,6 @@
     var backdropCache = {};
     var backdropCacheOrder = [];
     var backdropPending = {};
-    var detailsRequests = {};
     var generation = 0;
 
     var initialized = false;
@@ -51,6 +53,7 @@
     var menuObserver = null;
 
     var TITLE_SELECTOR = '.full-start__title, .full-start-new__title, .full__title, .full-card__title';
+    var META_SELECTOR = '.full-start__meta, .full-start-new__meta, .full__meta, .full-card__meta';
 
     /* Утиліти */
 
@@ -260,10 +263,6 @@
         return enabled(S.card, true);
     }
 
-    function studiosEnabled() {
-        return enabled(S.studios, true);
-    }
-
     function logoScale() {
         var v = parseInt(storageGet(S.scale, '100'), 10);
         return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
@@ -288,6 +287,8 @@
             img.style.height = (
                 (window.innerWidth <= 480 ? 5 : 7) * factor
             ) + 'em';
+        } else if (mode === 'studio' || mode === 'hero_studio') {
+            img.style.height = '1.35em';
         } else {
             img.style.height = Math.round(
                 (window.innerWidth <= 480 ? 75 : 105) * factor
@@ -446,6 +447,59 @@
         }, cb);
     }
 
+    function ensureStudioLogo(item, cb) {
+        cb = cb || function () {};
+
+        if (!item) {
+            cb(null);
+            return;
+        }
+
+        var type = movieType(item);
+        var holder = getLogoHolder(item);
+
+        cached(holder, 'tfeed_studio', function (done) {
+            var id = first(item.tmdb_id, item.tmdbId, item.id);
+
+            if (id && typeof id === 'object') id = id.id;
+
+            id = text(id);
+
+            if (!/^\d+$/.test(id)) {
+                done(null);
+                return;
+            }
+
+            var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+
+            if (!tmdb || !tmdb.get) {
+                done(null);
+                return;
+            }
+
+            tmdb.get(
+                type + '/' + id,
+                {},
+                function (json) {
+                    var companies = json && json.production_companies ? json.production_companies : [];
+                    var company = null;
+
+                    for (var i = 0; i < companies.length; i++) {
+                        if (companies[i] && companies[i].logo_path) {
+                            company = companies[i];
+                            break;
+                        }
+                    }
+
+                    done(company ? Lampa.Api.img(company.logo_path, LOGO_SIZE) : null);
+                },
+                function () {
+                    done(null);
+                }
+            );
+        }, cb);
+    }
+
     function clearLogoCache() {
         generation++;
         logoItems = {};
@@ -563,6 +617,9 @@
             ensureLogo(item, function (url) {
                 if (url) new Image().src = url;
             });
+            ensureStudioLogo(item, function (url) {
+                if (url) new Image().src = url;
+            });
         }
     }
 
@@ -657,115 +714,6 @@
         if (layer) layer.style.display = 'block';
     }
 
-    /* Аналіз кольору логотипа студії */
-
-    function applyStudioColorAnalysis(imgElement, logoUrl) {
-        if (!imgElement) return;
-
-        var img = new Image();
-        img.crossOrigin = 'anonymous';
-
-        img.onload = function () {
-            try {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-
-                canvas.width = this.width;
-                canvas.height = this.height;
-                ctx.drawImage(this, 0, 0);
-
-                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                var r = 0, g = 0, b = 0, count = 0;
-
-                for (var i = 0; i < imageData.length; i += 4) {
-                    if (imageData[i + 3] > 50) {
-                        r += imageData[i];
-                        g += imageData[i + 1];
-                        b += imageData[i + 2];
-                        count++;
-                    }
-                }
-
-                if (count > 0) {
-                    var brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;
-
-                    if (brightness < 40) {
-                        imgElement.style.filter = 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8))';
-                    }
-                }
-            } catch (e) {}
-        };
-
-        img.src = logoUrl;
-    }
-
-    /* Дозавантаження деталей для банера */
-
-    function fetchHeroDetails(d, cb) {
-        if (!d || !d.id) {
-            cb(d);
-            return;
-        }
-
-        var type = movieType(d);
-        var id = first(d.tmdb_id, d.tmdbId, d.id);
-        if (id && typeof id === 'object') id = id.id;
-        id = text(id);
-
-        if (!/^\d+$/.test(id)) {
-            cb(d);
-            return;
-        }
-
-        if (
-            (d.production_companies && d.production_companies.length) ||
-            (d.networks && d.networks.length)
-        ) {
-            cb(d);
-            return;
-        }
-
-        var reqKey = type + '_' + id;
-        if (detailsRequests[reqKey]) {
-            detailsRequests[reqKey].then(function (res) {
-                cb(res || d);
-            });
-            return;
-        }
-
-        var lang = 'en';
-        try {
-            lang = Lampa.Storage.field('tmdb_lang') || 'en';
-        } catch (e) {}
-
-        var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
-        if (!tmdb || !tmdb.get) {
-            cb(d);
-            return;
-        }
-
-        detailsRequests[reqKey] = new Promise(function (resolve) {
-            tmdb.get(
-                type + '/' + id,
-                { filter: { language: lang } },
-                function (json) {
-                    if (json) {
-                        d.production_companies = json.production_companies || d.production_companies;
-                        d.networks = json.networks || d.networks;
-                    }
-                    resolve(d);
-                },
-                function () {
-                    resolve(d);
-                }
-            );
-        });
-
-        detailsRequests[reqKey].then(function (res) {
-            cb(res);
-        });
-    }
-
     /* CSS стилі */
 
     var CSS = [
@@ -782,14 +730,19 @@
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7);}',
         '.banner-hero__meta{font-size:1.08em;color:rgba(245,245,241,.88);margin-bottom:.75em;display:flex;gap:.58em;align-items:center;flex-wrap:wrap;font-weight:500;line-height:1.4;text-shadow:0 2px 8px rgba(0,0,0,.65);}',
         '.banner-hero__meta-item{display:inline-flex;align-items:center;white-space:nowrap;}',
-        '.banner-hero__studio{display:inline-flex;align-items:center;height:1.4em;max-height:22px;vertical-align:middle;margin-right:.3em;}',
-        '.banner-hero__studio img{height:100%!important;width:auto!important;max-width:110px!important;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));display:inline-block;opacity:1;}',
         '.banner-hero__rate{display:inline-flex;align-items:center;gap:.32em;background:transparent;color:#f0ca78;font-weight:800;}',
         '.banner-hero__rate-star{font-size:1.05em;color:#e9bd65;}',
         '.banner-hero__year{color:rgba(245,245,241,.90);}',
         '.banner-hero__genre{color:rgba(225,229,235,.82);}',
         '.banner-hero__separator{color:rgba(255,255,255,.38);font-size:.9em;}',
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 10px rgba(0,0,0,.65);}',
+        
+        /* Студійний логотип у банері (герої) та у картці */
+        '.banner-hero__studio-logo{display:inline-block;vertical-align:middle;height:1.35em;width:auto;max-width:100px;object-fit:contain;margin-left:.35em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));}',
+        '.banner-hero__studio-logo.ready{opacity:1;}',
+        '.interface-plus-studio-logo{display:inline-block;vertical-align:middle;height:1.4em;width:auto;max-width:120px;object-fit:contain;margin-left:.6em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));}',
+        '.interface-plus-studio-logo.ready{opacity:1;}',
+
         '.interface-plus-logo-title{position:relative;}',
         '.interface-plus-card-logo{display:block;width:auto;height:auto;max-width:100%;object-fit:contain;object-position:left center;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45));}',
         '.interface-plus-card-logo.ready{opacity:1;}',
@@ -904,43 +857,6 @@
     function buildHeroMeta(container, d) {
         container.textContent = '';
 
-        // 1. Студія / Мережа (якщо увімкнено)
-        if (studiosEnabled()) {
-            var studios = (d.networks || d.production_companies || []).filter(function (s) {
-                return s && s.logo_path;
-            });
-
-            log('Studio check for:', movieTitle(d), 'Found studios:', studios);
-
-            if (studios.length > 0) {
-                var studio = studios[0];
-                var studioUrl = 'https://image.tmdb.org/t/p/w200' + studio.logo_path;
-
-                var studioSpan = document.createElement('span');
-                studioSpan.className = 'banner-hero__meta-item banner-hero__studio';
-
-                var studioImg = document.createElement('img');
-                studioImg.alt = studio.name || '';
-                studioImg.src = studioUrl;
-
-                studioImg.onerror = function() {
-                    log('Failed to load studio logo image:', studioUrl);
-                    studioSpan.style.display = 'none';
-                };
-
-                applyStudioColorAnalysis(studioImg, studioUrl);
-
-                studioSpan.appendChild(studioImg);
-                container.appendChild(studioSpan);
-
-                var sep = document.createElement('span');
-                sep.className = 'banner-hero__separator';
-                sep.textContent = '·';
-                container.appendChild(sep);
-            }
-        }
-
-        // 2. Рейтинг
         var rating = Number(d.vote_average) || 0;
 
         if (rating > 0) {
@@ -954,11 +870,34 @@
             container.appendChild(rate);
         }
 
-        // 3. Рік
+        // Асинхронне додавання логотипу студії до рядка метаданих банера
+        ensureStudioLogo(d, function (studioUrl) {
+            if (!studioUrl || container.parentNode && !container.parentNode.isConnected) return;
+
+            if (!container.querySelector('.banner-hero__studio-logo')) {
+                if (container.children.length) {
+                    container.appendChild(
+                        Object.assign(document.createElement('span'), {
+                            className: 'banner-hero__separator',
+                            textContent: '·'
+                        })
+                    );
+                }
+
+                var studioImg = document.createElement('img');
+                studioImg.className = 'banner-hero__studio-logo';
+                studioImg.alt = '';
+                container.appendChild(studioImg);
+
+                setAdaptiveLogo(studioImg, studioUrl, 'hero_studio');
+                studioImg.classList.add('ready');
+            }
+        });
+
         var year = movieYear(d);
 
         if (year) {
-            if (container.children.length > (studiosEnabled() ? 2 : 0)) {
+            if (container.children.length) {
                 container.appendChild(
                     Object.assign(document.createElement('span'), {
                         className: 'banner-hero__separator',
@@ -975,7 +914,6 @@
             );
         }
 
-        // 4. Жанри
         var genres = movieGenres(d);
 
         if (genres.length) {
@@ -997,75 +935,73 @@
         }
     }
 
-    function showHero(hero, rawData, force) {
-        if (!hero || !rawData) return;
+    function showHero(hero, d, force) {
+        if (!hero || !d) return;
 
-        fetchHeroDetails(rawData, function (d) {
-            var key = identity(d);
+        var key = identity(d);
 
-            if (!force && hero.movieKey === key) return;
+        if (!force && hero.movieKey === key) return;
 
-            hero.movieKey = key;
-            hero.lastMovieData = d;
-            hero.token++;
+        hero.movieKey = key;
+        hero.lastMovieData = d;
+        hero.token++;
 
-            var token = hero.token;
-            var p = hero.parts;
+        var token = hero.token;
+        var p = hero.parts;
 
-            showHeroBackground();
+        showHeroBackground();
 
-            p.logo.classList.remove('ready');
-            p.logo.style.display = 'none';
-            p.logo.removeAttribute('src');
+        p.logo.classList.remove('ready');
+        p.logo.style.display = 'none';
+        p.logo.removeAttribute('src');
 
-            p.title.style.display = '';
-            p.title.textContent = movieTitle(d);
+        p.title.style.display = '';
+        p.title.textContent = movieTitle(d);
 
-            p.logo.style.transform = 'scale(' + logoScale() + ')';
-            p.logo.style.transformOrigin = 'left center';
+        p.logo.style.transform = 'scale(' + logoScale() + ')';
+        p.logo.style.transformOrigin = 'left center';
 
-            buildHeroMeta(p.meta, d);
+        buildHeroMeta(p.meta, d);
 
-            p.descr.textContent = d.overview || '';
+        p.descr.textContent = d.overview || '';
 
-            if (d.backdrop_path) {
-                switchHeroBackdrop(
-                    hero,
-                    imageURL(d.backdrop_path, BACKDROP_SIZE),
-                    token
-                );
-            } else {
-                if (p.bgA) {
-                    p.bgA.classList.remove('show');
-                    p.bgA.style.backgroundImage = 'none';
-                }
-
-                if (p.bgB) {
-                    p.bgB.classList.remove('show');
-                    p.bgB.style.backgroundImage = 'none';
-                }
-
-                hero.activeBgIndex = 0;
+        if (d.backdrop_path) {
+            switchHeroBackdrop(
+                hero,
+                imageURL(d.backdrop_path, BACKDROP_SIZE),
+                token
+            );
+        } else {
+            if (p.bgA) {
+                p.bgA.classList.remove('show');
+                p.bgA.style.backgroundImage = 'none';
             }
 
-            ensureLogo(d, function (url) {
-                if (hero.token !== token || !url) return;
+            if (p.bgB) {
+                p.bgB.classList.remove('show');
+                p.bgB.style.backgroundImage = 'none';
+            }
 
-                preload(url, function (ok) {
-                    if (!ok || hero.token !== token) return;
+            hero.activeBgIndex = 0;
+        }
 
-                    setAdaptiveLogo(p.logo, url, 'hero');
+        ensureLogo(d, function (url) {
+            if (hero.token !== token || !url) return;
 
-                    p.logo.style.transform = 'scale(' + logoScale() + ')';
-                    p.logo.style.transformOrigin = 'left center';
-                    p.logo.style.display = 'block';
+            preload(url, function (ok) {
+                if (!ok || hero.token !== token) return;
 
-                    requestAnimationFrame(function () {
-                        if (hero.token === token) {
-                            p.logo.classList.add('ready');
-                            p.title.style.display = 'none';
-                        }
-                    });
+                setAdaptiveLogo(p.logo, url, 'hero');
+
+                p.logo.style.transform = 'scale(' + logoScale() + ')';
+                p.logo.style.transformOrigin = 'left center';
+                p.logo.style.display = 'block';
+
+                requestAnimationFrame(function () {
+                    if (hero.token === token) {
+                        p.logo.classList.add('ready');
+                        p.title.style.display = 'none';
+                    }
                 });
             });
         });
@@ -1234,7 +1170,7 @@
         attachHero(activeActivity());
     }
 
-    /* Картки */
+    /* Картки та студійні логотипи */
 
     function restoreTitle(root) {
         if (!root) return;
@@ -1270,11 +1206,24 @@
                 'interface-plus-logo-active'
             );
         });
+
+        if (root.querySelectorAll) {
+            var studioLogos = root.querySelectorAll('.interface-plus-studio-logo');
+            Array.prototype.forEach.call(studioLogos, function (sl) {
+                sl.remove();
+            });
+        }
     }
 
     function findTitle(root) {
         return root && root.querySelector
             ? root.querySelector(TITLE_SELECTOR)
+            : null;
+    }
+
+    function findMeta(root) {
+        return root && root.querySelector
+            ? root.querySelector(META_SELECTOR)
             : null;
     }
 
@@ -1332,22 +1281,36 @@
     }
 
     function showCardLogoInstant(root, d) {
-        var hit = getLogoHolder(d).tfeed_logo;
+        var holder = getLogoHolder(d);
+        var hit = holder.tfeed_logo;
+        var studioHit = holder.tfeed_studio;
         var title = hit && findTitle(root);
 
-        if (!title) return false;
+        if (title) {
+            var logo = prepareLogo(title);
 
-        var logo = prepareLogo(title);
+            logo.style.transform = 'scale(' + logoScale() + ')';
+            logo.style.transformOrigin = 'left center';
 
-        logo.style.transform = 'scale(' + logoScale() + ')';
-        logo.style.transformOrigin = 'left center';
+            setAdaptiveLogo(logo, hit, 'card');
 
-        setAdaptiveLogo(logo, hit, 'card');
+            logo.classList.add('ready');
+            title.classList.add('interface-plus-logo-active');
+        }
 
-        logo.classList.add('ready');
-        title.classList.add('interface-plus-logo-active');
+        if (studioHit) {
+            var meta = findMeta(root);
+            if (meta && !meta.querySelector('.interface-plus-studio-logo')) {
+                var studioImg = document.createElement('img');
+                studioImg.className = 'interface-plus-studio-logo';
+                studioImg.alt = '';
+                meta.appendChild(studioImg);
+                setAdaptiveLogo(studioImg, studioHit, 'studio');
+                studioImg.classList.add('ready');
+            }
+        }
 
-        return true;
+        return !!title;
     }
 
     function startCard(o, override, force) {
@@ -1376,6 +1339,7 @@
             key: key,
             data: d,
             src: '',
+            studioSrc: '',
             observer: null
         };
 
@@ -1386,7 +1350,6 @@
                 if (!cardCurrent(token, key)) return;
 
                 var title = findTitle(root);
-
                 if (
                     title &&
                     activeCard.src &&
@@ -1404,6 +1367,20 @@
                         title.classList.add('interface-plus-logo-active');
                     }
                 }
+
+                var meta = findMeta(root);
+                if (
+                    meta &&
+                    activeCard.studioSrc &&
+                    !meta.querySelector('.interface-plus-studio-logo')
+                ) {
+                    var studioImg = document.createElement('img');
+                    studioImg.className = 'interface-plus-studio-logo';
+                    studioImg.alt = '';
+                    meta.appendChild(studioImg);
+                    setAdaptiveLogo(studioImg, activeCard.studioSrc, 'studio');
+                    studioImg.classList.add('ready');
+                }
             });
 
             observer.observe(root, {
@@ -1419,23 +1396,44 @@
 
             activeCard.src = url || '';
 
-            if (!url) return;
+            if (url) {
+                var title = findTitle(root);
 
-            var title = findTitle(root);
+                if (title) {
+                    var logo = prepareLogo(title);
 
-            if (!title) return;
+                    if (logo) {
+                        logo.style.transform = 'scale(' + logoScale() + ')';
+                        logo.style.transformOrigin = 'left center';
 
-            var logo = prepareLogo(title);
+                        setAdaptiveLogo(logo, url, 'card');
 
-            if (!logo) return;
+                        logo.classList.add('ready');
+                        title.classList.add('interface-plus-logo-active');
+                    }
+                }
+            }
+        });
 
-            logo.style.transform = 'scale(' + logoScale() + ')';
-            logo.style.transformOrigin = 'left center';
+        ensureStudioLogo(d, function (url) {
+            if (!cardCurrent(token, key)) return;
 
-            setAdaptiveLogo(logo, url, 'card');
+            activeCard.studioSrc = url || '';
 
-            logo.classList.add('ready');
-            title.classList.add('interface-plus-logo-active');
+            if (url) {
+                var meta = findMeta(root);
+
+                if (meta && !meta.querySelector('.interface-plus-studio-logo')) {
+                    var studioImg = document.createElement('img');
+                    studioImg.className = 'interface-plus-studio-logo';
+                    studioImg.alt = '';
+                    meta.appendChild(studioImg);
+
+                    setAdaptiveLogo(studioImg, url, 'studio');
+
+                    studioImg.classList.add('ready');
+                }
+            }
         });
     }
 
@@ -1630,21 +1628,11 @@
         );
 
         add(
-            S.studios,
-            'trigger',
-            true,
-            'Логотипи студій у банері',
-            'Показувати логотип студії/мережі в мета-рядку банера',
-            null,
-            applyHero
-        );
-
-        add(
             S.card,
             'trigger',
             true,
             'Логотип у картці фільму',
-            'Логотипи тільки з TMDB',
+            'Логотипи та студії тільки з TMDB',
             null,
             function () {
                 refreshCard(true);
@@ -1815,7 +1803,7 @@
                 Lampa.Storage.listener.follow('change', function (e) {
                     if (!e || !e.name) return;
 
-                    if (e.name === S.hero || e.name === S.studios) applyHero();
+                    if (e.name === S.hero) applyHero();
 
                     if (e.name === S.card) refreshCard(true);
 
@@ -1841,6 +1829,10 @@
         getLogo: function(item) {
             var holder = getLogoHolder(item);
             return holder ? holder.tfeed_logo : null;
+        },
+        getStudioLogo: function(item) {
+            var holder = getLogoHolder(item);
+            return holder ? holder.tfeed_studio : null;
         },
         getLastMovie: function() {
             return activeHero ? activeHero.lastMovieData : null;
@@ -1881,7 +1873,7 @@
             }
         });
 
-        log('Precise menu cinematic shift + smart hero studios initialized');
+        log('Precise menu cinematic shift and hero studio logos initialized');
     }
 
     if (window.appready) {
