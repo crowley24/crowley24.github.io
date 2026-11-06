@@ -1,27 +1,20 @@
-
 (function () {
     'use strict';
 
     /*
-     * @name MOB_INTERFACE
-     * @version 3.2.2
-     * @author Crowley24
-     * @description Premium Mobile Interface — Adaptive Bottom Position
-     * @platforms Lampa | Mobile
+     * MOB_INTERFACE 3.2.3
+     * Premium Mobile Interface — Adaptive Bottom Position + Moving Blur
      *
-     * 3.2.2 CHANGES:
-     * - Main interface moved toward bottom of screen
-     * - Buttons positioned above native Lampa bottom navigation
-     * - Adaptive positioning for different screen heights
-     * - Scroll support for shorter displays
-     * - Native bottom navigation remains untouched
-     * - Preserved TMDB logos, studio logos and metadata
-     * - Preserved native Lampa ratings and buttons
-     * - Preserved premium logo-only animation
+     * FIX 3.2.3:
+     * - Gradient and blur now move together with the interface
+     * - Background image remains full-screen and stationary
+     * - Content remains anchored above native bottom navigation
+     * - Native navigation is not modified
+     * - Preserves TMDB logos, studio logos, metadata and ratings
      */
 
-    if (window.MOB_INTERFACE_V322_READY) return;
-    window.MOB_INTERFACE_V322_READY = true;
+    if (window.MOB_INTERFACE_V323_READY) return;
+    window.MOB_INTERFACE_V323_READY = true;
 
     var detailsCache = {};
     var logoCache = {};
@@ -54,7 +47,7 @@
     });
 
     // --------------------------------------------------
-    // TMDB LOGO LANGUAGE SELECTION
+    // TMDB LOGO LANGUAGE
     // --------------------------------------------------
 
     function pickMovieLogo(logos, lang) {
@@ -257,9 +250,7 @@
                         quality = 'w500';
                     }
 
-                    var logoUrl = Lampa.Api.img(logo.file_path, quality);
-
-                    finish(logoUrl, true);
+                    finish(Lampa.Api.img(logo.file_path, quality), true);
                 },
                 function () {
                     finish(null, false);
@@ -296,8 +287,8 @@
 
         $title
             .empty()
-            .removeClass('mi322-logo-ready')
-            .addClass('mi322-logo-pending');
+            .removeClass('mi323-logo-ready')
+            .addClass('mi323-logo-pending');
 
         var type = getMovieType(movie);
 
@@ -319,8 +310,8 @@
             if (!$finalTitle.length) return;
 
             $finalTitle
-                .removeClass('mi322-logo-pending')
-                .removeClass('mi322-logo-ready')
+                .removeClass('mi323-logo-pending')
+                .removeClass('mi323-logo-ready')
                 .empty()
                 .append(nativeTitle);
         }
@@ -350,7 +341,7 @@
                 var $logo = $(image.cloneNode(false));
 
                 $logo
-                    .addClass('mi322-movie-logo')
+                    .addClass('mi323-movie-logo')
                     .attr(
                         'alt',
                         movie.title ||
@@ -362,8 +353,8 @@
 
                 $finalTitle
                     .empty()
-                    .removeClass('mi322-logo-pending')
-                    .addClass('mi322-logo-ready')
+                    .removeClass('mi323-logo-pending')
+                    .addClass('mi323-logo-ready')
                     .append($logo);
             });
         });
@@ -520,7 +511,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi322-header-meta-hidden') ||
+                element.classList.contains('mi323-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -567,7 +558,7 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi322-header-meta-hidden');
+                target.classList.add('mi323-header-meta-hidden');
             }
         });
     }
@@ -618,10 +609,10 @@
         var css = '';
 
         // --------------------------------------------------
-        // PREMIUM LOGO ANIMATION
+        // LOGO ANIMATION
         // --------------------------------------------------
 
-        css += '@keyframes mi322LogoReveal{';
+        css += '@keyframes mi323LogoReveal{';
         css += '0%{opacity:0;transform:translate3d(0,10px,0) scale(.975);}';
         css += '65%{opacity:1;transform:translate3d(0,-1px,0) scale(1.005);}';
         css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);}';
@@ -642,16 +633,20 @@
         css += 'box-sizing:border-box!important;';
         css += '}';
 
+        // --------------------------------------------------
+        // HIDE REACTIONS
+        // --------------------------------------------------
+
         css += '.full-start-new .full-start__reactions,';
         css += '.full-start-new [class*="reactions"]{';
         css += 'display:none!important;';
         css += '}';
 
         // --------------------------------------------------
-        // DUPLICATE METADATA
+        // HIDE DUPLICATE METADATA
         // --------------------------------------------------
 
-        css += '.full-start-new .mi322-header-meta-hidden{';
+        css += '.full-start-new .mi323-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -662,7 +657,7 @@
         css += '}';
 
         // --------------------------------------------------
-        // AGE RATING
+        // HIDE AGE RATING
         // --------------------------------------------------
 
         css += '.full-start-new .full-start__age,';
@@ -674,7 +669,7 @@
         css += '}';
 
         // --------------------------------------------------
-        // STATUS AND DETAILS
+        // HIDE STATUS AND DETAILS
         // --------------------------------------------------
 
         css += '.full-start-new .full-start__status,';
@@ -687,22 +682,22 @@
         // --------------------------------------------------
         // MAIN CONTENT POSITION
         // --------------------------------------------------
-        // The content is anchored above the native bottom menu.
-        // The menu itself is not modified.
-        // Short screens receive internal scrolling.
 
         css += '.full-start-new .full-start-new__right{';
         css += 'position:absolute!important;';
         css += 'z-index:3!important;';
+        css += 'isolation:isolate!important;';
         css += 'left:0!important;';
         css += 'right:0!important;';
         css += 'bottom:calc(' + bottomOffset + 'px + env(safe-area-inset-bottom))!important;';
         css += 'display:flex!important;';
         css += 'flex-direction:column!important;';
+        css += 'justify-content:flex-end!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
         css += 'width:100%!important;';
         css += 'max-width:100%!important;';
+        css += 'min-height:58vh!important;';
         css += 'max-height:calc(100dvh - 125px - env(safe-area-inset-bottom))!important;';
         css += 'overflow-y:auto!important;';
         css += 'overflow-x:hidden!important;';
@@ -712,12 +707,48 @@
         css += 'padding:0 14px!important;';
         css += 'padding-bottom:4px!important;';
         css += 'box-sizing:border-box!important;';
-        css += 'background:none!important;';
+        css += 'background:transparent!important;';
         css += '}';
 
         css += '.full-start-new .full-start-new__right::-webkit-scrollbar{';
         css += 'display:none!important;';
         css += 'width:0!important;';
+        css += '}';
+
+        // --------------------------------------------------
+        // MOVING GRADIENT AND BLUR LAYER
+        // This layer belongs to the moved content block.
+        // The original backdrop image is not moved or changed.
+        // --------------------------------------------------
+
+        css += '.full-start-new .full-start-new__right:before{';
+        css += 'content:""!important;';
+        css += 'display:block!important;';
+        css += 'position:absolute!important;';
+        css += 'z-index:0!important;';
+        css += 'pointer-events:none!important;';
+        css += 'left:0!important;';
+        css += 'right:0!important;';
+        css += 'top:0!important;';
+        css += 'bottom:0!important;';
+        css += 'border-radius:0!important;';
+        css += 'background:linear-gradient(to bottom,';
+        css += 'rgba(29,31,32,0) 0%,';
+        css += 'rgba(29,31,32,.12) 22%,';
+        css += 'rgba(29,31,32,.48) 48%,';
+        css += 'rgba(29,31,32,.88) 76%,';
+        css += '#1d1f20 100%)!important;';
+        css += 'backdrop-filter:blur(17px);';
+        css += '-webkit-backdrop-filter:blur(17px);';
+        css += 'mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 100%);';
+        css += '-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 20%,black 100%);';
+        css += '}';
+
+        // Keep all content above the moving blur layer.
+
+        css += '.full-start-new .full-start-new__right > *{';
+        css += 'position:relative;';
+        css += 'z-index:1;';
         css += '}';
 
         // --------------------------------------------------
@@ -767,20 +798,20 @@
         css += 'flex-shrink:0;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi322-logo-pending{';
+        css += '.full-start-new .full-start-new__title.mi323-logo-pending{';
         css += 'display:none!important;';
         css += '}';
 
-        css += '.full-start-new .full-start-new__title.mi322-logo-ready{';
+        css += '.full-start-new .full-start-new__title.mi323-logo-ready{';
         css += 'display:flex!important;';
         css += 'visibility:visible!important;';
         css += '}';
 
         // --------------------------------------------------
-        // PREMIUM LOGO IMAGE
+        // MOVIE LOGO IMAGE
         // --------------------------------------------------
 
-        css += '.full-start-new .full-start-new__title img.mi322-movie-logo{';
+        css += '.full-start-new .full-start-new__title img.mi323-movie-logo{';
         css += 'display:block!important;';
         css += 'height:auto!important;';
         css += 'max-height:' + lHeight + 'px!important;';
@@ -791,7 +822,7 @@
         css += 'margin:0!important;';
         css += 'opacity:1;';
         css += 'transform:translate3d(0,0,0) scale(1);';
-        css += 'animation:mi322LogoReveal .72s cubic-bezier(.16,1,.3,1) both;';
+        css += 'animation:mi323LogoReveal .72s cubic-bezier(.16,1,.3,1) both;';
         css += 'backface-visibility:hidden;';
         css += '}';
 
@@ -950,8 +981,6 @@
         css += 'content:none!important;';
         css += '}';
 
-        // PRESS FEEDBACK
-
         css += '.full-start-new .full-start__button:active{';
         css += 'transform:scale(.97);';
         css += 'background:rgba(255,255,255,.075)!important;';
@@ -960,7 +989,9 @@
         css += 'opacity:1;';
         css += '}';
 
+        // --------------------------------------------------
         // BUTTON ICONS
+        // --------------------------------------------------
 
         css += '.full-start-new .full-start__button svg,';
         css += '.full-start-new .full-start__button img{';
@@ -973,7 +1004,9 @@
         css += 'filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));';
         css += '}';
 
+        // --------------------------------------------------
         // BUTTON LABELS
+        // --------------------------------------------------
 
         css += '.full-start-new .full-start__button span{';
         css += 'position:relative;';
@@ -1000,6 +1033,7 @@
         css += '@media screen and (max-width:480px) and (max-height:650px){';
 
         css += '.full-start-new .full-start-new__right{';
+        css += 'min-height:52vh!important;';
         css += 'max-height:calc(100dvh - 105px - env(safe-area-inset-bottom))!important;';
         css += 'gap:5px!important;';
         css += '}';
@@ -1034,7 +1068,7 @@
 
         css += '@media (prefers-reduced-motion:reduce){';
 
-        css += '.full-start-new .full-start-new__title img.mi322-movie-logo{';
+        css += '.full-start-new .full-start-new__title img.mi323-movie-logo{';
         css += 'animation:none!important;';
         css += 'opacity:1!important;';
         css += 'transform:none!important;';
@@ -1198,8 +1232,6 @@
         ) {
             return;
         }
-
-        // STUDIO LOGO
 
         if (Lampa.Storage.get('mobile_interface_studios')) {
             $render.find('.studio-header-brand').remove();
@@ -1511,9 +1543,7 @@
             onChange: applyStyles
         });
 
-        // --------------------------------------------------
         // BOTTOM NAVIGATION SPACING
-        // --------------------------------------------------
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
@@ -1549,7 +1579,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.2.2 Adaptive Bottom Interface initialized'
+            '[MOB_INTERFACE] 3.2.3 Moving Blur Interface initialized'
         );
     }
 
