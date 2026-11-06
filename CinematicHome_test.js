@@ -2,16 +2,12 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT + STUDIO LOGOS IN HERO
+     * INTERFACE+ 1.7.1 — PRECISE MENU CINEMATIC SHIFT + SMART HERO STUDIOS
      * TMDB ONLY
-     *
-     * CHANGES:
-     * - Integrated smart studio logos with color analysis in hero meta line
-     * - Preserved all 1.7.0 menu shift and cinematic features
      */
 
-    var VERSION = '1.7.0';
-    var READY_KEY = 'interface_plus_tmdb_only_170';
+    var VERSION = '1.7.1';
+    var READY_KEY = 'interface_plus_tmdb_only_171';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -39,6 +35,7 @@
     var backdropCache = {};
     var backdropCacheOrder = [];
     var backdropPending = {};
+    var detailsRequests = {};
     var generation = 0;
 
     var initialized = false;
@@ -662,7 +659,7 @@
 
     /* Аналіз кольору логотипа студії */
 
-    function applyStudioColorAnalysis(imgElement, logoUrl, uniqueId) {
+    function applyStudioColorAnalysis(imgElement, logoUrl) {
         if (!imgElement) return;
 
         var img = new Image();
@@ -700,6 +697,73 @@
         };
 
         img.src = logoUrl;
+    }
+
+    /* Дозавантаження деталей для банера (щоб з'явились студії) */
+
+    function fetchHeroDetails(d, cb) {
+        if (!d || !d.id) {
+            cb(d);
+            return;
+        }
+
+        var type = movieType(d);
+        var id = first(d.tmdb_id, d.tmdbId, d.id);
+        if (id && typeof id === 'object') id = id.id;
+        id = text(id);
+
+        if (!/^\d+$/.test(id)) {
+            cb(d);
+            return;
+        }
+
+        if (
+            (d.production_companies && d.production_companies.length) ||
+            (d.networks && d.networks.length)
+        ) {
+            cb(d);
+            return;
+        }
+
+        var reqKey = type + '_' + id;
+        if (detailsRequests[reqKey]) {
+            detailsRequests[reqKey].then(function (res) {
+                cb(res || d);
+            });
+            return;
+        }
+
+        var lang = 'en';
+        try {
+            lang = Lampa.Storage.field('tmdb_lang') || 'en';
+        } catch (e) {}
+
+        var tmdb = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb;
+        if (!tmdb || !tmdb.get) {
+            cb(d);
+            return;
+        }
+
+        detailsRequests[reqKey] = new Promise(function (resolve) {
+            tmdb.get(
+                type + '/' + id,
+                { filter: { language: lang } },
+                function (json) {
+                    if (json) {
+                        d.production_companies = json.production_companies || d.production_companies;
+                        d.networks = json.networks || d.networks;
+                    }
+                    resolve(d);
+                },
+                function () {
+                    resolve(d);
+                }
+            );
+        });
+
+        detailsRequests[reqKey].then(function (res) {
+            cb(res);
+        });
     }
 
     /* CSS стилі */
@@ -925,73 +989,75 @@
         }
     }
 
-    function showHero(hero, d, force) {
-        if (!hero || !d) return;
+    function showHero(hero, rawData, force) {
+        if (!hero || !rawData) return;
 
-        var key = identity(d);
+        fetchHeroDetails(rawData, function (d) {
+            var key = identity(d);
 
-        if (!force && hero.movieKey === key) return;
+            if (!force && hero.movieKey === key) return;
 
-        hero.movieKey = key;
-        hero.lastMovieData = d;
-        hero.token++;
+            hero.movieKey = key;
+            hero.lastMovieData = d;
+            hero.token++;
 
-        var token = hero.token;
-        var p = hero.parts;
+            var token = hero.token;
+            var p = hero.parts;
 
-        showHeroBackground();
+            showHeroBackground();
 
-        p.logo.classList.remove('ready');
-        p.logo.style.display = 'none';
-        p.logo.removeAttribute('src');
+            p.logo.classList.remove('ready');
+            p.logo.style.display = 'none';
+            p.logo.removeAttribute('src');
 
-        p.title.style.display = '';
-        p.title.textContent = movieTitle(d);
+            p.title.style.display = '';
+            p.title.textContent = movieTitle(d);
 
-        p.logo.style.transform = 'scale(' + logoScale() + ')';
-        p.logo.style.transformOrigin = 'left center';
+            p.logo.style.transform = 'scale(' + logoScale() + ')';
+            p.logo.style.transformOrigin = 'left center';
 
-        buildHeroMeta(p.meta, d);
+            buildHeroMeta(p.meta, d);
 
-        p.descr.textContent = d.overview || '';
+            p.descr.textContent = d.overview || '';
 
-        if (d.backdrop_path) {
-            switchHeroBackdrop(
-                hero,
-                imageURL(d.backdrop_path, BACKDROP_SIZE),
-                token
-            );
-        } else {
-            if (p.bgA) {
-                p.bgA.classList.remove('show');
-                p.bgA.style.backgroundImage = 'none';
+            if (d.backdrop_path) {
+                switchHeroBackdrop(
+                    hero,
+                    imageURL(d.backdrop_path, BACKDROP_SIZE),
+                    token
+                );
+            } else {
+                if (p.bgA) {
+                    p.bgA.classList.remove('show');
+                    p.bgA.style.backgroundImage = 'none';
+                }
+
+                if (p.bgB) {
+                    p.bgB.classList.remove('show');
+                    p.bgB.style.backgroundImage = 'none';
+                }
+
+                hero.activeBgIndex = 0;
             }
 
-            if (p.bgB) {
-                p.bgB.classList.remove('show');
-                p.bgB.style.backgroundImage = 'none';
-            }
+            ensureLogo(d, function (url) {
+                if (hero.token !== token || !url) return;
 
-            hero.activeBgIndex = 0;
-        }
+                preload(url, function (ok) {
+                    if (!ok || hero.token !== token) return;
 
-        ensureLogo(d, function (url) {
-            if (hero.token !== token || !url) return;
+                    setAdaptiveLogo(p.logo, url, 'hero');
 
-            preload(url, function (ok) {
-                if (!ok || hero.token !== token) return;
+                    p.logo.style.transform = 'scale(' + logoScale() + ')';
+                    p.logo.style.transformOrigin = 'left center';
+                    p.logo.style.display = 'block';
 
-                setAdaptiveLogo(p.logo, url, 'hero');
-
-                p.logo.style.transform = 'scale(' + logoScale() + ')';
-                p.logo.style.transformOrigin = 'left center';
-                p.logo.style.display = 'block';
-
-                requestAnimationFrame(function () {
-                    if (hero.token === token) {
-                        p.logo.classList.add('ready');
-                        p.title.style.display = 'none';
-                    }
+                    requestAnimationFrame(function () {
+                        if (hero.token === token) {
+                            p.logo.classList.add('ready');
+                            p.title.style.display = 'none';
+                        }
+                    });
                 });
             });
         });
@@ -1807,7 +1873,7 @@
             }
         });
 
-        log('Precise menu cinematic shift + studios initialized');
+        log('Precise menu cinematic shift + smart hero studios initialized');
     }
 
     if (window.appready) {
