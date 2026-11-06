@@ -3,39 +3,43 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.2.3
+     * @version 3.1.4
      * @author Crowley24
-     * @description Fixed Cinematic Background + Minimal Premium Mobile Interface
+     * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.2.3 FIXES:
-     * - Fixed background disappearing during poster animation
-     * - Removed opacity from background visibility detection
-     * - Improved poster image URL detection
-     * - Fixed image crossfade logic
-     * - Background cleanup when card is actually removed
-     * - TMDB backdrop slideshow
-     * - Smooth fade while scrolling
+     * 3.1.4 CHANGES:
+     * - Fixed poster background position (stays in place on scroll)
+     * - Adjusted content padding and layout layers for fixed background
+     * - Fixed buttons visibility and container stability
+     * - Refined duplicate metadata cleaning logic
+     * - Improved safe DOM selectors for action buttons
+     * - Preserved year/country in metadata row
+     * - Minimal transparent metadata design
+     * - Removed metadata glass panel, background and border
+     * - Thin elegant metadata separators
+     * - Minimal transparent buttons
+     * - Removed button backgrounds, borders and heavy shadows
+     * - Subtle button press animation
+     * - Improved logo shadows and glow
+     * - Refined tagline typography
+     * - Improved poster gradients
+     * - Improved animations
+     * - Age rating completely hidden
+     * - No custom badges or custom ratings
+     * - Native Lampa ratings preserved
+     * - TMDB cache and async request protection
+     * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V323_READY) return;
-    window.MOB_INTERFACE_V323_READY = true;
+    if (window.MOB_INTERFACE_V314_READY) return;
+    window.MOB_INTERFACE_V314_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
     var currentActiveId = null;
     var activeRenderToken = 0;
     var started = false;
-
-    var fixedBackground = null;
-    var backgroundListeners = [];
-    var backgroundObserver = null;
-    var backgroundRenderToken = 0;
-    var backgroundPoster = null;
-    var backgroundInitialTop = 0;
-    var backgroundHeight = 0;
-    var backgroundScrollFrame = null;
-    var backgroundActiveImage = 0;
 
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
@@ -58,424 +62,12 @@
         }
     });
 
-    /*
-     * SLIDESHOW CLEANUP
-     */
-
     function stopSlideshow() {
         if (slideshowTimer) {
             clearInterval(slideshowTimer);
             slideshowTimer = null;
         }
     }
-
-    /*
-     * BACKGROUND EVENT CLEANUP
-     */
-
-    function removeBackgroundListeners() {
-        backgroundListeners.forEach(function (item) {
-            try {
-                item.target.removeEventListener(
-                    item.event,
-                    item.handler,
-                    item.options
-                );
-            } catch (e) {}
-        });
-
-        backgroundListeners = [];
-
-        if (backgroundScrollFrame) {
-            cancelAnimationFrame(backgroundScrollFrame);
-            backgroundScrollFrame = null;
-        }
-    }
-
-    /*
-     * REMOVE FIXED BACKGROUND
-     */
-
-    function removeFixedBackground() {
-        removeBackgroundListeners();
-
-        if (backgroundObserver) {
-            backgroundObserver.disconnect();
-            backgroundObserver = null;
-        }
-
-        if (fixedBackground && fixedBackground.parentNode) {
-            fixedBackground.parentNode.removeChild(fixedBackground);
-        }
-
-        fixedBackground = null;
-        backgroundPoster = null;
-        backgroundInitialTop = 0;
-        backgroundHeight = 0;
-        backgroundRenderToken = 0;
-        backgroundActiveImage = 0;
-    }
-
-    function addBackgroundListener(target, event, handler, options) {
-        if (!target || !target.addEventListener) return;
-
-        target.addEventListener(event, handler, options || false);
-
-        backgroundListeners.push({
-            target: target,
-            event: event,
-            handler: handler,
-            options: options || false
-        });
-    }
-
-    /*
-     * GET POSTER IMAGE URL
-     */
-
-    function getPosterImageUrl(posterElement) {
-        if (!posterElement) return '';
-
-        var img = posterElement.querySelector('img');
-
-        if (img) {
-            var url =
-                img.currentSrc ||
-                img.src ||
-                img.getAttribute('data-src') ||
-                img.getAttribute('data-original') ||
-                img.getAttribute('data-lazy-src') ||
-                '';
-
-            if (url && url.indexOf('data:image') !== 0) {
-                return url;
-            }
-        }
-
-        var posterStyle = window.getComputedStyle(posterElement);
-        var backgroundImage = posterStyle.backgroundImage || '';
-
-        if (
-            backgroundImage &&
-            backgroundImage !== 'none'
-        ) {
-            var match = backgroundImage.match(
-                /url\(["']?(.*?)["']?\)/
-            );
-
-            if (match && match[1]) {
-                return match[1];
-            }
-        }
-
-        var posterChild = posterElement.querySelector(
-            '[style*="background-image"]'
-        );
-
-        if (posterChild) {
-            var childStyle = window.getComputedStyle(posterChild);
-            var childBackground = childStyle.backgroundImage || '';
-
-            if (childBackground && childBackground !== 'none') {
-                var childMatch = childBackground.match(
-                    /url\(["']?(.*?)["']?\)/
-                );
-
-                if (childMatch && childMatch[1]) {
-                    return childMatch[1];
-                }
-            }
-        }
-
-        return '';
-    }
-
-    /*
-     * FIXED BACKGROUND IMAGE
-     */
-
-    function setFixedBackgroundImage(url, renderToken) {
-        if (
-            !url ||
-            !fixedBackground ||
-            renderToken !== activeRenderToken ||
-            renderToken !== backgroundRenderToken
-        ) {
-            return;
-        }
-
-        var images = fixedBackground.querySelectorAll(
-            '.mi323-fixed-image'
-        );
-
-        if (images.length < 2) return;
-
-        var nextIndex = backgroundActiveImage === 0 ? 1 : 0;
-        var currentIndex = backgroundActiveImage;
-
-        var nextImage = images[nextIndex];
-        var currentImage = images[currentIndex];
-
-        var preload = new Image();
-
-        preload.onload = function () {
-            if (
-                renderToken !== activeRenderToken ||
-                renderToken !== backgroundRenderToken ||
-                !fixedBackground ||
-                !document.body.contains(fixedBackground)
-            ) {
-                return;
-            }
-
-            nextImage.src = url;
-
-            requestAnimationFrame(function () {
-                if (
-                    renderToken !== activeRenderToken ||
-                    renderToken !== backgroundRenderToken ||
-                    !fixedBackground ||
-                    !document.body.contains(fixedBackground)
-                ) {
-                    return;
-                }
-
-                nextImage.classList.add('mi323-image-active');
-                currentImage.classList.remove('mi323-image-active');
-
-                backgroundActiveImage = nextIndex;
-            });
-        };
-
-        preload.onerror = function () {};
-
-        preload.src = url;
-    }
-
-    /*
-     * CREATE FIXED BACKGROUND
-     */
-
-    function createFixedBackground($render, renderToken) {
-        removeFixedBackground();
-
-        if (
-            !$render ||
-            !$render.length ||
-            renderToken !== activeRenderToken
-        ) {
-            return;
-        }
-
-        var posterElement = $render.find(
-            '.full-start-new__poster'
-        ).first()[0];
-
-        if (!posterElement) return;
-
-        backgroundPoster = posterElement;
-        backgroundRenderToken = renderToken;
-        backgroundActiveImage = 0;
-
-        var rect = posterElement.getBoundingClientRect();
-
-        backgroundInitialTop = rect.top;
-        backgroundHeight = rect.height || window.innerHeight * 0.62;
-
-        var layer = document.createElement('div');
-
-        layer.id = 'mi323-fixed-background';
-
-        layer.innerHTML =
-            '<div class="mi323-fixed-background__images">' +
-                '<img class="mi323-fixed-image mi323-image-active" alt="">' +
-                '<img class="mi323-fixed-image" alt="">' +
-            '</div>' +
-            '<div class="mi323-fixed-background__gradient"></div>' +
-            '<div class="mi323-fixed-background__shade"></div>';
-
-        document.body.appendChild(layer);
-
-        fixedBackground = layer;
-
-        /*
-         * INITIAL IMAGE
-         */
-
-        var originalImageUrl = getPosterImageUrl(posterElement);
-
-        if (originalImageUrl) {
-            setFixedBackgroundImage(
-                originalImageUrl,
-                renderToken
-            );
-        }
-
-        /*
-         * SCROLL EFFECT
-         */
-
-        function updateBackground() {
-            backgroundScrollFrame = null;
-
-            if (
-                renderToken !== activeRenderToken ||
-                renderToken !== backgroundRenderToken ||
-                !fixedBackground ||
-                !backgroundPoster ||
-                !document.body.contains(backgroundPoster)
-            ) {
-                return;
-            }
-
-            var currentRect =
-                backgroundPoster.getBoundingClientRect();
-
-            var distance = Math.max(
-                0,
-                backgroundInitialTop - currentRect.top
-            );
-
-            var fadeDistance = Math.max(
-                backgroundHeight * 1.45,
-                window.innerHeight * 0.85
-            );
-
-            var progress = Math.min(
-                distance / fadeDistance,
-                1
-            );
-
-            var imageOpacity = 1 - progress * 0.76;
-            var shadeOpacity = progress * 0.30;
-
-            fixedBackground.style.setProperty(
-                '--mi323-image-opacity',
-                imageOpacity.toFixed(3)
-            );
-
-            fixedBackground.style.setProperty(
-                '--mi323-shade-opacity',
-                shadeOpacity.toFixed(3)
-            );
-        }
-
-        function requestBackgroundUpdate() {
-            if (backgroundScrollFrame) return;
-
-            backgroundScrollFrame =
-                requestAnimationFrame(updateBackground);
-        }
-
-        addBackgroundListener(
-            document,
-            'scroll',
-            requestBackgroundUpdate,
-            true
-        );
-
-        addBackgroundListener(
-            window,
-            'scroll',
-            requestBackgroundUpdate,
-            true
-        );
-
-        addBackgroundListener(
-            window,
-            'resize',
-            requestBackgroundUpdate,
-            false
-        );
-
-        updateBackground();
-    }
-
-    /*
-     * BACKGROUND ACTIVITY WATCHER
-     *
-     * IMPORTANT:
-     * Do not use opacity here.
-     * The poster has an entrance animation that starts at opacity:0.
-     * Checking opacity would remove the background immediately.
-     */
-
-    function watchBackgroundActivity(renderToken) {
-        if (backgroundObserver) {
-            backgroundObserver.disconnect();
-            backgroundObserver = null;
-        }
-
-        function checkBackground() {
-            if (
-                renderToken !== activeRenderToken ||
-                !fixedBackground ||
-                !backgroundPoster
-            ) {
-                return;
-            }
-
-            if (
-                !document.body.contains(backgroundPoster) ||
-                !document.body.contains(fixedBackground)
-            ) {
-                removeFixedBackground();
-                return;
-            }
-
-            var element = backgroundPoster;
-            var hidden = false;
-
-            while (element && element !== document.body) {
-                var style = window.getComputedStyle(element);
-
-                /*
-                 * Only actual visibility states are checked.
-                 * Opacity is deliberately ignored.
-                 */
-
-                if (
-                    style.display === 'none' ||
-                    style.visibility === 'hidden'
-                ) {
-                    hidden = true;
-                    break;
-                }
-
-                element = element.parentElement;
-            }
-
-            if (hidden) {
-                removeFixedBackground();
-            }
-        }
-
-        backgroundObserver = new MutationObserver(function () {
-            checkBackground();
-        });
-
-        backgroundObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: [
-                'class',
-                'style',
-                'hidden'
-            ]
-        });
-
-        /*
-         * Initial check is safe now:
-         * opacity is not used as a removal condition.
-         */
-
-        checkBackground();
-    }
-
-    /*
-     * DARK IMAGE DETECTION
-     */
 
     function isImageDark(imgSrc, callback) {
         var img = new Image();
@@ -561,6 +153,7 @@
             '.full-start-new__title',
             '.full-start-new__tagline',
             '.full-start-new__buttons',
+            '.full-start-new__actions',
             '.studio-header-brand',
             '.plugin-meta-row',
             '.full-start__rates',
@@ -580,10 +173,7 @@
                 return true;
             }
 
-            if (
-                element.querySelector &&
-                element.querySelector(protectedSelector)
-            ) {
+            if (element.querySelector && element.querySelector(protectedSelector)) {
                 return true;
             }
 
@@ -619,7 +209,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi312-header-meta-hidden') ||
+                element.classList.contains('mi314-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -628,6 +218,7 @@
             if (!isYearCountryLine(element)) continue;
 
             var position = element.compareDocumentPosition(title);
+
             var beforeTitle = !!(position & 4);
 
             if (!beforeTitle) continue;
@@ -645,6 +236,7 @@
                 var parent = current.parentElement;
 
                 if (!parent || parent === root) break;
+
                 if (isProtected(parent)) break;
 
                 var parentText = String(parent.textContent || '')
@@ -666,7 +258,7 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi312-header-meta-hidden');
+                target.classList.add('mi314-header-meta-hidden');
             }
         });
     }
@@ -740,77 +332,6 @@
         var css = '';
 
         /*
-         * FIXED BACKGROUND
-         */
-
-        css += '#mi323-fixed-background{';
-        css += 'position:fixed!important;';
-        css += 'top:0!important;';
-        css += 'left:0!important;';
-        css += 'right:0!important;';
-        css += 'width:100vw!important;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
-        css += 'overflow:hidden!important;';
-        css += 'pointer-events:none!important;';
-        css += 'z-index:0!important;';
-        css += 'background:#050608;';
-        css += '--mi323-image-opacity:1;';
-        css += '--mi323-shade-opacity:0;';
-        css += '}';
-
-        css += '#mi323-fixed-background .mi323-fixed-background__images{';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'overflow:hidden;';
-        css += '}';
-
-        css += '#mi323-fixed-background .mi323-fixed-image{';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'width:100%;';
-        css += 'height:100%;';
-        css += 'object-fit:cover;';
-        css += 'object-position:center center;';
-        css += 'opacity:0;';
-        css += 'transition:opacity 1.35s ease-in-out;';
-        css += 'transform-origin:center center;';
-        css += 'filter:saturate(1.06) contrast(1.045);';
-        css += 'will-change:opacity,transform;';
-        css += '}';
-
-        css += '#mi323-fixed-background .mi323-fixed-image.mi323-image-active{';
-        css += 'opacity:var(--mi323-image-opacity,1);';
-        css += '}';
-
-        if (isPosterAnim) {
-            css += '#mi323-fixed-background .mi323-fixed-image{';
-            css += 'animation:kenBurnsEffect 28s ease-in-out infinite;';
-            css += '}';
-        }
-
-        css += '#mi323-fixed-background .mi323-fixed-background__gradient{';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'z-index:2;';
-        css += 'background:linear-gradient(';
-        css += '180deg,';
-        css += 'rgba(5,7,11,0) 0%,';
-        css += 'rgba(5,7,11,.12) 22%,';
-        css += 'rgba(5,7,11,.38) 48%,';
-        css += 'rgba(5,7,11,.82) 78%,';
-        css += '#050608 100%';
-        css += ');';
-        css += '}';
-
-        css += '#mi323-fixed-background .mi323-fixed-background__shade{';
-        css += 'position:absolute;';
-        css += 'inset:0;';
-        css += 'z-index:3;';
-        css += 'background:rgba(0,0,0,var(--mi323-shade-opacity,0));';
-        css += '}';
-
-        /*
          * ANIMATIONS
          */
 
@@ -851,16 +372,14 @@
         css += '100%{opacity:1;transform:scale(1)}';
         css += '}';
 
-        css += '@keyframes premium_glow{';
-        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
-        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
-        css += '}';
-
         css += '@media screen and (max-width:480px){';
+
+        /*
+         * MAIN CARD
+         */
 
         css += '.full-start-new{';
         css += 'position:relative!important;';
-        css += 'z-index:1!important;';
         css += 'isolation:isolate;';
         css += 'background:transparent!important;';
         css += '}';
@@ -870,7 +389,11 @@
         css += 'display:none!important;';
         css += '}';
 
-        css += '.full-start-new .mi312-header-meta-hidden{';
+        /*
+         * DUPLICATE METADATA
+         */
+
+        css += '.full-start-new .mi314-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -879,6 +402,10 @@
         css += 'padding:0!important;';
         css += 'overflow:hidden!important;';
         css += '}';
+
+        /*
+         * AGE RATING
+         */
 
         css += '.full-start-new .full-start__age,';
         css += '.full-start-new .full-start-new__age,';
@@ -899,16 +426,18 @@
         css += '}';
 
         /*
-         * POSTER PLACEHOLDER
+         * CINEMATIC POSTER (FIXED BACKGROUND)
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:relative!important;';
-        css += 'overflow:visible!important;';
-        css += 'background:transparent!important;';
-        css += 'z-index:1;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
+        css += 'position:fixed!important;';
+        css += 'top:0!important;';
+        css += 'left:0!important;';
+        css += 'width:100vw!important;';
+        css += 'height:100vh!important;';
+        css += 'overflow:hidden!important;';
+        css += 'background:#050608;';
+        css += 'z-index:0!important;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -917,18 +446,37 @@
         css += '}';
 
         css += '.full-start-new .full-start-new__poster:after{';
-        css += 'display:none!important;';
-        css += 'content:none!important;';
+        css += 'content:"";';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'pointer-events:none;';
+        css += 'z-index:2;';
+        css += 'background:linear-gradient(';
+        css += '180deg,';
+        css += 'rgba(5,7,11,.2) 0%,';
+        css += 'rgba(5,7,11,.5) 40%,';
+        css += '#050608 85%';
+        css += ');';
         css += '}';
 
         css += '.full-start-new .full-start-new__poster img{';
-        css += 'visibility:hidden!important;';
-        css += 'opacity:0!important;';
-        css += 'pointer-events:none!important;';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'width:100%;';
+        css += 'height:100%;';
+        css += 'object-fit:cover;';
+        css += 'filter:saturate(1.06) contrast(1.045)!important;';
+        css += 'transform-origin:center center!important;';
+        css += 'transition:opacity 1.35s ease-in-out!important;';
+
+        if (isPosterAnim) {
+            css += 'animation:kenBurnsEffect 28s ease-in-out infinite!important;';
+        }
+
         css += '}';
 
         /*
-         * MAIN CONTENT
+         * MAIN CONTENT (SCROLLABLE OVER FIXED POSTER)
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -938,9 +486,9 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:0 14px!important;';
-        css += 'margin-top:-168px!important;';
-        css += 'background:none!important;';
+        css += 'padding:140px 14px 40px 14px!important;';
+        css += 'margin-top:0!important;';
+        css += 'background:transparent!important;';
         css += '}';
 
         /*
@@ -1025,7 +573,7 @@
         css += '}';
 
         /*
-         * METADATA
+         * MINIMAL TRANSPARENT METADATA
          */
 
         css += '.full-start-new .plugin-meta-row{';
@@ -1064,6 +612,10 @@
         css += 'opacity:.94;';
         css += '}';
 
+        /*
+         * THIN METADATA SEPARATORS
+         */
+
         css += '.full-start-new .plugin-meta-row .info-separator{';
         css += 'display:inline-block;';
         css += 'width:1px;';
@@ -1079,7 +631,7 @@
         css += '}';
 
         /*
-         * NATIVE RATINGS
+         * NATIVE LAMPA RATINGS
          */
 
         css += '.full-start-new .plugin-meta-row .full-start__rates{';
@@ -1105,10 +657,11 @@
         css += '}';
 
         /*
-         * BUTTON CONTAINER
+         * MINIMAL BUTTON CONTAINER
          */
 
-        css += '.full-start-new .full-start-new__buttons{';
+        css += '.full-start-new .full-start-new__buttons,';
+        css += '.full-start-new .full-start__buttons{';
         css += enter;
         css += 'animation-delay:.31s;';
         css += 'order:6;';
@@ -1149,10 +702,18 @@
         css += 'opacity:.9;';
         css += '}';
 
+        /*
+         * REMOVE BUTTON DECORATIVE GLASS
+         */
+
         css += '.full-start-new .full-start__button:before{';
         css += 'display:none!important;';
         css += 'content:none!important;';
         css += '}';
+
+        /*
+         * SUBTLE PRESS EFFECT
+         */
 
         css += '.full-start-new .full-start__button:active{';
         css += 'transform:scale(.94);';
@@ -1161,6 +722,10 @@
         css += 'box-shadow:none!important;';
         css += 'opacity:1;';
         css += '}';
+
+        /*
+         * BUTTON ICONS
+         */
 
         css += '.full-start-new .full-start__button svg,';
         css += '.full-start-new .full-start__button img{';
@@ -1173,6 +738,10 @@
         css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
         css += 'transition:transform .22s ease,filter .22s ease;';
         css += '}';
+
+        /*
+         * BUTTON LABELS
+         */
 
         css += '.full-start-new .full-start__button span{';
         css += 'position:relative;';
@@ -1256,11 +825,19 @@
                 .appendTo($metaRow);
         }
 
+        /*
+         * YEAR
+         */
+
         var date = movie.release_date ||
             movie.first_air_date ||
             '';
 
         addText(date ? date.substring(0, 4) : '');
+
+        /*
+         * COUNTRY
+         */
 
         var country = '';
 
@@ -1281,6 +858,10 @@
 
         addText(country);
 
+        /*
+         * RUNTIME
+         */
+
         var runtime = movie.runtime || (
             movie.episode_run_time &&
             movie.episode_run_time.length
@@ -1291,6 +872,10 @@
         if (runtime) {
             addText(formatTime(runtime));
         }
+
+        /*
+         * GENRES
+         */
 
         if (movie.genres && movie.genres.length) {
             addText(
@@ -1303,6 +888,10 @@
                     .join(', ')
             );
         }
+
+        /*
+         * NATIVE LAMPA RATINGS
+         */
 
         var $card = container.closest('.full-start-new');
         var $nativeRates = $card.find('.full-start__rates').first();
@@ -1495,6 +1084,10 @@
             }
         }
 
+        /*
+         * RECHECK DUPLICATE METADATA
+         */
+
         hideDuplicateHeaderMetadata($render);
     }
 
@@ -1602,17 +1195,6 @@
             intervalTime = 10000;
         }
 
-        var firstUrl = Lampa.TMDB.image(
-            '/t/p/' +
-            Lampa.Storage.get(
-                'mobile_interface_slideshow_quality',
-                'w780'
-            ) +
-            items[0].file_path
-        );
-
-        setFixedBackgroundImage(firstUrl, renderToken);
-
         slideshowTimer = setInterval(function () {
             if (
                 renderToken !== activeRenderToken ||
@@ -1634,7 +1216,47 @@
                 items[index].file_path
             );
 
-            setFixedBackgroundImage(imgUrl, renderToken);
+            var nextImg = new Image();
+
+            nextImg.onload = function () {
+                if (
+                    renderToken !== activeRenderToken ||
+                    !$poster[0] ||
+                    !document.body.contains($poster[0])
+                ) {
+                    return;
+                }
+
+                var $current = $poster.find('img').first();
+
+                var $next = $('<img>')
+                    .attr('src', imgUrl)
+                    .css({
+                        opacity: 0,
+                        transition: 'opacity 1.35s ease-in-out'
+                    });
+
+                $poster.append($next);
+
+                requestAnimationFrame(function () {
+                    if (renderToken !== activeRenderToken) {
+                        return;
+                    }
+
+                    $next.css('opacity', 1);
+                    $current.css('opacity', 0);
+                });
+
+                setTimeout(function () {
+                    if ($current && $current.length) {
+                        $current.remove();
+                    }
+                }, 1450);
+            };
+
+            nextImg.onerror = function () {};
+
+            nextImg.src = imgUrl;
 
         }, intervalTime);
     }
@@ -1646,17 +1268,12 @@
     function init() {
         Lampa.Listener.follow('full', function (e) {
 
-            /*
-             * CARD DESTROY
-             */
-
             if (
                 e.type === 'destroy' ||
                 e.type === 'onBeforeDestroy'
             ) {
                 activeRenderToken++;
                 stopSlideshow();
-                removeFixedBackground();
                 currentActiveId = null;
                 return;
             }
@@ -1681,7 +1298,6 @@
             }
 
             stopSlideshow();
-            removeFixedBackground();
 
             var renderToken = ++activeRenderToken;
             var movie = e.data.movie;
@@ -1694,13 +1310,6 @@
             if (window.lampa_settings) {
                 window.lampa_settings.blur_poster = false;
             }
-
-            /*
-             * FIXED BACKGROUND
-             */
-
-            createFixedBackground($render, renderToken);
-            watchBackgroundActivity(renderToken);
 
             /*
              * METADATA
@@ -1919,7 +1528,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.2.3 Background Animation Fix initialized'
+            '[MOB_INTERFACE] 3.1.4 Minimal Cinematic Premium initialized'
         );
     }
 
