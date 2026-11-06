@@ -3,14 +3,14 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.5
+     * @version 3.1.6
      * @author Crowley24
      * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.5 CHANGES:
-     * - Fixed poster background using sticky positioning for strict Lampa layout compatibility
-     * - Restored correct content margins and smooth scrolling layers
+     * 3.1.6 CHANGES:
+     * - Locked background poster in place using absolute layout pinning
+     * - Optimized scroll container layers for smooth mobile performance
      * - Fixed buttons visibility and container stability
      * - Refined duplicate metadata cleaning logic
      * - Improved safe DOM selectors for action buttons
@@ -32,8 +32,8 @@
      * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V315_READY) return;
-    window.MOB_INTERFACE_V315_READY = true;
+    if (window.MOB_INTERFACE_V316_READY) return;
+    window.MOB_INTERFACE_V316_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -209,7 +209,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi315-header-meta-hidden') ||
+                element.classList.contains('mi316-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -258,7 +258,7 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi315-header-meta-hidden');
+                target.classList.add('mi316-header-meta-hidden');
             }
         });
     }
@@ -375,13 +375,16 @@
         css += '@media screen and (max-width:480px){';
 
         /*
-         * MAIN CARD
+         * MAIN CARD CONTAINER (LOCKED VIEWPORT LAYER)
          */
 
         css += '.full-start-new{';
-        css += 'position:relative!important;';
+        css += 'position:absolute!important;';
+        css += 'inset:0!important;';
+        css += 'overflow-y:auto!important;';
+        css += 'overflow-x:hidden!important;';
         css += 'isolation:isolate;';
-        css += 'background:transparent!important;';
+        css += 'background:#050608!important;';
         css += '}';
 
         css += '.full-start-new .full-start__reactions,';
@@ -393,7 +396,7 @@
          * DUPLICATE METADATA
          */
 
-        css += '.full-start-new .mi315-header-meta-hidden{';
+        css += '.full-start-new .mi316-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -426,17 +429,19 @@
         css += '}';
 
         /*
-         * CINEMATIC POSTER (STICKY BACKGROUND)
+         * CINEMATIC POSTER (ABSOLUTE FIXED BACKGROUND)
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:sticky!important;';
+        css += 'position:absolute!important;';
         css += 'top:0!important;';
+        css += 'left:0!important;';
+        css += 'width:100%!important;';
+        css += 'height:62vh!important;';
+        css += 'min-height:390px;';
         css += 'overflow:hidden!important;';
         css += 'background:#050608;';
         css += 'z-index:1!important;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -479,7 +484,7 @@
         css += '}';
 
         /*
-         * MAIN CONTENT (SCROLLABLE OVER STICKY POSTER)
+         * MAIN CONTENT (SCROLLABLE OVER ABSOLUTE POSTER)
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -489,8 +494,8 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:0 14px!important;';
-        css += 'margin-top:-168px!important;';
+        css += 'padding:0 14px 40px!important;';
+        css += 'margin-top:calc(62vh - 168px)!important;';
         css += 'background:transparent!important;';
         css += '}';
 
@@ -1524,14 +1529,14 @@
     function startPlugin() {
         if (started) return;
 
-        started = true;
+        started > (started = true);
 
         applyStyles();
         setupSettings();
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.5 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.6 Minimal Cinematic Premium initialized'
         );
     }
 
