@@ -3,17 +3,13 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.6
+     * @version 3.1.2
      * @author Crowley24
      * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.6 CHANGES:
-     * - Locked background poster in place using absolute layout pinning
-     * - Optimized scroll container layers for smooth mobile performance
-     * - Fixed buttons visibility and container stability
-     * - Refined duplicate metadata cleaning logic
-     * - Improved safe DOM selectors for action buttons
+     * 3.1.2 CHANGES:
+     * - Removed duplicate year/country above movie logo
      * - Preserved year/country in metadata row
      * - Minimal transparent metadata design
      * - Removed metadata glass panel, background and border
@@ -32,8 +28,8 @@
      * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V316_READY) return;
-    window.MOB_INTERFACE_V316_READY = true;
+    if (window.MOB_INTERFACE_V312_READY) return;
+    window.MOB_INTERFACE_V312_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -153,7 +149,6 @@
             '.full-start-new__title',
             '.full-start-new__tagline',
             '.full-start-new__buttons',
-            '.full-start-new__actions',
             '.studio-header-brand',
             '.plugin-meta-row',
             '.full-start__rates',
@@ -209,7 +204,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi316-header-meta-hidden') ||
+                element.classList.contains('mi312-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -258,7 +253,7 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi316-header-meta-hidden');
+                target.classList.add('mi312-header-meta-hidden');
             }
         });
     }
@@ -372,19 +367,21 @@
         css += '100%{opacity:1;transform:scale(1)}';
         css += '}';
 
+        css += '@keyframes premium_glow{';
+        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
+        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
+        css += '}';
+
         css += '@media screen and (max-width:480px){';
 
         /*
-         * MAIN CARD CONTAINER (LOCKED VIEWPORT LAYER)
+         * MAIN CARD
          */
 
         css += '.full-start-new{';
-        css += 'position:absolute!important;';
-        css += 'inset:0!important;';
-        css += 'overflow-y:auto!important;';
-        css += 'overflow-x:hidden!important;';
+        css += 'position:relative!important;';
         css += 'isolation:isolate;';
-        css += 'background:#050608!important;';
+        css += 'background:transparent!important;';
         css += '}';
 
         css += '.full-start-new .full-start__reactions,';
@@ -396,7 +393,7 @@
          * DUPLICATE METADATA
          */
 
-        css += '.full-start-new .mi316-header-meta-hidden{';
+        css += '.full-start-new .mi312-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -429,19 +426,16 @@
         css += '}';
 
         /*
-         * CINEMATIC POSTER (ABSOLUTE FIXED BACKGROUND)
+         * CINEMATIC POSTER
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:absolute!important;';
-        css += 'top:0!important;';
-        css += 'left:0!important;';
-        css += 'width:100%!important;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
+        css += 'position:relative!important;';
         css += 'overflow:hidden!important;';
         css += 'background:#050608;';
-        css += 'z-index:1!important;';
+        css += 'z-index:1;';
+        css += 'height:62vh!important;';
+        css += 'min-height:390px;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -484,7 +478,7 @@
         css += '}';
 
         /*
-         * MAIN CONTENT (SCROLLABLE OVER ABSOLUTE POSTER)
+         * MAIN CONTENT
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -494,9 +488,9 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:0 14px 40px!important;';
-        css += 'margin-top:calc(62vh - 168px)!important;';
-        css += 'background:transparent!important;';
+        css += 'padding:0 14px!important;';
+        css += 'margin-top:-168px!important;';
+        css += 'background:none!important;';
         css += '}';
 
         /*
@@ -668,8 +662,7 @@
          * MINIMAL BUTTON CONTAINER
          */
 
-        css += '.full-start-new .full-start-new__buttons,';
-        css += '.full-start-new .full-start__buttons{';
+        css += '.full-start-new .full-start-new__buttons{';
         css += enter;
         css += 'animation-delay:.31s;';
         css += 'order:6;';
@@ -1529,14 +1522,14 @@
     function startPlugin() {
         if (started) return;
 
-        started > (started = true);
+        started = true;
 
         applyStyles();
         setupSettings();
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.6 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.2 Minimal Cinematic Premium initialized'
         );
     }
 
