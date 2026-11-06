@@ -2,12 +2,12 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.5 — SMART STUDIO COLOR & INVERSION LOGIC
+     * INTERFACE+ 1.7.6 — NEWCARD STUDIO COLOR ANALYSIS & INVERSION
      * TMDB ONLY
      */
 
-    var VERSION = '1.7.5';
-    var READY_KEY = 'interface_plus_tmdb_only_175';
+    var VERSION = '1.7.6';
+    var READY_KEY = 'interface_plus_tmdb_only_176';
 
     if (window[READY_KEY]) return;
     window[READY_KEY] = true;
@@ -264,7 +264,7 @@
         return Math.max(70, Math.min(120, isNaN(v) ? 100 : v)) / 100;
     }
 
-    /* Адаптивне масштабування та точний аналіз чорно-білих/кольорових логотипів */
+    /* Адаптивне масштабування логотипів */
 
     function adaptiveLogoHeight(img, mode) {
         if (!img || !img.naturalWidth || !img.naturalHeight) return;
@@ -298,13 +298,13 @@
         img.style.objectPosition = 'left center';
     }
 
-    function setAdaptiveLogo(img, src, mode, analyzeColor) {
+    function setAdaptiveLogo(img, src, mode, analyzeColor, dItem) {
         if (!img || !src) return;
 
         img.onload = function () {
             adaptiveLogoHeight(img, mode);
             if (analyzeColor) {
-                applyStudioColorAnalysis(img);
+                applyNewCardStudioColorAnalysis(img, src);
             }
         };
 
@@ -313,14 +313,14 @@
         if (img.complete && img.naturalWidth) {
             adaptiveLogoHeight(img, mode);
             if (analyzeColor) {
-                applyStudioColorAnalysis(img);
+                applyNewCardStudioColorAnalysis(img, src);
             }
         }
     }
 
-    function applyStudioColorAnalysis(img) {
-        img.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))';
+    /* ТОЧНИЙ АНАЛІЗ КОЛЬОРІВ СТУДІЙНИХ ЛОГОТИПІВ З NEWCARD */
 
+    function applyNewCardStudioColorAnalysis(img, logoUrl) {
         try {
             var canvas = document.createElement('canvas');
             var ctx = canvas.getContext('2d');
@@ -329,47 +329,36 @@
             canvas.height = img.naturalHeight || 40;
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            var rSum = 0, gSum = 0, bSum = 0, count = 0;
-            var maxDiff = 0;
+            var imageData = ctx.getImageData(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            ).data;
+
+            var r = 0, g = 0, b = 0, count = 0;
 
             for (var i = 0; i < imageData.length; i += 4) {
-                var alpha = imageData[i + 3];
-                if (alpha > 50) {
-                    var r = imageData[i];
-                    var g = imageData[i + 1];
-                    var b = imageData[i + 2];
-
-                    rSum += r;
-                    gSum += g;
-                    bSum += b;
+                if (imageData[i + 3] > 50) {
+                    r += imageData[i];
+                    g += imageData[i + 1];
+                    b += imageData[i + 2];
                     count++;
-
-                    // Визначаємо максимальну різницю між каналами для перевірки на кольоровість
-                    var diff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-                    if (diff > maxDiff) maxDiff = diff;
                 }
             }
 
             if (count > 0) {
-                var avgR = rSum / count;
-                var avgG = gSum / count;
-                var avgB = bSum / count;
-                var brightness = (0.299 * avgR + 0.587 * avgG + 0.114 * avgB);
+                var brightness =
+                    (0.299 * r + 0.587 * g + 0.114 * b) / count;
 
-                // Якщо логотип монохромний (різниця між кольорами мала) І він темний/чорний — робимо білим
-                var isMonochrome = maxDiff < 20;
-                
-                if (isMonochrome && brightness < 120) {
-                    img.style.filter = 'brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.6))';
+                if (brightness < 40) {
+                    img.style.filter = 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8))';
                 } else {
-                    // Кольорові залишаємо як є (без інверсії)
-                    img.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))';
+                    img.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))';
                 }
             }
         } catch (e) {
-            // У разі блокування CORS залишаємо стандартний стиль
-            img.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))';
+            img.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))';
         }
     }
 
@@ -538,7 +527,7 @@
                 type + '/' + id,
                 {},
                 function (json) {
-                    var companies = json && json.production_companies ? json.production_companies : [];
+                    var companies = json && (json.production_companies || json.networks) ? (json.production_companies || json.networks) : [];
                     var company = null;
 
                     for (var i = 0; i < companies.length; i++) {
@@ -795,9 +784,9 @@
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 2px 10px rgba(0,0,0,.65);}',
         
         /* Студійні логотипи перед рейтингом */
-        '.banner-hero__studio-logo{display:inline-block;vertical-align:middle;height:1.35em;width:auto;max-width:90px;object-fit:contain;margin-right:.5em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}',
+        '.banner-hero__studio-logo{display:inline-block;vertical-align:middle;height:1.35em;width:auto;max-width:90px;object-fit:contain;margin-right:.5em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));}',
         '.banner-hero__studio-logo.ready{opacity:1;}',
-        '.interface-plus-studio-logo{display:inline-block;vertical-align:middle;height:1.4em;width:auto;max-width:120px;object-fit:contain;margin-right:.6em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));}',
+        '.interface-plus-studio-logo{display:inline-block;vertical-align:middle;height:1.4em;width:auto;max-width:120px;object-fit:contain;margin-right:.6em;opacity:0;transition:opacity .15s ease;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));}',
         '.interface-plus-studio-logo.ready{opacity:1;}',
 
         '.interface-plus-logo-title{position:relative;}',
@@ -924,7 +913,7 @@
                 
                 container.insertBefore(studioImg, container.firstChild);
 
-                setAdaptiveLogo(studioImg, studioUrl, 'hero_studio', true);
+                setAdaptiveLogo(studioImg, studioUrl, 'hero_studio', true, d);
                 studioImg.classList.add('ready');
 
                 if (container.children.length > 1) {
@@ -1360,7 +1349,7 @@
                 studioImg.className = 'interface-plus-studio-logo';
                 studioImg.alt = '';
                 meta.insertBefore(studioImg, meta.firstChild);
-                setAdaptiveLogo(studioImg, studioHit, 'studio', true);
+                setAdaptiveLogo(studioImg, studioHit, 'studio', true, d);
                 studioImg.classList.add('ready');
 
                 if (meta.children.length > 1) {
@@ -1440,7 +1429,7 @@
                     studioImg.className = 'interface-plus-studio-logo';
                     studioImg.alt = '';
                     meta.insertBefore(studioImg, meta.firstChild);
-                    setAdaptiveLogo(studioImg, activeCard.studioSrc, 'studio', true);
+                    setAdaptiveLogo(studioImg, activeCard.studioSrc, 'studio', true, d);
                     studioImg.classList.add('ready');
 
                     if (meta.children.length > 1) {
@@ -1498,7 +1487,7 @@
                     studioImg.alt = '';
                     meta.insertBefore(studioImg, meta.firstChild);
 
-                    setAdaptiveLogo(studioImg, url, 'studio', true);
+                    setAdaptiveLogo(studioImg, url, 'studio', true, d);
 
                     studioImg.classList.add('ready');
 
@@ -1949,7 +1938,7 @@
             }
         });
 
-        log('Precise menu cinematic shift, studio logo before rating and smart color analysis initialized');
+        log('Precise menu cinematic shift, studio logo before rating and NewCard studio color analysis initialized');
     }
 
     if (window.appready) {
