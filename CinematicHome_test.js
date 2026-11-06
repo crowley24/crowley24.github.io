@@ -2,16 +2,12 @@
     'use strict';
 
     /*
-     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT
+     * INTERFACE+ 1.7.0 — PRECISE MENU CINEMATIC SHIFT + STUDIO LOGOS IN HERO
      * TMDB ONLY
      *
-     * CHANGES 1.7.0:
-     * - Synchronized hero and background menu shift
-     * - Background keeps original width and image framing
-     * - Desktop menu shift: 20em
-     * - Mobile menu shift: 16em
-     * - Unified transition timing and easing
-     * - Preserved all 1.6.9 functionality
+     * CHANGES:
+     * - Integrated smart studio logos with color analysis in hero meta line
+     * - Preserved all 1.7.0 menu shift and cinematic features
      */
 
     var VERSION = '1.7.0';
@@ -26,7 +22,8 @@
         size: 'interface_size',
         font: 'fontchanger_selected',
         card: P + 'card_logo',
-        scale: P + 'logo_scale'
+        scale: P + 'logo_scale',
+        studios: P + 'hero_studios'
     };
 
     var LOGO_SIZE = 'w500';
@@ -264,6 +261,10 @@
 
     function cardEnabled() {
         return enabled(S.card, true);
+    }
+
+    function studiosEnabled() {
+        return enabled(S.studios, true);
     }
 
     function logoScale() {
@@ -659,6 +660,48 @@
         if (layer) layer.style.display = 'block';
     }
 
+    /* Аналіз кольору логотипа студії */
+
+    function applyStudioColorAnalysis(imgElement, logoUrl, uniqueId) {
+        if (!imgElement) return;
+
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = function () {
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+
+                canvas.width = this.width;
+                canvas.height = this.height;
+                ctx.drawImage(this, 0, 0);
+
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                var r = 0, g = 0, b = 0, count = 0;
+
+                for (var i = 0; i < imageData.length; i += 4) {
+                    if (imageData[i + 3] > 50) {
+                        r += imageData[i];
+                        g += imageData[i + 1];
+                        b += imageData[i + 2];
+                        count++;
+                    }
+                }
+
+                if (count > 0) {
+                    var brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;
+
+                    if (brightness < 40) {
+                        imgElement.style.filter = 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8))';
+                    }
+                }
+            } catch (e) {}
+        };
+
+        img.src = logoUrl;
+    }
+
     /* CSS стилі */
 
     var CSS = [
@@ -675,6 +718,8 @@
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7);}',
         '.banner-hero__meta{font-size:1.08em;color:rgba(245,245,241,.88);margin-bottom:.75em;display:flex;gap:.58em;align-items:center;flex-wrap:wrap;font-weight:500;line-height:1.4;text-shadow:0 2px 8px rgba(0,0,0,.65);}',
         '.banner-hero__meta-item{display:inline-flex;align-items:center;white-space:nowrap;}',
+        '.banner-hero__studio{display:inline-flex;align-items:center;height:1.2em;margin-right:.2em;}',
+        '.banner-hero__studio img{height:100%;width:auto;max-width:90px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));opacity:0.95;}',
         '.banner-hero__rate{display:inline-flex;align-items:center;gap:.32em;background:transparent;color:#f0ca78;font-weight:800;}',
         '.banner-hero__rate-star{font-size:1.05em;color:#e9bd65;}',
         '.banner-hero__year{color:rgba(245,245,241,.90);}',
@@ -688,7 +733,7 @@
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-original-title{display:none!important;}',
         '.interface-plus-logo-title.interface-plus-logo-active>.interface-plus-card-logo{font-size:initial;line-height:normal;}',
 
-        /* MENU CINEMATIC SHIFT — однакова геометрія для банера і фону */
+        /* MENU CINEMATIC SHIFT */
         'body.menu--open #interface-plus-screen-background{width:100%;transform:translateX(' + MENU_SHIFT + ');}',
         'body.menu--open .banner-host .banner-hero{transform:translateX(' + MENU_SHIFT + ');}',
 
@@ -795,6 +840,35 @@
     function buildHeroMeta(container, d) {
         container.textContent = '';
 
+        // 1. Студія / Мережа (якщо увімкнено)
+        if (studiosEnabled()) {
+            var studios = (d.networks || d.production_companies || []).filter(function (s) {
+                return s && s.logo_path;
+            });
+
+            if (studios.length > 0) {
+                var studio = studios[0];
+                var studioUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+                var studioSpan = document.createElement('span');
+                studioSpan.className = 'banner-hero__meta-item banner-hero__studio';
+
+                var studioImg = document.createElement('img');
+                studioImg.alt = studio.name || '';
+                studioImg.src = studioUrl;
+
+                applyStudioColorAnalysis(studioImg, studioUrl);
+
+                studioSpan.appendChild(studioImg);
+                container.appendChild(studioSpan);
+
+                var sep = document.createElement('span');
+                sep.className = 'banner-hero__separator';
+                sep.textContent = '·';
+                container.appendChild(sep);
+            }
+        }
+
+        // 2. Рейтинг
         var rating = Number(d.vote_average) || 0;
 
         if (rating > 0) {
@@ -808,10 +882,11 @@
             container.appendChild(rate);
         }
 
+        // 3. Рік
         var year = movieYear(d);
 
         if (year) {
-            if (container.children.length) {
+            if (container.children.length > (studiosEnabled() ? 2 : 0)) {
                 container.appendChild(
                     Object.assign(document.createElement('span'), {
                         className: 'banner-hero__separator',
@@ -828,6 +903,7 @@
             );
         }
 
+        // 4. Жанри
         var genres = movieGenres(d);
 
         if (genres.length) {
@@ -1480,6 +1556,16 @@
         );
 
         add(
+            S.studios,
+            'trigger',
+            true,
+            'Логотипи студій у банері',
+            'Показувати логотип студії/мережі в мета-рядку банера',
+            null,
+            applyHero
+        );
+
+        add(
             S.card,
             'trigger',
             true,
@@ -1655,7 +1741,7 @@
                 Lampa.Storage.listener.follow('change', function (e) {
                     if (!e || !e.name) return;
 
-                    if (e.name === S.hero) applyHero();
+                    if (e.name === S.hero || e.name === S.studios) applyHero();
 
                     if (e.name === S.card) refreshCard(true);
 
@@ -1721,7 +1807,7 @@
             }
         });
 
-        log('Precise menu cinematic shift initialized');
+        log('Precise menu cinematic shift + studios initialized');
     }
 
     if (window.appready) {
