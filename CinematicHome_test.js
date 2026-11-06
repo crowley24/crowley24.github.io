@@ -699,7 +699,7 @@
         img.src = logoUrl;
     }
 
-    /* Дозавантаження деталей для банера (щоб з'явились студії) */
+    /* Дозавантаження деталей для банера */
 
     function fetchHeroDetails(d, cb) {
         if (!d || !d.id) {
@@ -782,8 +782,8 @@
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7);}',
         '.banner-hero__meta{font-size:1.08em;color:rgba(245,245,241,.88);margin-bottom:.75em;display:flex;gap:.58em;align-items:center;flex-wrap:wrap;font-weight:500;line-height:1.4;text-shadow:0 2px 8px rgba(0,0,0,.65);}',
         '.banner-hero__meta-item{display:inline-flex;align-items:center;white-space:nowrap;}',
-        '.banner-hero__studio{display:inline-flex;align-items:center;height:1.2em;margin-right:.2em;}',
-        '.banner-hero__studio img{height:100%;width:auto;max-width:90px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));opacity:0.95;}',
+        '.banner-hero__studio{display:inline-flex;align-items:center;height:1.4em;max-height:22px;vertical-align:middle;margin-right:.3em;}',
+        '.banner-hero__studio img{height:100%!important;width:auto!important;max-width:110px!important;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));display:inline-block;opacity:1;}',
         '.banner-hero__rate{display:inline-flex;align-items:center;gap:.32em;background:transparent;color:#f0ca78;font-weight:800;}',
         '.banner-hero__rate-star{font-size:1.05em;color:#e9bd65;}',
         '.banner-hero__year{color:rgba(245,245,241,.90);}',
@@ -910,15 +910,23 @@
                 return s && s.logo_path;
             });
 
+            log('Studio check for:', movieTitle(d), 'Found studios:', studios);
+
             if (studios.length > 0) {
                 var studio = studios[0];
-                var studioUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+                var studioUrl = 'https://image.tmdb.org/t/p/w200' + studio.logo_path;
+
                 var studioSpan = document.createElement('span');
                 studioSpan.className = 'banner-hero__meta-item banner-hero__studio';
 
                 var studioImg = document.createElement('img');
                 studioImg.alt = studio.name || '';
                 studioImg.src = studioUrl;
+
+                studioImg.onerror = function() {
+                    log('Failed to load studio logo image:', studioUrl);
+                    studioSpan.style.display = 'none';
+                };
 
                 applyStudioColorAnalysis(studioImg, studioUrl);
 
