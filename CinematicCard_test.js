@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-
     /*
      * @name NEWCARD
      * @version 3.3.7 + Interface+ Bridge
