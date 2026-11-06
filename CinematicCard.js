@@ -2,9 +2,9 @@
     'use strict';
     /*
      * @name NEWCARD
-     * @version 3.3.7 + Interface+ Bridge + Staggered Animation + Clean Studios
+     * @version 3.3.7 + Interface+ Bridge + Staggered Animation + Smart Studio Logos
      * @author Crowley24
-     * @description Cinematic TV interface with Trailer Feed logo behavior, Interface+ cache integration, Stagger animations and clean unified studio logos
+     * @description Cinematic TV interface with Trailer Feed logo behavior, Interface+ cache integration, Stagger animations and smart studio logos styling
      * @platforms Lampa | Android TV
      */
 
@@ -534,7 +534,7 @@
             gap: 0;
         }
 
-        /* STUDIOS — UNIFIED SIZE & ORIGINAL COLORS */
+        /* STUDIOS — UNIFIED SIZE & SMART WHITE ADAPTATION */
 
         .cas-studios-row {
             display: flex;
@@ -562,6 +562,7 @@
             object-fit: contain;
             object-position: left center;
             opacity: 0.9;
+            filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8));
             transition: opacity 0.3s ease;
         }
 
@@ -1792,7 +1793,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.7 + Interface+ Bridge + Staggered Animation + Clean Studios initialized successfully'
+                'NewCard 3.3.7 + Interface+ Bridge + Staggered Animation + Smart Studio Logos initialized successfully'
             );
 
         } catch (error) {
