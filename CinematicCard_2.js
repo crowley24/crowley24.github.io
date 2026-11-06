@@ -1,23 +1,11 @@
-
 (function () {
     'use strict';
-
     /*
      * @name NEWCARD
-     * @version 3.3.8
+     * @version 3.3.7 + Interface+ Bridge + Staggered Animation + Smart Studio Logos
      * @author Crowley24
-     * @description Cinematic TV interface with Interface+ Bridge, Staggered Animation and Canvas Smart Studio Logos
+     * @description Cinematic TV interface with Trailer Feed logo behavior, Interface+ cache integration, Stagger animations and smart studio logos styling
      * @platforms Lampa | Android TV
-     *
-     * 3.3.8 CHANGES:
-     * - Studio logos: height 1.3em, max-width 6.5em
-     * - Canvas-based studio logo color analysis (96x48)
-     * - Dark monochrome logos are converted to white
-     * - Colored and light logos preserve original colors
-     * - Transparent pixels are excluded from analysis
-     * - CORS-safe image loading with original-image fallback
-     * - Studio analysis cache (128 entries)
-     * - Removed unconditional white filter from studio logos
      */
 
     const PLUGIN_NAME = 'NewCard';
@@ -27,10 +15,6 @@
     const LOGO_CACHE_TIMEOUT = CACHE_LIFETIME;
     const REQUEST_TIMEOUT = 12000;
 
-    const STUDIO_CANVAS_WIDTH = 96;
-    const STUDIO_CANVAS_HEIGHT = 48;
-    const STUDIO_ANALYSIS_CACHE_LIMIT = 128;
-
     let currentInterval = null;
     let logoRequestId = 0;
     let cardRequestId = 0;
@@ -38,8 +22,6 @@
     let detailsRequests = {};
     let debounceTimer = null;
     let slideshowGeneration = 0;
-
-    const studioAnalysisCache = {};
 
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
@@ -366,7 +348,7 @@
 
                             <div class="full-start__button selector button--reaction">
                                 <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361827 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 0.0000337953 25.609 0.000000023187 25.7962C-0.000033749 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
+                                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
                                     <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>
                                 </svg>
                                 <span>#{title_reactions}</span>
@@ -407,7 +389,7 @@
 
                 <div class="full-start__button selector view--trailer">
                     <svg height="24" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7604 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>
                     </svg>
                     <span>#{full_trailers}</span>
                 </div>
@@ -493,7 +475,7 @@
             transform-origin: center center;
         }
 
-        /* STAGGERED FADE-IN */
+        /* NETFLIX-STYLE STAGGERED FADE-IN SYSTEM */
 
         .cas-studios-row,
         .cas-tagline,
@@ -552,12 +534,7 @@
             gap: 0;
         }
 
-        /* =================================================
-           STUDIO LOGOS
-           SAME DIMENSIONS AS LAMPA DETAIL CARD
-           Height: 1.3em
-           Max width: 6.5em
-           ================================================= */
+        /* STUDIOS — UNIFIED SIZE & SMART WHITE ADAPTATION */
 
         .cas-studios-row {
             display: flex;
@@ -566,20 +543,15 @@
             align-items: center;
             gap: 12px;
             margin: 0 0 10px 0;
-            min-height: 1.3em;
         }
 
         .cas-studio-item {
-            height: 1.3em !important;
-            max-height: 1.3em;
-            width: auto;
-            max-width: 6.5em;
+            height: 22px !important;
+            max-width: 110px;
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            flex: 0 0 auto;
             margin-bottom: 2px;
-            overflow: visible;
         }
 
         .cas-studio-item img {
@@ -593,14 +565,6 @@
             opacity: 0.9;
             filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
             transition: opacity 0.3s ease, filter 0.25s ease;
-        }
-
-        /* Only dark monochrome logos receive white conversion */
-        .cas-studio-item img.cas-studio-white {
-            filter:
-                brightness(0)
-                invert(1)
-                drop-shadow(0 1px 2px rgba(0,0,0,0.8));
         }
 
         .cas-studio-item img:hover {
@@ -654,7 +618,7 @@
             text-align: left !important;
         }
 
-        /* METADATA */
+        /* SINGLE-LINE METADATA */
 
         .cas-meta-line {
             display: flex !important;
@@ -753,7 +717,7 @@
             padding: 0;
         }
 
-        /* SLIDE ANIMATION */
+        /* STAGGER ANIMATION TIMELINE (SLIDE STYLE) */
 
         .cas-anim-slide .cas-studios-row,
         .cas-anim-slide .cas-tagline,
@@ -772,38 +736,33 @@
             transform: translate3d(0, 0, 0);
             transition-delay: 0.0s;
         }
-
         .cas-anim-slide.cas-animated .cas-tagline {
             opacity: 0.85 !important;
             transform: translate3d(0, 0, 0);
             transition-delay: 0.05s;
         }
-
         .cas-anim-slide.cas-animated .cas-logo {
             opacity: 1 !important;
             transform: translate3d(0, 0, 0);
             transition-delay: 0.1s;
         }
-
         .cas-anim-slide.cas-animated .cas-meta-line {
             opacity: 0.82 !important;
             transform: translate3d(0, 0, 0);
             transition-delay: 0.18s;
         }
-
         .cas-anim-slide.cas-animated .cas-description {
             opacity: 0.75 !important;
             transform: translate3d(0, 0, 0);
             transition-delay: 0.25s;
         }
-
         .cas-anim-slide.cas-animated .full-start-new__buttons {
             opacity: 1 !important;
             transform: translate3d(0, 0, 0);
             transition-delay: 0.32s;
         }
 
-        /* SPRING ANIMATION */
+        /* STAGGER ANIMATION TIMELINE (SPRING STYLE) */
 
         .cas-anim-spring .cas-studios-row,
         .cas-anim-spring .cas-tagline,
@@ -822,31 +781,26 @@
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
             transition-delay: 0.0s;
         }
-
         .cas-anim-spring.cas-animated .cas-tagline {
             opacity: 0.85 !important;
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
             transition-delay: 0.05s;
         }
-
         .cas-anim-spring.cas-animated .cas-logo {
             opacity: 1 !important;
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
             transition-delay: 0.1s;
         }
-
         .cas-anim-spring.cas-animated .cas-meta-line {
             opacity: 0.82 !important;
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
             transition-delay: 0.18s;
         }
-
         .cas-anim-spring.cas-animated .cas-description {
             opacity: 0.75 !important;
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
             transition-delay: 0.25s;
         }
-
         .cas-anim-spring.cas-animated .full-start-new__buttons {
             opacity: 1 !important;
             transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
@@ -911,17 +865,8 @@
                 margin: 0 5px;
             }
 
-            /* Same studio logo dimensions on mobile */
             .cas-studio-item {
-                height: 1.3em !important;
-                max-height: 1.3em;
-                max-width: 6.5em;
-            }
-
-            .cas-studio-item img {
-                height: 1.3em !important;
-                max-height: 1.3em !important;
-                max-width: 6.5em !important;
+                height: 20px !important;
             }
 
             .full-start-new__buttons {
@@ -1260,38 +1205,28 @@
         const logoContainer = render.find('.cas-logo');
         logoContainer.empty();
 
-        // 1. INTERFACE+ BRIDGE
+        // 1. СПРОБА ОТРИМАТИ ЛОГОТИП З КЕШУ INTERFACE+
         let bridgeLogoUrl = null;
-
-        if (
-            window.InterfacePlusBridge &&
-            typeof window.InterfacePlusBridge.getLogo === 'function'
-        ) {
+        if (window.InterfacePlusBridge && typeof window.InterfacePlusBridge.getLogo === 'function') {
             bridgeLogoUrl = window.InterfacePlusBridge.getLogo(data);
         }
 
         if (bridgeLogoUrl) {
             preloadImage(bridgeLogoUrl).then(() => {
                 if (requestId !== logoRequestId) return;
-
                 logoContainer.empty();
-
                 const image = $('<img>');
-
                 image.attr('alt', data.title || data.name || '');
                 image.attr('src', bridgeLogoUrl);
-
                 logoContainer.append(image);
                 image.show();
-
             }).catch(() => {
                 showLogoFallback(render, data, requestId);
             });
-
             return;
         }
 
-        // 2. OWN CACHE / TMDB
+        // 2. ВЛАСНИЙ КЕШ / TMDB ЗАПИТ
         const cachedLogo = getCachedLogo(cacheId);
 
         if (cachedLogo && cachedLogo.file_path) {
@@ -1401,279 +1336,86 @@
     }
 
     // =====================================================
-    // STUDIO LOGOS — CANVAS COLOR ANALYSIS
+    // STUDIO LOGOS (WITH COLOR ANALYSIS)
     // =====================================================
-
-    function getStudioAnalysisCache(url) {
-        if (!url) return undefined;
-
-        if (
-            Object.prototype.hasOwnProperty.call(
-                studioAnalysisCache,
-                url
-            )
-        ) {
-            return studioAnalysisCache[url];
-        }
-
-        return undefined;
-    }
-
-    function setStudioAnalysisCache(url, result) {
-        if (!url) return;
-
-        studioAnalysisCache[url] = result;
-
-        const keys = Object.keys(studioAnalysisCache);
-
-        while (keys.length > STUDIO_ANALYSIS_CACHE_LIMIT) {
-            delete studioAnalysisCache[keys.shift()];
-        }
-    }
-
-    /*
-     * Аналізує логотип через Canvas.
-     *
-     * Полотно: 96 x 48 px.
-     *
-     * Прозорі пікселі не враховуються.
-     *
-     * Логотип вважається темним монохромним, якщо:
-     * - понад 85% видимих пікселів мають яскравість нижче 110;
-     * - менше 4% видимих пікселів мають виражений колір;
-     * - для аналізу є достатня кількість видимих пікселів.
-     *
-     * Повертає:
-     * true  — застосувати білий фільтр;
-     * false — залишити оригінальний колір;
-     * null  — аналіз неможливий, залишити оригінал.
-     */
-
-    function analyzeStudioCanvas(image) {
-        try {
-            if (
-                !image ||
-                !image.complete ||
-                !image.naturalWidth ||
-                !image.naturalHeight
-            ) {
-                return null;
-            }
-
-            const canvas = document.createElement('canvas');
-
-            canvas.width = STUDIO_CANVAS_WIDTH;
-            canvas.height = STUDIO_CANVAS_HEIGHT;
-
-            const context = canvas.getContext('2d', {
-                willReadFrequently: true
-            });
-
-            if (!context) return null;
-
-            context.clearRect(
-                0,
-                0,
-                STUDIO_CANVAS_WIDTH,
-                STUDIO_CANVAS_HEIGHT
-            );
-
-            const scale = Math.min(
-                STUDIO_CANVAS_WIDTH / image.naturalWidth,
-                STUDIO_CANVAS_HEIGHT / image.naturalHeight
-            );
-
-            const width = image.naturalWidth * scale;
-            const height = image.naturalHeight * scale;
-
-            const x = (STUDIO_CANVAS_WIDTH - width) / 2;
-            const y = (STUDIO_CANVAS_HEIGHT - height) / 2;
-
-            context.drawImage(
-                image,
-                x,
-                y,
-                width,
-                height
-            );
-
-            const imageData = context.getImageData(
-                0,
-                0,
-                STUDIO_CANVAS_WIDTH,
-                STUDIO_CANVAS_HEIGHT
-            );
-
-            const pixels = imageData.data;
-
-            let visiblePixels = 0;
-            let darkPixels = 0;
-            let coloredPixels = 0;
-
-            for (let i = 0; i < pixels.length; i += 4) {
-                const r = pixels[i];
-                const g = pixels[i + 1];
-                const b = pixels[i + 2];
-                const alpha = pixels[i + 3];
-
-                // Ignore transparent and nearly transparent pixels.
-                if (alpha < 51) continue;
-
-                visiblePixels++;
-
-                const brightness =
-                    0.2126 * r +
-                    0.7152 * g +
-                    0.0722 * b;
-
-                const maxChannel = Math.max(r, g, b);
-                const minChannel = Math.min(r, g, b);
-
-                const saturationDifference =
-                    maxChannel - minChannel;
-
-                if (brightness < 110) {
-                    darkPixels++;
-                }
-
-                if (saturationDifference > 30) {
-                    coloredPixels++;
-                }
-            }
-
-            if (visiblePixels < 5) {
-                return null;
-            }
-
-            const darkRatio = darkPixels / visiblePixels;
-            const coloredRatio = coloredPixels / visiblePixels;
-
-            return (
-                darkRatio > 0.85 &&
-                coloredRatio < 0.04
-            );
-
-        } catch (error) {
-            // Canvas may be blocked by CORS.
-            // Do not alter the original logo in this case.
-            return null;
-        }
-    }
-
-    /*
-     * Завантаження логотипа з CORS для Canvas.
-     *
-     * Якщо аналіз уже є в кеші, повторно Canvas не запускаємо.
-     * Якщо Canvas не може прочитати зображення, логотип залишається
-     * в оригінальному кольорі.
-     */
-
-    function analyzeStudioImage(image, url) {
-        if (!image || !url) return;
-
-        const cached = getStudioAnalysisCache(url);
-
-        if (cached !== undefined) {
-            if (cached === true) {
-                image.addClass('cas-studio-white');
-            } else {
-                image.removeClass('cas-studio-white');
-            }
-
-            return;
-        }
-
-        const result = analyzeStudioCanvas(image);
-
-        setStudioAnalysisCache(url, result);
-
-        if (result === true) {
-            image.addClass('cas-studio-white');
-        } else {
-            image.removeClass('cas-studio-white');
-        }
-    }
-
-    /*
-     * Створює елемент логотипа студії.
-     *
-     * crossorigin встановлюється ДО src.
-     * Це дозволяє Canvas прочитати пікселі TMDB-зображення,
-     * якщо сервер надає відповідний CORS-заголовок.
-     */
-
-    function createStudioLogo(studio, logoUrl) {
-        const item = $('<div class="cas-studio-item cas-wave-studio"></div>');
-        const image = $('<img>');
-
-        image.attr('alt', studio.name || '');
-        image.attr('crossorigin', 'anonymous');
-
-        image.on('load', function () {
-            analyzeStudioImage(image, logoUrl);
-        });
-
-        image.on('error', function () {
-            /*
-             * Якщо завантаження з CORS не вдалося,
-             * не застосовуємо жодного фільтра.
-             * Пробуємо показати оригінал без CORS-режиму.
-             */
-
-            if (image.data('cas-cors-retry')) return;
-
-            image.data('cas-cors-retry', true);
-            image.removeAttr('crossorigin');
-            image.attr('src', logoUrl);
-        });
-
-        image.attr('src', logoUrl);
-
-        item.append(image);
-
-        return item;
-    }
 
     function renderStudioLogosWithColorAnalysis(container, data) {
         container.empty();
 
-        if (!data) return;
-
-        let candidates = [];
-
-        if (
-            Array.isArray(data.networks) &&
-            data.networks.length
-        ) {
-            candidates = data.networks;
-        } else if (
-            Array.isArray(data.production_companies) &&
-            data.production_companies.length
-        ) {
-            candidates = data.production_companies;
-        }
-
-        const studios = candidates
-            .filter(studio => {
-                return studio &&
-                    studio.logo_path &&
-                    typeof studio.logo_path === 'string';
-            })
-            .slice(0, 1);
+        const studios = (
+            data.networks || data.production_companies || []
+        ).filter(s => s.logo_path).slice(0, 1);
 
         studios.forEach(studio => {
             const logoUrl = Lampa.TMDB.image(
                 '/t/p/w200' + studio.logo_path
             );
 
-            if (!logoUrl) return;
+            // Генеруємо унікальний ID для точкового пошуку елемента після аналізу кольору
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);
 
-            const item = createStudioLogo(
-                studio,
-                logoUrl
+            const item = $(
+                `<div class="cas-studio-item cas-wave-studio" id="${id}"></div>`
             );
+            const image = $('<img>');
 
+            image.attr('src', logoUrl);
+            image.attr('alt', studio.name || '');
+
+            item.append(image);
             container.append(item);
+
+            // Запускаємо аналіз кольорів через Canvas
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            img.onload = function () {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    ctx.drawImage(this, 0, 0);
+
+                    const imageData = ctx.getImageData(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    ).data;
+
+                    let r = 0, g = 0, b = 0, count = 0;
+
+                    // Проходимо по всіх пікселях (ігноруємо прозорі)
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        if (imageData[i + 3] > 50) {
+                            r += imageData[i];
+                            g += imageData[i + 1];
+                            b += imageData[i + 2];
+                            count++;
+                        }
+                    }
+
+                    if (count > 0) {
+                        // Обчислюємо загальну яскравість логотипа за формулою
+                        const brightness =
+                            (0.299 * r + 0.587 * g + 0.114 * b) / count;
+
+                        // Якщо логотип темний (яскравість менше 40), робимо його білим
+                        if (brightness < 40) {
+                            $('#' + id + ' img').css(
+                                'filter',
+                                'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.8))'
+                            );
+                        }
+                    }
+                } catch (e) {
+                    // CORS або інші обмеження безпеки canvas ігноруємо
+                }
+            };
+
+            img.src = logoUrl;
         });
     }
 
@@ -1834,8 +1576,6 @@
 
         renderMetadata(render, data);
 
-        let studioData = data;
-
         if (needsDetails(data)) {
             const details = await loadTMDBDetails(data);
 
@@ -1891,24 +1631,22 @@
                 }
             }
 
-            /*
-             * If the original card lacks studio information,
-             * use the TMDB details response for studio logos.
-             */
+            renderMetadata(render, merged);
 
             if (
-                !(
-                    (data.networks && data.networks.length) ||
-                    (data.production_companies && data.production_companies.length)
-                )
+                Lampa.Storage.get('cas_show_studios') &&
+                (
+                    !data.production_companies ||
+                    !data.production_companies.length
+                ) &&
+                details.production_companies &&
+                details.production_companies.length
             ) {
-                studioData = Object.assign({}, data, {
-                    networks: details.networks || [],
-                    production_companies: details.production_companies || []
-                });
+                renderStudioLogosWithColorAnalysis(
+                    render.find('.cas-studios-row'),
+                    details
+                );
             }
-
-            renderMetadata(render, merged);
         }
 
         if (requestId !== cardRequestId) return;
@@ -1916,7 +1654,7 @@
         if (Lampa.Storage.get('cas_show_studios')) {
             renderStudioLogosWithColorAnalysis(
                 render.find('.cas-studios-row'),
-                studioData
+                data
             );
         } else {
             render.find('.cas-studios-row').empty();
@@ -2113,7 +1851,7 @@
             initializePlugin();
 
             console.log(
-                'NewCard 3.3.8 + Interface+ Bridge + Staggered Animation + Canvas Smart Studio Logos initialized successfully'
+                'NewCard 3.3.7 + Interface+ Bridge + Staggered Animation + Smart Studio Logos initialized successfully'
             );
 
         } catch (error) {
