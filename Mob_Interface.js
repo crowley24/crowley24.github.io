@@ -3,14 +3,14 @@
 
     /*
      * @name MOB_INTERFACE
-     * @version 3.1.4
+     * @version 3.1.5
      * @author Crowley24
      * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
-     * 3.1.4 CHANGES:
-     * - Fixed poster background position (stays in place on scroll)
-     * - Adjusted content padding and layout layers for fixed background
+     * 3.1.5 CHANGES:
+     * - Fixed poster background using sticky positioning for strict Lampa layout compatibility
+     * - Restored correct content margins and smooth scrolling layers
      * - Fixed buttons visibility and container stability
      * - Refined duplicate metadata cleaning logic
      * - Improved safe DOM selectors for action buttons
@@ -32,8 +32,8 @@
      * - Safe slideshow timer management
      */
 
-    if (window.MOB_INTERFACE_V314_READY) return;
-    window.MOB_INTERFACE_V314_READY = true;
+    if (window.MOB_INTERFACE_V315_READY) return;
+    window.MOB_INTERFACE_V315_READY = true;
 
     var slideshowTimer = null;
     var detailsCache = {};
@@ -209,7 +209,7 @@
             var element = elements[i];
 
             if (
-                element.classList.contains('mi314-header-meta-hidden') ||
+                element.classList.contains('mi315-header-meta-hidden') ||
                 isProtected(element)
             ) {
                 continue;
@@ -258,7 +258,7 @@
                 target !== root &&
                 !isProtected(target)
             ) {
-                target.classList.add('mi314-header-meta-hidden');
+                target.classList.add('mi315-header-meta-hidden');
             }
         });
     }
@@ -393,7 +393,7 @@
          * DUPLICATE METADATA
          */
 
-        css += '.full-start-new .mi314-header-meta-hidden{';
+        css += '.full-start-new .mi315-header-meta-hidden{';
         css += 'display:none!important;';
         css += 'visibility:hidden!important;';
         css += 'height:0!important;';
@@ -426,18 +426,17 @@
         css += '}';
 
         /*
-         * CINEMATIC POSTER (FIXED BACKGROUND)
+         * CINEMATIC POSTER (STICKY BACKGROUND)
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:fixed!important;';
+        css += 'position:sticky!important;';
         css += 'top:0!important;';
-        css += 'left:0!important;';
-        css += 'width:100vw!important;';
-        css += 'height:100vh!important;';
         css += 'overflow:hidden!important;';
         css += 'background:#050608;';
-        css += 'z-index:0!important;';
+        css += 'z-index:1!important;';
+        css += 'height:62vh!important;';
+        css += 'min-height:390px;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -448,14 +447,16 @@
         css += '.full-start-new .full-start-new__poster:after{';
         css += 'content:"";';
         css += 'position:absolute;';
-        css += 'inset:0;';
+        css += 'inset:15% 0 0;';
         css += 'pointer-events:none;';
         css += 'z-index:2;';
         css += 'background:linear-gradient(';
         css += '180deg,';
-        css += 'rgba(5,7,11,.2) 0%,';
-        css += 'rgba(5,7,11,.5) 40%,';
-        css += '#050608 85%';
+        css += 'rgba(5,7,11,0) 0%,';
+        css += 'rgba(5,7,11,.12) 22%,';
+        css += 'rgba(5,7,11,.38) 48%,';
+        css += 'rgba(5,7,11,.82) 78%,';
+        css += '#050608 100%';
         css += ');';
         css += '}';
 
@@ -473,10 +474,12 @@
             css += 'animation:kenBurnsEffect 28s ease-in-out infinite!important;';
         }
 
+        css += 'mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
+        css += '-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
         css += '}';
 
         /*
-         * MAIN CONTENT (SCROLLABLE OVER FIXED POSTER)
+         * MAIN CONTENT (SCROLLABLE OVER STICKY POSTER)
          */
 
         css += '.full-start-new .full-start-new__right{';
@@ -486,8 +489,8 @@
         css += 'flex-direction:column!important;';
         css += 'align-items:center!important;';
         css += 'gap:' + blocksGap + '!important;';
-        css += 'padding:140px 14px 40px 14px!important;';
-        css += 'margin-top:0!important;';
+        css += 'padding:0 14px!important;';
+        css += 'margin-top:-168px!important;';
         css += 'background:transparent!important;';
         css += '}';
 
@@ -1528,7 +1531,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.1.4 Minimal Cinematic Premium initialized'
+            '[MOB_INTERFACE] 3.1.5 Minimal Cinematic Premium initialized'
         );
     }
 
