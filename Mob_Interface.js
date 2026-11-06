@@ -1,3 +1,4 @@
+
 (function () {
     'use strict';
 
@@ -5,22 +6,20 @@
      * @name MOB_INTERFACE
      * @version 3.2.0
      * @author Crowley24
-     * @description Fixed Cinematic Poster — Premium Mobile Interface
+     * @description Minimal Cinematic Premium Mobile Interface
      * @platforms Lampa | Mobile
      *
      * 3.2.0 CHANGES:
-     * - FIXED CINEMATIC POSTER
-     * - Background stays fixed during vertical scrolling
-     * - Content scrolls independently over background
-     * - Preserved original poster layout spacing
-     * - Preserved TMDB slideshow
-     * - Preserved Ken Burns animation
-     * - Preserved poster gradients
-     * - Preserved all metadata and native ratings
-     * - Preserved studio and movie logos
-     * - Preserved all original settings
-     * - Safe slideshow timer management
-     * - Safe render lifecycle
+     * - Smooth cinematic background scroll effect
+     * - Background poster stays sticky while scrolling
+     * - Subtle upward movement based on scroll progress
+     * - Background gradually fades into darkness
+     * - Smooth reverse animation when scrolling up
+     * - TMDB slideshow preserved
+     * - Ken Burns animation preserved
+     * - Scroll listeners safely removed on card destroy
+     *
+     * BASE: 3.1.2
      */
 
     if (window.MOB_INTERFACE_V320_READY) return;
@@ -31,6 +30,12 @@
     var currentActiveId = null;
     var activeRenderToken = 0;
     var started = false;
+
+    var scrollListeners = [];
+    var scrollFrame = null;
+    var scrollPoster = null;
+    var scrollStartValues = [];
+    var scrollLastProgress = 0;
 
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
@@ -65,7 +70,225 @@
     }
 
     /*
-     * IMAGE BRIGHTNESS
+     * BACKGROUND SCROLL EFFECT
+     */
+
+    function removeScrollListeners() {
+        scrollListeners.forEach(function (item) {
+            try {
+                item.target.removeEventListener(
+                    item.event,
+                    item.handler,
+                    item.options
+                );
+            } catch (e) {}
+        });
+
+        scrollListeners = [];
+
+        if (scrollFrame) {
+            cancelAnimationFrame(scrollFrame);
+            scrollFrame = null;
+        }
+
+        if (scrollPoster && scrollPoster.length) {
+            scrollPoster
+                .css('--mi-scroll-shift', '0px')
+                .css('--mi-scroll-opacity', '1')
+                .removeClass('mi320-scroll-active');
+        }
+
+        scrollPoster = null;
+        scrollStartValues = [];
+        scrollLastProgress = 0;
+    }
+
+    function addScrollListener(target, event, handler, options) {
+        if (!target) return;
+
+        target.addEventListener(event, handler, options);
+
+        scrollListeners.push({
+            target: target,
+            event: event,
+            handler: handler,
+            options: options
+        });
+    }
+
+    function getScrollableParents(element) {
+        var parents = [];
+        var current = element ? element.parentElement : null;
+
+        while (current && current !== document.body) {
+            var style = window.getComputedStyle(current);
+            var overflowY = style.overflowY;
+
+            var isScrollable =
+                (
+                    overflowY === 'auto' ||
+                    overflowY === 'scroll' ||
+                    overflowY === 'overlay'
+                ) &&
+                current.scrollHeight > current.clientHeight + 5;
+
+            if (isScrollable) {
+                parents.push(current);
+            }
+
+            current = current.parentElement;
+        }
+
+        if (
+            document.scrollingElement &&
+            parents.indexOf(document.scrollingElement) === -1
+        ) {
+            parents.push(document.scrollingElement);
+        }
+
+        return parents;
+    }
+
+    function getTotalScrollDistance() {
+        var total = 0;
+
+        scrollStartValues.forEach(function (item) {
+            var current = item.target.scrollTop || 0;
+            var delta = current - item.start;
+
+            if (delta > 0) {
+                total += delta;
+            }
+        });
+
+        return total;
+    }
+
+    function updateBackgroundScroll() {
+        scrollFrame = null;
+
+        if (
+            !scrollPoster ||
+            !scrollPoster.length ||
+            !scrollPoster[0] ||
+            !document.body.contains(scrollPoster[0])
+        ) {
+            removeScrollListeners();
+            return;
+        }
+
+        var posterElement = scrollPoster[0];
+        var posterHeight = posterElement.offsetHeight || window.innerHeight * 0.62;
+
+        /*
+         * Максимальний діапазон ефекту:
+         * приблизно 1.5 висоти постера.
+         */
+
+        var scrollDistance = getTotalScrollDistance();
+        var progress = Math.min(
+            Math.max(scrollDistance / (posterHeight * 1.5), 0),
+            1
+        );
+
+        /*
+         * Невеликий рух угору:
+         * 12% висоти постера.
+         */
+
+        var shift = posterHeight * 0.12 * progress;
+
+        /*
+         * Плавне розчинення:
+         * залишається мінімальна видимість,
+         * щоб фон не зникав різко.
+         */
+
+        var opacity = 1 - (progress * 0.62);
+
+        scrollLastProgress = progress;
+
+        scrollPoster
+            .css('--mi-scroll-shift', (-shift).toFixed(1) + 'px')
+            .css('--mi-scroll-opacity', opacity.toFixed(3));
+    }
+
+    function scheduleBackgroundScroll() {
+        if (scrollFrame) return;
+
+        scrollFrame = requestAnimationFrame(
+            updateBackgroundScroll
+        );
+    }
+
+    function startBackgroundScroll($render, renderToken) {
+        removeScrollListeners();
+
+        if (
+            !Lampa ||
+            window.innerWidth > 480 ||
+            !$render ||
+            !$render.length
+        ) {
+            return;
+        }
+
+        var $poster = $render
+            .find('.full-start-new__poster')
+            .first();
+
+        if (!$poster.length) return;
+
+        scrollPoster = $poster;
+
+        var parents = getScrollableParents($render[0]);
+
+        scrollStartValues = parents.map(function (parent) {
+            return {
+                target: parent,
+                start: parent.scrollTop || 0
+            };
+        });
+
+        scrollPoster.addClass('mi320-scroll-active');
+
+        var handler = function () {
+            if (renderToken !== activeRenderToken) {
+                removeScrollListeners();
+                return;
+            }
+
+            scheduleBackgroundScroll();
+        };
+
+        parents.forEach(function (parent) {
+            addScrollListener(
+                parent,
+                'scroll',
+                handler,
+                { passive: true }
+            );
+        });
+
+        addScrollListener(
+            window,
+            'scroll',
+            handler,
+            { passive: true }
+        );
+
+        addScrollListener(
+            window,
+            'resize',
+            handler,
+            { passive: true }
+        );
+
+        scheduleBackgroundScroll();
+    }
+
+    /*
+     * IMAGE DARKNESS DETECTION
      */
 
     function isImageDark(imgSrc, callback) {
@@ -216,7 +439,6 @@
             if (!isYearCountryLine(element)) continue;
 
             var position = element.compareDocumentPosition(title);
-
             var beforeTitle = !!(position & 4);
 
             if (!beforeTitle) continue;
@@ -234,7 +456,6 @@
                 var parent = current.parentElement;
 
                 if (!parent || parent === root) break;
-
                 if (isProtected(parent)) break;
 
                 var parentText = String(parent.textContent || '')
@@ -385,8 +606,6 @@
         css += 'position:relative!important;';
         css += 'isolation:isolate;';
         css += 'background:transparent!important;';
-        css += 'padding-top:62vh!important;';
-        css += 'box-sizing:border-box!important;';
         css += '}';
 
         css += '.full-start-new .full-start__reactions,';
@@ -431,31 +650,28 @@
         css += '}';
 
         /*
-         * FIXED CINEMATIC POSTER
+         * CINEMATIC BACKGROUND POSTER
          *
-         * IMPORTANT:
-         * Poster is now fixed relative to the viewport.
-         * It does not move when the card scrolls.
-         *
-         * The main card receives padding-top:62vh
-         * to preserve the original poster space.
+         * Sticky keeps the background in view while
+         * the card content scrolls over it.
          */
 
         css += '.full-start-new .full-start-new__poster{';
-        css += 'position:fixed!important;';
+        css += 'position:-webkit-sticky!important;';
+        css += 'position:sticky!important;';
         css += 'top:0!important;';
-        css += 'left:0!important;';
-        css += 'right:0!important;';
-        css += 'width:100vw!important;';
-        css += 'height:62vh!important;';
-        css += 'min-height:390px;';
-        css += 'margin:0!important;';
-        css += 'padding:0!important;';
         css += 'overflow:hidden!important;';
         css += 'background:#050608;';
-        css += 'z-index:0!important;';
-        css += 'pointer-events:none!important;';
-        css += 'transform:none!important;';
+        css += 'z-index:1;';
+        css += 'height:62vh!important;';
+        css += 'min-height:390px;';
+        css += 'margin-top:0!important;';
+        css += 'margin-bottom:0!important;';
+        css += 'transform:translate3d(0,var(--mi-scroll-shift,0px),0);';
+        css += 'opacity:var(--mi-scroll-opacity,1);';
+        css += 'will-change:transform,opacity;';
+        css += 'transition:opacity .08s linear;';
+        css += 'isolation:isolate;';
 
         if (isUIAnim) {
             css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
@@ -464,7 +680,7 @@
         css += '}';
 
         /*
-         * POSTER GRADIENT
+         * Dark gradient over the background
          */
 
         css += '.full-start-new .full-start-new__poster:after{';
@@ -484,7 +700,10 @@
         css += '}';
 
         /*
-         * POSTER IMAGE
+         * BACKGROUND IMAGES
+         *
+         * Ken Burns remains on the image itself.
+         * Scroll movement is applied to the poster layer.
          */
 
         css += '.full-start-new .full-start-new__poster img{';
@@ -1303,6 +1522,7 @@
             ) {
                 activeRenderToken++;
                 stopSlideshow();
+                removeScrollListeners();
                 currentActiveId = null;
                 return;
             }
@@ -1327,6 +1547,7 @@
             }
 
             stopSlideshow();
+            removeScrollListeners();
 
             var renderToken = ++activeRenderToken;
             var movie = e.data.movie;
@@ -1354,6 +1575,15 @@
              */
 
             hideDuplicateHeaderMetadata($render);
+
+            /*
+             * BACKGROUND SCROLL EFFECT
+             */
+
+            startBackgroundScroll(
+                $render,
+                renderToken
+            );
 
             /*
              * TMDB
@@ -1557,7 +1787,7 @@
         init();
 
         console.log(
-            '[MOB_INTERFACE] 3.2.0 Fixed Cinematic Poster initialized'
+            '[MOB_INTERFACE] 3.2.0 Smooth Scroll Background initialized'
         );
     }
 
