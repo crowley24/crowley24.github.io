@@ -2,123 +2,120 @@
 (function () {
     'use strict';
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.0.1';
 
-    function runProbe() {
-        var report = [];
-
-        function add(value) {
-            report.push(String(value));
+    function start() {
+        if (!window.Lampa || !Lampa.Template || !Lampa.Modal) {
+            alert('Lampa API не знайдено');
+            return;
         }
 
-        add('LAMPA TEMPLATE SELECTOR PROBE ' + VERSION);
-        add('==============================');
+        var report = [];
+
+        function log(value) {
+            report.push(String(value));
+        }
 
         try {
             var templates = Lampa.Template.all();
 
-            add('TEMPLATE COUNT: ' + Object.keys(templates).length);
-            add('');
+            log('LAMPA TEMPLATE SELECTOR PROBE ' + VERSION);
+            log('==============================');
+            log('Template count: ' + Object.keys(templates).length);
+            log('');
 
             Object.keys(templates).sort().forEach(function (name) {
-                var html = String(templates[name] || '');
+                var source = String(templates[name] || '');
 
                 if (
-                    html.indexOf('selector') !== -1 ||
-                    html.indexOf('data-action') !== -1 ||
-                    html.indexOf('hover:') !== -1
+                    source.indexOf('selector') !== -1 ||
+                    source.indexOf('data-action') !== -1
                 ) {
-                    add('TEMPLATE: ' + name);
-                    add('LENGTH: ' + html.length);
+                    log('TEMPLATE: ' + name);
+                    log('LENGTH: ' + source.length);
 
-                    var matches = html.match(/<[^>]*(?:selector|data-action|hover:)[^>]*>/gi);
+                    var matches = source.match(/<[^>]*(?:selector|data-action)[^>]*>/gi);
 
                     if (matches) {
-                        matches.slice(0, 12).forEach(function (item) {
-                            add('  ' + item);
+                        matches.slice(0, 10).forEach(function (item) {
+                            log(item);
                         });
                     }
 
-                    add('HTML PREVIEW:');
-                    add(html.substring(0, 1800));
-                    add('--------------------------------');
+                    log('HTML:');
+                    log(source.substring(0, 1200));
+                    log('------------------------------');
                 }
             });
 
-            add('');
-            add('JQUERY CHECK');
+            var modal = Lampa.Template.get('modal');
 
-            var test = Lampa.Template.get('modal');
+            log('');
+            log('MODAL TEMPLATE');
+            log('Type: ' + typeof modal);
+            log('jQuery: ' + !!modal.jquery);
+            log('Length: ' + modal.length);
+            log('modal content: ' + modal.find('.modal__content').length);
+            log('modal body: ' + modal.find('.modal__body').length);
 
-            add('Template.get("modal"): ' + (test && test.jquery ? 'jQuery object' : typeof test));
-            add('find(".selector") available: ' + !!(test && test.find));
-            add('selector count: ' + (test && test.find ? test.find('.selector').length : 'N/A'));
-
-        } catch (e) {
-            add('ERROR: ' + e.message);
+        } catch (error) {
+            log('DIAGNOSTIC ERROR: ' + error.message);
         }
 
-        return report.join('\n');
-    }
-
-    function openReport() {
-        var report = runProbe();
-
-        var html = $('<div class="about">').css({
-            padding: '20px',
-            color: '#fff',
-            'font-size': '14px'
+        var content = $('<div>').css({
+            padding: '15px',
+            color: '#fff'
         });
 
         var output = $('<pre>').css({
             'white-space': 'pre-wrap',
             'overflow-wrap': 'break-word',
-            'max-height': '65vh',
-            'overflow-y': 'auto',
             'font-size': '11px',
             'line-height': '1.5',
-            'user-select': 'text'
-        }).text(report);
+            'max-height': '60vh',
+            'overflow-y': 'auto'
+        }).text(report.join('\n'));
 
-        var buttons = $('<div>').css({
-            display: 'flex',
-            gap: '10px',
-            'margin-top': '15px'
+        var copy = $('<div class="selector button">КОПІЮВАТИ ЗВІТ</div>');
+        var close = $('<div class="selector button">ЗАКРИТИ</div>');
+
+        copy.css({
+            padding: '12px',
+            'margin-top': '12px'
         });
 
-        var copy = $('<div class="selector button selector--focus">')
-            .text('КОПІЮВАТИ ЗВІТ');
+        close.css({
+            padding: '12px',
+            'margin-top': '8px'
+        });
 
-        var close = $('<div class="selector button">')
-            .text('ЗАКРИТИ');
+        function fallbackCopy() {
+            var area = document.createElement('textarea');
+            area.value = report.join('\n');
+            area.style.position = 'fixed';
+            area.style.left = '-9999px';
+            document.body.appendChild(area);
+            area.select();
+
+            var success = false;
+
+            try {
+                success = document.execCommand('copy');
+            } catch (e) {}
+
+            document.body.removeChild(area);
+            copy.text(success ? 'СКОПІЙОВАНО' : 'НЕ ВДАЛОСЯ СКОПІЮВАТИ');
+        }
 
         copy.on('hover:enter click', function () {
-            var copied = false;
-
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(report).then(function () {
-                    copy.text('СКОПІЙОВАНО');
-                }).catch(function () {
-                    fallbackCopy();
-                });
+                navigator.clipboard.writeText(report.join('\n'))
+                    .then(function () {
+                        copy.text('СКОПІЙОВАНО');
+                    })
+                    .catch(fallbackCopy);
             } else {
                 fallbackCopy();
-            }
-
-            function fallbackCopy() {
-                var textarea = document.createElement('textarea');
-                textarea.value = report;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-
-                try {
-                    copied = document.execCommand('copy');
-                } catch (e) {}
-
-                document.body.removeChild(textarea);
-                copy.text(copied ? 'СКОПІЙОВАНО' : 'НЕ ВДАЛОСЯ СКОПІЮВАТИ');
             }
         });
 
@@ -126,27 +123,14 @@
             Lampa.Modal.close();
         });
 
-        buttons.append(copy, close);
-        html.append(output, buttons);
+        content.append(output, copy, close);
 
         Lampa.Modal.open({
-            title: 'TEMPLATE SELECTOR PROBE',
-            html: html,
+            title: 'ДІАГНОСТИКА LAMPA',
+            html: content,
             size: 'large'
         });
     }
 
-    if (window.Lampa && Lampa.Template && Lampa.Modal) {
-        Lampa.Template.add(
-            'crowley_template_selector_probe_button',
-            '<div class="selector">TEMPLATE SELECTOR PROBE</div>'
-        );
-
-        Lampa.Template.get('crowley_template_selector_probe_button')
-            .on('hover:enter', openReport);
-
-        $('body').append(
-            Lampa.Template.get('crowley_template_selector_probe_button')
-        );
-    }
+    start();
 })();
