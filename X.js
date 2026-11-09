@@ -2,67 +2,110 @@
 (function () {
     'use strict';
 
-    var VERSION = '1.0.3';
+    var ID = 'crowley_modal_diagnostic_104';
 
-    function start() {
-        if (!window.Lampa || !Lampa.Template || !Lampa.Modal) {
-            alert('Lampa API unavailable');
-            return;
-        }
+    if (document.getElementById(ID)) return;
 
+    var report = [];
+
+    function log(text) {
+        report.push(String(text));
+        console.log('[LAMPA DIAG]', text);
+    }
+
+    log('LAMPA MODAL DIAGNOSTIC 1.0.4');
+    log('Lampa: ' + !!window.Lampa);
+    log('Modal: ' + !!(window.Lampa && Lampa.Modal));
+    log('Template: ' + !!(window.Lampa && Lampa.Template));
+
+    var panel = document.createElement('div');
+
+    panel.id = ID;
+    panel.style.cssText =
+        'position:fixed;z-index:2147483647;top:4%;left:3%;width:94%;' +
+        'max-height:90%;overflow:auto;background:#17191f;color:white;' +
+        'padding:20px;box-sizing:border-box;border:2px solid #35c98b;' +
+        'border-radius:12px;font:14px Arial;';
+
+    var heading = document.createElement('div');
+    heading.textContent = 'LAMPA MODAL DIAGNOSTIC';
+    heading.style.cssText = 'font-size:20px;font-weight:bold;color:#35c98b;margin-bottom:15px';
+
+    var output = document.createElement('pre');
+    output.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5';
+    output.textContent = report.join('\n');
+
+    function refresh() {
+        output.textContent = report.join('\n');
+    }
+
+    function button(label, callback) {
+        var el = document.createElement('button');
+        el.textContent = label;
+        el.style.cssText = 'padding:13px;margin:6px 6px 6px 0;background:#287b5a;color:white;border:0;border-radius:6px;font-size:14px';
+        el.onclick = callback;
+        return el;
+    }
+
+    var test = button('ТЕСТ MODAL', function () {
         try {
-            // Створюємо вміст через штатний jQuery-шаблон Lampa
-            var html = Lampa.Template.get('modal', {
-                title: 'MODAL TEST'
+            log('--- MODAL TEST ---');
+
+            var tpl = Lampa.Template.get('modal', {
+                title: 'DIAGNOSTIC TEST'
             });
 
-            var content = $('<div class="about">');
+            log('Template type: ' + typeof tpl);
+            log('jQuery: ' + !!tpl.jquery);
+            log('Length: ' + tpl.length);
+            log('Body found: ' + tpl.find('.modal__body').length);
 
-            var message = $('<div>').css({
-                padding: '25px',
-                color: '#ffffff',
-                'font-size': '20px',
-                'line-height': '1.5'
-            }).text('Якщо ти бачиш це повідомлення, Lampa.Modal успішно відкрився.');
-
-            var details = $('<pre>').css({
-                padding: '15px',
-                color: '#35c98b',
-                'font-size': '13px',
-                'white-space': 'pre-wrap'
-            }).text(
-                'Lampa version: 1.13.5-581\n' +
-                'Template API: OK\n' +
-                'Modal API: OK\n' +
-                'jQuery HTML: OK'
-            );
-
-            var close = $('<div class="selector button">ЗАКРИТИ ТЕСТ</div>').css({
-                padding: '15px',
-                'margin-top': '15px'
-            });
-
-            close.on('hover:enter', function () {
-                Lampa.Modal.close();
-            });
-
-            content.append(message, details, close);
+            var body = $('<div>').text('MODAL TEST CONTENT');
 
             Lampa.Modal.open({
-                title: 'LAMPA MODAL TEST ' + VERSION,
-                html: content,
+                title: 'TEST',
+                html: body,
                 size: 'large'
             });
 
-        } catch (error) {
-            console.error('[MODAL TEST]', error);
-
-            alert(
-                'Помилка Lampa.Modal:\n' +
-                (error.message || error)
-            );
+            log('Modal.open call returned successfully');
+        } catch (e) {
+            log('MODAL ERROR: ' + (e.stack || e.message || e));
         }
-    }
 
-    start();
+        refresh();
+    });
+
+    var copy = button('КОПІЮВАТИ ЗВІТ', function () {
+        var area = document.createElement('textarea');
+        area.value = report.join('\n');
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.select();
+
+        var ok = false;
+        try {
+            ok = document.execCommand('copy');
+        } catch (e) {}
+
+        document.body.removeChild(area);
+        copy.textContent = ok ? 'СКОПІЙОВАНО' : 'КОПІЮВАННЯ НЕ ВДАЛОСЯ';
+    });
+
+    var close = button('ЗАКРИТИ', function () {
+        panel.remove();
+    });
+
+    panel.appendChild(heading);
+    panel.appendChild(output);
+    panel.appendChild(test);
+    panel.appendChild(copy);
+    panel.appendChild(close);
+
+    document.body.appendChild(panel);
+
+    log('Diagnostic panel created');
+    refresh();
+
 })();
