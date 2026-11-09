@@ -2,133 +2,141 @@
 (function () {
     'use strict';
 
-    /*
-     * CHATURBATE IFRAME TEST 1.0.2
-     * Native Lampa Iframe
-     */
-
-    var ID = 'chaturbate_iframe_test_102';
+    var ID = 'android_webview_detector_100';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    var currentUrl = 'https://example.com/';
-
-    function openPage(url) {
-        if (!Lampa.Iframe ||
-            typeof Lampa.Iframe.init !== 'function' ||
-            typeof Lampa.Iframe.show !== 'function') {
-            alert('Lampa.Iframe недоступний');
-            return;
-        }
+    function safeSource(fn) {
+        if (typeof fn !== 'function') return 'Not a function';
 
         try {
-            Lampa.Iframe.init();
-
-            Lampa.Iframe.show({
-                url: url,
-                onBack: function () {
-                    console.log('[CHATURBATE] Iframe closed');
-                }
-            });
-
-            console.log('[CHATURBATE] Opened:', url);
+            return Function.prototype.toString.call(fn);
         } catch (e) {
-            console.error('[CHATURBATE] Iframe error:', e);
-            alert('Помилка Iframe: ' + e.message);
+            return 'Unavailable: ' + e.message;
         }
     }
 
-    function closePage() {
+    function keys(obj) {
         try {
-            Lampa.Iframe.close();
+            return obj ? Object.getOwnPropertyNames(obj).join(', ') : 'Not found';
         } catch (e) {
-            console.error(e);
+            return 'Access denied';
         }
     }
 
-    function createPanel() {
-        var old = document.getElementById(ID + '_panel');
-        if (old) old.remove();
+    var out = [];
 
-        var panel = document.createElement('div');
+    out.push('ANDROID WEBVIEW DETECTOR 1.0.0');
+    out.push('================================');
 
-        panel.id = ID + '_panel';
+    out.push('\n1. ANDROID CLIENT');
+    out.push('Version: ' +
+        (window.AndroidJS && AndroidJS.appVersion
+            ? AndroidJS.appVersion()
+            : 'Unknown'));
 
-        panel.style.cssText = [
-            'position:fixed',
-            'z-index:999998',
-            'left:5%',
-            'top:12%',
-            'width:90%',
-            'background:#151515',
-            'color:#fff',
-            'border:1px solid #555',
-            'border-radius:14px',
-            'padding:20px',
-            'box-sizing:border-box',
-            'font-family:Arial,sans-serif'
-        ].join(';');
+    out.push('\n2. AndroidJS METHODS');
+    out.push(keys(window.AndroidJS));
 
-        var title = document.createElement('div');
-        title.textContent = 'CHATURBATE — IFRAME TEST';
-        title.style.cssText =
-            'font-size:20px;font-weight:bold;margin-bottom:18px;';
+    out.push('\n3. Lampa.Android METHODS');
+    out.push(keys(window.Lampa && Lampa.Android));
 
-        panel.appendChild(title);
+    out.push('\n4. window.android');
+    out.push(keys(window.android));
 
-        function addButton(label, url) {
-            var button = document.createElement('button');
+    out.push('\n5. AndroidJS.openBrowser SOURCE');
+    out.push(safeSource(
+        window.AndroidJS && AndroidJS.openBrowser
+    ));
 
-            button.textContent = label;
-            button.style.cssText =
-                'display:block;width:100%;padding:16px;margin:10px 0;' +
-                'font-size:17px;border-radius:8px;';
+    out.push('\n6. Lampa.Android.openBrowser SOURCE');
+    out.push(safeSource(
+        window.Lampa && Lampa.Android && Lampa.Android.openBrowser
+    ));
 
-            button.onclick = function () {
-                panel.remove();
-                openPage(url);
-            };
+    out.push('\n7. GLOBAL BROWSER OBJECTS');
 
-            panel.appendChild(button);
-        }
+    var found = [];
 
-        addButton(
-            '1. Відкрити example.com',
-            'https://example.com/'
-        );
-
-        addButton(
-            '2. Відкрити Chaturbate',
-            'https://chaturbate.com/'
-        );
-
-        var closeButton = document.createElement('button');
-        closeButton.textContent = 'ЗАКРИТИ';
-        closeButton.style.cssText =
-            'display:block;width:100%;padding:14px;margin-top:16px;' +
-            'font-size:16px;';
-
-        closeButton.onclick = function () {
-            panel.remove();
-        };
-
-        panel.appendChild(closeButton);
-        document.body.appendChild(panel);
-    }
-
-    function start() {
-        createPanel();
-    }
-
-    if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                setTimeout(start, 1500);
+    try {
+        Object.getOwnPropertyNames(window).forEach(function (name) {
+            if (/webview|browser|chrome|android|webkit/i.test(name)) {
+                found.push(name);
             }
         });
-    } else {
-        setTimeout(start, 3000);
+    } catch (e) {
+        found.push('Global scan unavailable: ' + e.message);
     }
+
+    out.push(found.join(', '));
+
+    out.push('\n8. LAMPA COMPONENTS');
+
+    var components = [];
+
+    try {
+        Object.getOwnPropertyNames(Lampa).forEach(function (name) {
+            if (/web|browser|iframe|modal|player|window/i.test(name)) {
+                components.push(name + ' (' + typeof Lampa[name] + ')');
+            }
+        });
+    } catch (e) {
+        components.push('Scan unavailable: ' + e.message);
+    }
+
+    out.push(components.join('\n'));
+
+    out.push('\n9. WEBVIEW RELATED GLOBALS');
+
+    [
+        'WebView',
+        'AndroidWebView',
+        'WebViewClient',
+        'WebChromeClient',
+        'webkit',
+        'chrome',
+        'browser',
+        'Android'
+    ].forEach(function (name) {
+        out.push(name + ': ' + typeof window[name]);
+    });
+
+    var result = out.join('\n');
+
+    console.log(result);
+
+    var panel = document.createElement('div');
+
+    panel.style.cssText =
+        'position:fixed;z-index:999999;top:3%;left:3%;width:94%;' +
+        'max-height:92%;overflow:auto;background:#111;color:#eee;' +
+        'padding:16px;border:2px solid #777;border-radius:12px;' +
+        'box-sizing:border-box;font:12px monospace;white-space:pre-wrap;';
+
+    var heading = document.createElement('div');
+    heading.textContent = 'ANDROID WEBVIEW DIAGNOSTIC';
+    heading.style.cssText =
+        'font-size:17px;font-weight:bold;color:#8fd3ff;margin-bottom:12px;';
+
+    var pre = document.createElement('pre');
+    pre.textContent = result;
+    pre.style.cssText =
+        'white-space:pre-wrap;word-break:break-word;';
+
+    var button = document.createElement('button');
+    button.textContent = 'ЗАКРИТИ';
+    button.style.cssText =
+        'padding:12px 25px;margin-top:12px;font-size:16px;';
+
+    button.onclick = function () {
+        panel.remove();
+    };
+
+    panel.appendChild(heading);
+    panel.appendChild(pre);
+    panel.appendChild(button);
+
+    document.body.appendChild(panel);
 
 })();
