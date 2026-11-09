@@ -3,480 +3,351 @@
     'use strict';
 
     /*
-     * CHaturbate LIVE 1.0.0
-     * Author: Crowley24
-     * Platform: Lampa / Android TV / Mobile
+     * CHaturbate WebView Detector 1.0.0
+     * Crowley24
      *
-     * FEATURES:
-     * - Chaturbate public website catalog
-     * - Open room by username
-     * - Embedded iframe player
-     * - Recent rooms history
-     * - TV remote friendly interface
-     * - Persistent history
+     * Діагностика Android Bridge / WebView у Lampa.
+     * Нічого не запускає і не змінює в системі.
      */
 
-    if (window.chaturbate_live_100_ready) return;
+    var PLUGIN_ID = 'crowley_chaturbate_webview_detector';
+    var REPORT_ID = 'crowley-webview-detector-report';
 
-    window.chaturbate_live_100_ready = true;
+    if (window[PLUGIN_ID]) return;
+    window[PLUGIN_ID] = true;
 
-    var PLUGIN = 'chaturbate_live_100';
-    var HISTORY_KEY = 'chaturbate_live_history_100';
-    var BASE = 'https://chaturbate.com/';
-    var STYLE_ID = 'chaturbate-live-style-100';
+    function safeKeys(obj) {
+        if (!obj) return [];
 
-    var ICON =
-        '<svg viewBox="0 0 24 24" fill="currentColor">' +
-        '<path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3v8l7-4z"/>' +
-        '</svg>';
-
-    var activeComponent = null;
-
-    function getHistory() {
         try {
-            var history = Lampa.Storage.get(HISTORY_KEY, []);
-            return Array.isArray(history) ? history : [];
+            return Object.getOwnPropertyNames(obj);
         } catch (e) {
             return [];
         }
     }
 
-    function saveHistory(name) {
-        name = String(name || '').toLowerCase();
+    function describeObject(name, obj) {
+        var result = [];
 
-        var history = getHistory();
-
-        history = history.filter(function (item) {
-            return item !== name;
-        });
-
-        history.unshift(name);
-        history = history.slice(0, 15);
-
-        Lampa.Storage.set(HISTORY_KEY, history);
-    }
-
-    function validName(name) {
-        name = String(name || '').trim();
-
-        if (!/^[a-zA-Z0-9_]{1,50}$/.test(name)) {
-            return '';
+        if (!obj) {
+            return name + ': НЕ ЗНАЙДЕНО';
         }
 
-        return name;
-    }
+        result.push(name + ': ЗНАЙДЕНО');
 
-    function injectStyle() {
-        if (document.getElementById(STYLE_ID)) return;
+        var current = obj;
+        var depth = 0;
+        var found = {};
 
-        var css = `
-            .cbl {
-                width: 100%;
-                min-height: 100%;
-                padding: 2em;
-                box-sizing: border-box;
-                color: #fff;
-            }
+        while (current && depth < 3) {
+            safeKeys(current).forEach(function (key) {
+                if (found[key]) return;
 
-            .cbl__header {
-                display: flex;
-                align-items: center;
-                gap: 1em;
-                margin-bottom: 1.5em;
-            }
+                found[key] = true;
 
-            .cbl__logo {
-                font-size: 2em;
-                font-weight: 800;
-                letter-spacing: .04em;
-            }
+                try {
+                    var descriptor =
+                        Object.getOwnPropertyDescriptor(current, key);
 
-            .cbl__logo span {
-                color: #e84c75;
-            }
+                    if (!descriptor) return;
 
-            .cbl__subtitle {
-                opacity: .55;
-                font-size: .9em;
-                margin-top: .3em;
-            }
+                    var value = descriptor.value;
 
-            .cbl__tabs {
-                display: flex;
-                gap: .7em;
-                flex-wrap: wrap;
-                margin-bottom: 1.5em;
-            }
-
-            .cbl__button {
-                background: rgba(255,255,255,.09);
-                border: 2px solid transparent;
-                border-radius: .6em;
-                padding: .85em 1.3em;
-                color: #fff;
-                font-size: 1em;
-                cursor: pointer;
-                transition: .2s;
-            }
-
-            .cbl__button:focus,
-            .cbl__button.focus {
-                border-color: #e84c75;
-                background: rgba(232,76,117,.2);
-                outline: none;
-            }
-
-            .cbl__button--active {
-                background: #e84c75;
-            }
-
-            .cbl__search {
-                display: flex;
-                gap: .7em;
-                margin-bottom: 1.5em;
-                max-width: 750px;
-            }
-
-            .cbl__input {
-                flex: 1;
-                min-width: 0;
-                background: rgba(255,255,255,.1);
-                border: 2px solid rgba(255,255,255,.15);
-                border-radius: .6em;
-                padding: .9em 1em;
-                color: #fff;
-                font-size: 1em;
-                outline: none;
-            }
-
-            .cbl__input:focus {
-                border-color: #e84c75;
-            }
-
-            .cbl__history {
-                display: flex;
-                gap: .6em;
-                flex-wrap: wrap;
-                margin-bottom: 1.5em;
-            }
-
-            .cbl__history-title {
-                opacity: .6;
-                margin-bottom: .7em;
-                font-size: .9em;
-            }
-
-            .cbl__player {
-                width: 100%;
-                height: 68vh;
-                min-height: 350px;
-                background: #000;
-                border-radius: .8em;
-                overflow: hidden;
-                position: relative;
-            }
-
-            .cbl__frame {
-                width: 100%;
-                height: 100%;
-                border: 0;
-                background: #000;
-            }
-
-            .cbl__empty {
-                padding: 3em 1em;
-                text-align: center;
-                opacity: .55;
-            }
-
-            .cbl__status {
-                margin: .8em 0;
-                opacity: .65;
-                font-size: .85em;
-            }
-
-            .cbl__footer {
-                display: flex;
-                justify-content: space-between;
-                gap: 1em;
-                margin-top: 1em;
-                flex-wrap: wrap;
-                opacity: .65;
-                font-size: .8em;
-            }
-
-            @media(max-width: 700px) {
-                .cbl {
-                    padding: 1em;
-                }
-
-                .cbl__player {
-                    height: 60vh;
-                    min-height: 250px;
-                }
-
-                .cbl__search {
-                    flex-direction: column;
-                }
-
-                .cbl__logo {
-                    font-size: 1.5em;
-                }
-            }
-        `;
-
-        var style = document.createElement('style');
-        style.id = STYLE_ID;
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
-
-    function Component(object) {
-        var self = this;
-        var html;
-        var root;
-        var currentMode = 'catalog';
-        var currentRoom = '';
-
-        this.create = function () {
-            injectStyle();
-
-            html = $('<div class="cbl">' +
-                '<div class="cbl__header">' +
-                    '<div>' +
-                        '<div class="cbl__logo">CHaturbate <span>LIVE</span></div>' +
-                        '<div class="cbl__subtitle">Live streaming browser</div>' +
-                    '</div>' +
-                '</div>' +
-
-                '<div class="cbl__tabs">' +
-                    '<button class="cbl__button cbl__button--active cbl__catalog">Каталог</button>' +
-                    '<button class="cbl__button cbl__direct">За ніком</button>' +
-                    '<button class="cbl__button cbl__back">Назад</button>' +
-                '</div>' +
-
-                '<div class="cbl__search">' +
-                    '<input class="cbl__input" type="text" ' +
-                    'placeholder="Введіть нік кімнати..." ' +
-                    'autocomplete="off" autocapitalize="off">' +
-                    '<button class="cbl__button cbl__open">Відкрити</button>' +
-                '</div>' +
-
-                '<div class="cbl__history-title">Нещодавні кімнати</div>' +
-                '<div class="cbl__history"></div>' +
-
-                '<div class="cbl__status">Оберіть каталог або введіть нік кімнати.</div>' +
-
-                '<div class="cbl__player">' +
-                    '<div class="cbl__empty">' +
-                        'CHaturbate LIVE<br><br>' +
-                        'Тут відображатиметься трансляція' +
-                    '</div>' +
-                '</div>' +
-
-                '<div class="cbl__footer">' +
-                    '<span>CHaturbate LIVE 1.0.0</span>' +
-                    '<span>Embedded browser</span>' +
-                '</div>' +
-            '</div>');
-
-            root = html;
-            return root;
-        };
-
-        function status(text) {
-            root.find('.cbl__status').text(text);
-        }
-
-        function showFrame(url) {
-            var player = root.find('.cbl__player');
-
-            player.empty();
-
-            var frame = $('<iframe>', {
-                'class': 'cbl__frame',
-                allow: 'autoplay; fullscreen; picture-in-picture; camera; microphone',
-                allowfullscreen: 'allowfullscreen',
-                referrerpolicy: 'strict-origin-when-cross-origin'
-            });
-
-            frame.on('load', function () {
-                status('Сторінка завантажена. Якщо відео не з’явилося, сайт може блокувати iframe.');
-            });
-
-            frame.on('error', function () {
-                status('Помилка завантаження сторінки.');
-            });
-
-            frame.attr('src', url);
-
-            player.append(frame);
-        }
-
-        function openCatalog() {
-            currentMode = 'catalog';
-            currentRoom = '';
-
-            root.find('.cbl__catalog').addClass('cbl__button--active');
-            root.find('.cbl__direct').removeClass('cbl__button--active');
-
-            root.find('.cbl__input').val('');
-
-            status('Завантаження публічного каталогу Chaturbate...');
-
-            showFrame(BASE);
-        }
-
-        function openRoom(name) {
-            name = validName(name);
-
-            if (!name) {
-                Lampa.Noty.show('Введіть правильний нік кімнати');
-                return;
-            }
-
-            currentMode = 'room';
-            currentRoom = name;
-
-            saveHistory(name);
-            renderHistory();
-
-            root.find('.cbl__catalog').removeClass('cbl__button--active');
-            root.find('.cbl__direct').addClass('cbl__button--active');
-
-            status('Відкриваємо кімнату: ' + name);
-
-            showFrame(BASE + encodeURIComponent(name) + '/');
-        }
-
-        function renderHistory() {
-            var history = getHistory();
-            var container = root.find('.cbl__history');
-
-            container.empty();
-
-            if (!history.length) {
-                container.append(
-                    $('<span class="cbl__status">Історія порожня</span>')
-                );
-                return;
-            }
-
-            history.forEach(function (name) {
-                var button = $('<button class="cbl__button"></button>');
-                button.text(name);
-
-                button.on('click', function () {
-                    openRoom(name);
-                });
-
-                container.append(button);
-            });
-        }
-
-        function openFromInput() {
-            var name = root.find('.cbl__input').val();
-            openRoom(name);
-        }
-
-        this.start = function () {
-            activeComponent = self;
-
-            renderHistory();
-
-            root.find('.cbl__catalog').on('click', openCatalog);
-
-            root.find('.cbl__direct').on('click', function () {
-                root.find('.cbl__input').trigger('focus');
-                status('Введіть нік кімнати без символу @.');
-            });
-
-            root.find('.cbl__open').on('click', openFromInput);
-
-            root.find('.cbl__input').on('keydown', function (e) {
-                if (e.key === 'Enter' || e.keyCode === 13) {
-                    openFromInput();
-                }
-            });
-
-            root.find('.cbl__back').on('click', function () {
-                openCatalog();
-            });
-
-            openCatalog();
-
-            Lampa.Controller.add('content', {
-                toggle: function () {
-                    Lampa.Controller.collectionSet(
-                        root.find('.cbl__tabs'),
-                        root
-                    );
-
-                    Lampa.Controller.collectionFocus(
-                        false,
-                        root
-                    );
-                },
-
-                back: function () {
-                    if (currentMode === 'room') {
-                        openCatalog();
-                    } else {
-                        Lampa.Activity.backward();
+                    if (typeof value === 'function') {
+                        result.push('  ' + key + '()');
+                    } else if (
+                        value &&
+                        typeof value === 'object'
+                    ) {
+                        result.push('  ' + key + ' [object]');
                     }
-                }
+                } catch (e) {}
             });
 
-            Lampa.Controller.toggle('content');
-        };
-
-        this.render = function () {
-            return root;
-        };
-
-        this.destroy = function () {
             try {
-                var frame = root.find('.cbl__frame');
-                if (frame.length) frame.attr('src', 'about:blank');
+                current = Object.getPrototypeOf(current);
+            } catch (e) {
+                break;
+            }
 
-                Lampa.Controller.remove('content');
+            depth++;
+        }
+
+        return result.join('\n');
+    }
+
+    function collectReport() {
+        var lines = [];
+
+        lines.push('CHaturbate WebView Detector 1.0.0');
+        lines.push('================================');
+        lines.push('');
+
+        lines.push('1. PLATFORM');
+        lines.push('User Agent: ' + navigator.userAgent);
+        lines.push('URL: ' + location.href);
+        lines.push('');
+
+        lines.push('2. LAMPA');
+
+        var L = window.Lampa;
+
+        lines.push('Lampa: ' + (!!L ? 'YES' : 'NO'));
+
+        if (L) {
+            [
+                'Android',
+                'Platform',
+                'Player',
+                'Modal',
+                'Component',
+                'Activity',
+                'Settings',
+                'Listener',
+                'Storage',
+                'Notice'
+            ].forEach(function (key) {
+                lines.push(
+                    describeObject('Lampa.' + key, L[key])
+                );
+                lines.push('');
+            });
+        }
+
+        lines.push('3. ANDROID BRIDGES');
+
+        [
+            'Android',
+            'android',
+            'AndroidBridge',
+            'AndroidInterface',
+            'NativeAndroid',
+            'App',
+            'Native',
+            'WebView',
+            'webkit',
+            'JSBridge',
+            'LampaAndroid'
+        ].forEach(function (key) {
+            var obj;
+
+            try {
+                obj = window[key];
             } catch (e) {}
 
-            activeComponent = null;
-        };
-    }
-
-    function openPlugin() {
-        Lampa.Component.add(PLUGIN, Component);
-
-        Lampa.Activity.push({
-            url: '',
-            title: 'CHaturbate LIVE',
-            component: PLUGIN,
-            page: 1
+            lines.push(describeObject('window.' + key, obj));
+            lines.push('');
         });
+
+        lines.push('4. MATCHING GLOBAL OBJECTS');
+
+        safeKeys(window).forEach(function (key) {
+            if (!/(android|webview|bridge|native|intent|browser)/i.test(key)) {
+                return;
+            }
+
+            try {
+                var value = window[key];
+
+                lines.push(
+                    key + ': ' +
+                    (typeof value === 'function'
+                        ? 'FUNCTION'
+                        : typeof value)
+                );
+
+                if (value && typeof value === 'object') {
+                    var methods = safeKeys(value).filter(function (k) {
+                        try {
+                            return typeof value[k] === 'function';
+                        } catch (e) {
+                            return false;
+                        }
+                    });
+
+                    if (methods.length) {
+                        lines.push('  Methods: ' + methods.join(', '));
+                    }
+                }
+            } catch (e) {
+                lines.push(key + ': inaccessible');
+            }
+        });
+
+        lines.push('');
+        lines.push('5. ENVIRONMENT');
+
+        lines.push(
+            'Touch support: ' +
+            ('ontouchstart' in window)
+        );
+
+        lines.push(
+            'Cordova: ' +
+            (!!window.cordova)
+        );
+
+        lines.push(
+            'Capacitor: ' +
+            (!!window.Capacitor)
+        );
+
+        lines.push(
+            'External protocol handler: ' +
+            (!!window.navigator.registerProtocolHandler)
+        );
+
+        lines.push('');
+        lines.push('END OF REPORT');
+
+        return lines.join('\n');
     }
 
-    function init() {
-        if (!window.Lampa) return;
+    function showReport(report) {
+        var old = document.getElementById(REPORT_ID);
 
-        if (Lampa.Menu && Lampa.Menu.addButton) {
-            Lampa.Menu.addButton(
-                ICON,
-                'CHaturbate LIVE',
-                openPlugin
-            );
+        if (old) old.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = REPORT_ID;
+
+        overlay.style.cssText =
+            'position:fixed;inset:0;z-index:999999;' +
+            'background:rgba(0,0,0,.94);' +
+            'display:flex;align-items:center;' +
+            'justify-content:center;padding:3%;' +
+            'box-sizing:border-box;color:white;';
+
+        var panel = document.createElement('div');
+
+        panel.style.cssText =
+            'width:100%;max-width:900px;max-height:90%;' +
+            'display:flex;flex-direction:column;' +
+            'background:#17191e;border:1px solid #444;' +
+            'border-radius:12px;padding:20px;' +
+            'box-sizing:border-box;';
+
+        var title = document.createElement('div');
+        title.textContent = 'CHaturbate — WebView Detector';
+
+        title.style.cssText =
+            'font-size:20px;font-weight:bold;margin-bottom:12px;';
+
+        var info = document.createElement('div');
+
+        info.textContent =
+            'Скопіюй звіт і надішли його сюди. ' +
+            'Він покаже, чи доступний Android WebView у Lampa.';
+
+        info.style.cssText =
+            'font-size:14px;color:#aaa;margin-bottom:12px;';
+
+        var output = document.createElement('textarea');
+
+        output.value = report;
+        output.readOnly = true;
+
+        output.style.cssText =
+            'width:100%;height:48vh;min-height:180px;' +
+            'resize:none;background:#08090b;color:#bde5c8;' +
+            'border:1px solid #444;border-radius:6px;' +
+            'padding:12px;box-sizing:border-box;' +
+            'font:12px monospace;outline:none;';
+
+        var buttons = document.createElement('div');
+
+        buttons.style.cssText =
+            'display:flex;gap:10px;margin-top:12px;';
+
+        function makeButton(label, callback) {
+            var button = document.createElement('button');
+
+            button.textContent = label;
+
+            button.style.cssText =
+                'flex:1;padding:13px;border:0;border-radius:6px;' +
+                'background:#303640;color:white;font-size:15px;' +
+                'font-weight:bold;';
+
+            button.onclick = callback;
+
+            return button;
         }
 
-        console.log('[CHaturbate LIVE] Plugin initialized');
+        var copyButton = makeButton('КОПІЮВАТИ ЗВІТ', function () {
+            output.focus();
+            output.select();
+
+            try {
+                var ok = document.execCommand('copy');
+
+                copyButton.textContent =
+                    ok ? 'СКОПІЙОВАНО' : 'ВИДІЛЕНО — СКОПІЮЙ';
+
+            } catch (e) {
+                copyButton.textContent = 'ВИДІЛЕНО — СКОПІЮЙ';
+            }
+        });
+
+        var closeButton = makeButton('ЗАКРИТИ', function () {
+            overlay.remove();
+        });
+
+        buttons.appendChild(copyButton);
+        buttons.appendChild(closeButton);
+
+        panel.appendChild(title);
+        panel.appendChild(info);
+        panel.appendChild(output);
+        panel.appendChild(buttons);
+
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        output.focus();
     }
 
-    if (window.appready) {
-        init();
-    } else {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') init();
-        });
+    function run() {
+        try {
+            var report = collectReport();
+
+            console.log(report);
+
+            showReport(report);
+
+            if (
+                window.Lampa &&
+                Lampa.Notice &&
+                typeof Lampa.Notice.show === 'function'
+            ) {
+                Lampa.Notice.show(
+                    'CHaturbate WebView Detector: звіт готовий'
+                );
+            }
+
+        } catch (e) {
+            console.error(
+                'CHaturbate WebView Detector:',
+                e
+            );
+        }
     }
+
+    var attempts = 0;
+
+    function waitForLampa() {
+        attempts++;
+
+        if (window.Lampa && document.body) {
+            run();
+            return;
+        }
+
+        if (attempts < 20) {
+            setTimeout(waitForLampa, 1000);
+        }
+    }
+
+    setTimeout(waitForLampa, 1500);
 
 })();
