@@ -2,125 +2,62 @@
 (function () {
     'use strict';
 
-    /*
-     * CHATURBATE IFRAME DIAGNOSTIC 1.0.0
-     * Перевірка внутрішнього компонента Lampa.Iframe
-     */
+    var ID = 'chaturbate_iframe_api_probe_101';
 
-    var PLUGIN_ID = 'chaturbate_iframe_diagnostic_100';
+    if (window[ID]) return;
+    window[ID] = true;
 
-    if (window[PLUGIN_ID]) return;
-    window[PLUGIN_ID] = true;
+    var iframe = Lampa.Iframe;
+    var methods = ['init', 'show', 'close', 'render'];
+    var result = [];
 
-    function inspect() {
-        var output = [];
+    result.push('LAMPA IFRAME API PROBE 1.0.1');
+    result.push('============================');
 
-        function add(title, value) {
-            output.push(title + '\n' + String(value));
-        }
+    methods.forEach(function (name) {
+        var fn = iframe && iframe[name];
 
-        add('CHATURBATE IFRAME DIAGNOSTIC 1.0.0',
-            '================================');
+        result.push('\n' + name + ':');
+        result.push('Type: ' + typeof fn);
 
-        add('Lampa version',
-            window.AndroidJS && AndroidJS.appVersion
-                ? AndroidJS.appVersion()
-                : 'Unknown');
-
-        add('Lampa.Iframe type',
-            typeof Lampa.Iframe);
-
-        if (typeof Lampa.Iframe === 'function') {
-            add('Constructor source',
-                Function.prototype.toString.call(Lampa.Iframe));
-
-            add('Prototype methods',
-                Object.getOwnPropertyNames(
-                    Lampa.Iframe.prototype || {}
-                ).join(', ') || 'None');
-
-            add('Static properties',
-                Object.getOwnPropertyNames(Lampa.Iframe)
-                    .join(', ') || 'None');
-        } else if (Lampa.Iframe) {
-            add('Iframe properties',
-                Object.keys(Lampa.Iframe).join(', '));
-        }
-
-        add('Lampa.Modal type',
-            typeof Lampa.Modal);
-
-        add('Document',
-            document.readyState);
-
-        add('Iframe support',
-            typeof document.createElement('iframe').src);
-
-        var result = output.join('\n\n');
-
-        console.log(result);
-
-        var panel = document.createElement('div');
-
-        panel.id = PLUGIN_ID + '_panel';
-
-        panel.style.cssText = [
-            'position:fixed',
-            'z-index:999999',
-            'top:5%',
-            'left:4%',
-            'width:92%',
-            'max-height:88%',
-            'overflow:auto',
-            'background:#111',
-            'color:#eee',
-            'border:2px solid #777',
-            'border-radius:12px',
-            'padding:18px',
-            'box-sizing:border-box',
-            'font:14px monospace',
-            'white-space:pre-wrap',
-            'word-break:break-word'
-        ].join(';');
-
-        var heading = document.createElement('div');
-        heading.textContent = 'IFRAME DIAGNOSTIC';
-        heading.style.cssText =
-            'font-size:18px;font-weight:bold;margin-bottom:14px;color:#8fd3ff';
-
-        var content = document.createElement('pre');
-        content.textContent = result;
-        content.style.cssText =
-            'white-space:pre-wrap;word-break:break-word;margin:0;';
-
-        var close = document.createElement('button');
-        close.textContent = 'ЗАКРИТИ';
-        close.style.cssText =
-            'margin-top:16px;padding:12px 24px;font-size:16px;';
-
-        close.onclick = function () {
-            panel.remove();
-        };
-
-        panel.appendChild(heading);
-        panel.appendChild(content);
-        panel.appendChild(close);
-
-        document.body.appendChild(panel);
-    }
-
-    function start() {
-        inspect();
-    }
-
-    if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                setTimeout(start, 1500);
+        if (typeof fn === 'function') {
+            try {
+                result.push(
+                    'Source:\n' +
+                    Function.prototype.toString.call(fn)
+                );
+            } catch (e) {
+                result.push('Source unavailable: ' + e.message);
             }
-        });
-    } else {
-        setTimeout(start, 3000);
-    }
+        }
+    });
 
+    result.push('\nObject keys: ' + Object.keys(iframe).join(', '));
+
+    var output = result.join('\n');
+
+    console.log(output);
+
+    var panel = document.createElement('div');
+    panel.style.cssText =
+        'position:fixed;z-index:999999;top:4%;left:3%;width:94%;' +
+        'max-height:90%;overflow:auto;background:#111;color:#eee;' +
+        'padding:16px;border:2px solid #888;border-radius:10px;' +
+        'box-sizing:border-box;font:13px monospace;white-space:pre-wrap;';
+
+    var pre = document.createElement('pre');
+    pre.textContent = output;
+    pre.style.cssText = 'white-space:pre-wrap;word-break:break-word;';
+
+    var button = document.createElement('button');
+    button.textContent = 'ЗАКРИТИ';
+    button.style.cssText = 'padding:12px 24px;margin-top:12px;';
+
+    button.onclick = function () {
+        panel.remove();
+    };
+
+    panel.appendChild(pre);
+    panel.appendChild(button);
+    document.body.appendChild(panel);
 })();
