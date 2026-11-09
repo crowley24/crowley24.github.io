@@ -2,135 +2,82 @@
 (function () {
     'use strict';
 
-    var VERSION = '1.0.1';
+    var VERSION = '1.0.2';
+    var ID = 'crowley_plugin_boot_test';
 
-    function start() {
-        if (!window.Lampa || !Lampa.Template || !Lampa.Modal) {
-            alert('Lampa API не знайдено');
-            return;
-        }
+    // Не створювати панель повторно
+    if (document.getElementById(ID)) return;
 
-        var report = [];
+    function showPanel() {
+        if (document.getElementById(ID)) return;
 
-        function log(value) {
-            report.push(String(value));
-        }
+        var panel = document.createElement('div');
+        panel.id = ID;
 
-        try {
-            var templates = Lampa.Template.all();
+        panel.style.cssText = [
+            'position:fixed',
+            'z-index:2147483647',
+            'top:10%',
+            'left:5%',
+            'width:90%',
+            'padding:22px',
+            'box-sizing:border-box',
+            'background:#17191f',
+            'color:#ffffff',
+            'border:2px solid #35c98b',
+            'border-radius:12px',
+            'font-size:18px',
+            'font-family:Arial,sans-serif',
+            'line-height:1.6'
+        ].join(';');
 
-            log('LAMPA TEMPLATE SELECTOR PROBE ' + VERSION);
-            log('==============================');
-            log('Template count: ' + Object.keys(templates).length);
-            log('');
+        var title = document.createElement('div');
+        title.textContent = 'PLUGIN BOOT TEST ' + VERSION;
+        title.style.cssText = 'font-size:22px;font-weight:bold;margin-bottom:15px;color:#35c98b';
 
-            Object.keys(templates).sort().forEach(function (name) {
-                var source = String(templates[name] || '');
+        var status = document.createElement('div');
+        status.textContent = 'JavaScript плагіна успішно виконується.';
+        
+        var api = document.createElement('div');
+        api.style.marginTop = '10px';
+        api.textContent = 'Lampa API: ' + (window.Lampa ? 'ЗНАЙДЕНО' : 'НЕ ЗНАЙДЕНО');
 
-                if (
-                    source.indexOf('selector') !== -1 ||
-                    source.indexOf('data-action') !== -1
-                ) {
-                    log('TEMPLATE: ' + name);
-                    log('LENGTH: ' + source.length);
+        var close = document.createElement('button');
+        close.textContent = 'ЗАКРИТИ';
+        close.style.cssText = 'margin-top:20px;padding:12px 25px;font-size:17px;color:white;background:#287b5a;border:0;border-radius:7px';
 
-                    var matches = source.match(/<[^>]*(?:selector|data-action)[^>]*>/gi);
+        close.onclick = function () {
+            panel.remove();
+        };
 
-                    if (matches) {
-                        matches.slice(0, 10).forEach(function (item) {
-                            log(item);
-                        });
-                    }
+        panel.appendChild(title);
+        panel.appendChild(status);
+        panel.appendChild(api);
+        panel.appendChild(close);
 
-                    log('HTML:');
-                    log(source.substring(0, 1200));
-                    log('------------------------------');
-                }
-            });
-
-            var modal = Lampa.Template.get('modal');
-
-            log('');
-            log('MODAL TEMPLATE');
-            log('Type: ' + typeof modal);
-            log('jQuery: ' + !!modal.jquery);
-            log('Length: ' + modal.length);
-            log('modal content: ' + modal.find('.modal__content').length);
-            log('modal body: ' + modal.find('.modal__body').length);
-
-        } catch (error) {
-            log('DIAGNOSTIC ERROR: ' + error.message);
-        }
-
-        var content = $('<div>').css({
-            padding: '15px',
-            color: '#fff'
-        });
-
-        var output = $('<pre>').css({
-            'white-space': 'pre-wrap',
-            'overflow-wrap': 'break-word',
-            'font-size': '11px',
-            'line-height': '1.5',
-            'max-height': '60vh',
-            'overflow-y': 'auto'
-        }).text(report.join('\n'));
-
-        var copy = $('<div class="selector button">КОПІЮВАТИ ЗВІТ</div>');
-        var close = $('<div class="selector button">ЗАКРИТИ</div>');
-
-        copy.css({
-            padding: '12px',
-            'margin-top': '12px'
-        });
-
-        close.css({
-            padding: '12px',
-            'margin-top': '8px'
-        });
-
-        function fallbackCopy() {
-            var area = document.createElement('textarea');
-            area.value = report.join('\n');
-            area.style.position = 'fixed';
-            area.style.left = '-9999px';
-            document.body.appendChild(area);
-            area.select();
-
-            var success = false;
-
-            try {
-                success = document.execCommand('copy');
-            } catch (e) {}
-
-            document.body.removeChild(area);
-            copy.text(success ? 'СКОПІЙОВАНО' : 'НЕ ВДАЛОСЯ СКОПІЮВАТИ');
-        }
-
-        copy.on('hover:enter click', function () {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(report.join('\n'))
-                    .then(function () {
-                        copy.text('СКОПІЙОВАНО');
-                    })
-                    .catch(fallbackCopy);
-            } else {
-                fallbackCopy();
-            }
-        });
-
-        close.on('hover:enter click', function () {
-            Lampa.Modal.close();
-        });
-
-        content.append(output, copy, close);
-
-        Lampa.Modal.open({
-            title: 'ДІАГНОСТИКА LAMPA',
-            html: content,
-            size: 'large'
-        });
+        document.body.appendChild(panel);
     }
 
-    start();
+    // Якщо DOM вже готовий
+    if (document.body) {
+        showPanel();
+    } else {
+        document.addEventListener('DOMContentLoaded', showPanel, { once: true });
+    }
+
+    // Резервна перевірка, якщо DOM ще не створений
+    var attempts = 0;
+    var timer = setInterval(function () {
+        attempts++;
+
+        if (document.body) {
+            clearInterval(timer);
+            showPanel();
+        }
+
+        if (attempts >= 40) {
+            clearInterval(timer);
+        }
+    }, 500);
+
 })();
