@@ -2,96 +2,100 @@
 (function () {
     'use strict';
 
-    var ID = 'crowley_chaturbate_browser_test_110';
+    var ID = 'crowley_chaturbate_version_detector';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    function showMessage(message) {
-        if (window.Lampa && Lampa.Notice) {
-            Lampa.Notice.show(message);
-        } else {
-            alert(message);
+    function readValue(fn) {
+        try {
+            var value = fn();
+            return String(value);
+        } catch (e) {
+            return 'ERROR: ' + e.message;
         }
     }
 
-    function createButton() {
-        if (!document.body) return;
+    function run() {
+        var report = [];
 
-        if (document.getElementById('cb-browser-test')) return;
+        report.push('CHaturbate Version Detector 1.0.0');
+        report.push('================================');
+
+        report.push(
+            'Lampa.Platform.version(): ' +
+            readValue(function () {
+                return Lampa.Platform.version();
+            })
+        );
+
+        report.push(
+            'Lampa.Platform.get(): ' +
+            readValue(function () {
+                return Lampa.Platform.get();
+            })
+        );
+
+        report.push(
+            'AndroidJS.appVersion(): ' +
+            readValue(function () {
+                return AndroidJS.appVersion();
+            })
+        );
+
+        report.push(
+            'AndroidJS.openBrowser type: ' +
+            typeof AndroidJS.openBrowser
+        );
+
+        report.push(
+            'Lampa.Android.openBrowser type: ' +
+            typeof Lampa.Android.openBrowser
+        );
+
+        var output = report.join('\n');
 
         var panel = document.createElement('div');
-        panel.id = 'cb-browser-test';
 
         panel.style.cssText =
-            'position:fixed;bottom:25px;left:50%;' +
-            'transform:translateX(-50%);z-index:999999;' +
-            'width:90%;max-width:420px;padding:16px;' +
-            'box-sizing:border-box;background:#171a20;' +
-            'border:1px solid #555;border-radius:12px;' +
-            'color:white;font-family:Arial,sans-serif;';
+            'position:fixed;inset:10px;z-index:999999;' +
+            'background:#15171b;color:white;padding:18px;' +
+            'border:1px solid #555;border-radius:10px;';
 
-        var heading = document.createElement('div');
-        heading.textContent = 'CHaturbate Browser Test 1.1.0';
-        heading.style.cssText =
-            'font-size:17px;font-weight:bold;margin-bottom:12px;';
+        var area = document.createElement('textarea');
 
-        var button = document.createElement('button');
-        button.textContent = 'ВІДКРИТИ TEST PAGE';
+        area.value = output;
+        area.readOnly = true;
 
-        button.style.cssText =
-            'width:100%;padding:15px;border:0;border-radius:8px;' +
-            'background:#347bba;color:white;font-size:15px;' +
-            'font-weight:bold;';
-
-        button.onclick = function () {
-            var android = window.Lampa && Lampa.Android;
-
-            if (!android ||
-                typeof android.openBrowser !== 'function') {
-                showMessage('Lampa.Android.openBrowser недоступний');
-                return;
-            }
-
-            showMessage('Перевіряємо відкриття сторінки...');
-
-            try {
-                android.openBrowser('https://example.com/');
-            } catch (e) {
-                showMessage('Помилка: ' + e.message);
-            }
-        };
+        area.style.cssText =
+            'width:100%;height:65%;background:#080808;' +
+            'color:#9ee5ad;font:14px monospace;padding:12px;' +
+            'box-sizing:border-box;';
 
         var close = document.createElement('button');
-        close.textContent = 'ЗАКРИТИ ТЕСТ';
+
+        close.textContent = 'ЗАКРИТИ';
 
         close.style.cssText =
-            'width:100%;padding:12px;margin-top:8px;' +
-            'border:0;border-radius:8px;background:#343840;' +
-            'color:white;font-size:14px;';
+            'width:100%;padding:15px;margin-top:15px;' +
+            'background:#39414c;color:white;border:0;';
 
         close.onclick = function () {
             panel.remove();
         };
 
-        panel.appendChild(heading);
-        panel.appendChild(button);
+        panel.appendChild(area);
         panel.appendChild(close);
 
         document.body.appendChild(panel);
     }
 
-    function start() {
-        createButton();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', start);
-    } else {
-        start();
-    }
-
-    setTimeout(start, 2500);
-    setTimeout(start, 5000);
+    setTimeout(function () {
+        try {
+            run();
+        } catch (e) {
+            console.error('Version Detector:', e);
+        }
+    }, 2000);
 
 })();
