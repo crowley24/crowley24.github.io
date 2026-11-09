@@ -2,56 +2,96 @@
 (function () {
     'use strict';
 
-    var ID = 'crowley_chaturbate_browser_test';
+    var ID = 'crowley_chaturbate_browser_test_110';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    function addButton() {
-        if (!window.Lampa || !Lampa.Template) return;
+    function showMessage(message) {
+        if (window.Lampa && Lampa.Notice) {
+            Lampa.Notice.show(message);
+        } else {
+            alert(message);
+        }
+    }
 
-        var html = `
-            <div class="settings-param selector"
-                 id="crowley_chaturbate_browser_test"
-                 style="margin:15px;padding:18px;background:#20242b;border-radius:10px;">
-                <div style="font-size:18px;font-weight:bold;">
-                    CHaturbate Browser Test
-                </div>
-                <div style="font-size:13px;color:#aaa;margin-top:8px;">
-                    Перевірка нативного Android WebView
-                </div>
-                <div style="margin-top:14px;color:#6bcf91;">
-                    Відкрити тестову сторінку example.com
-                </div>
-            </div>
-        `;
+    function createButton() {
+        if (!document.body) return;
 
-        var node = $(html);
+        if (document.getElementById('cb-browser-test')) return;
 
-        node.on('hover:enter', function () {
-            if (
-                Lampa.Android &&
-                typeof Lampa.Android.openBrowser === 'function'
-            ) {
-                Lampa.Android.openBrowser('https://example.com/');
-            } else {
-                Lampa.Notice.show('Android openBrowser недоступний');
+        var panel = document.createElement('div');
+        panel.id = 'cb-browser-test';
+
+        panel.style.cssText =
+            'position:fixed;bottom:25px;left:50%;' +
+            'transform:translateX(-50%);z-index:999999;' +
+            'width:90%;max-width:420px;padding:16px;' +
+            'box-sizing:border-box;background:#171a20;' +
+            'border:1px solid #555;border-radius:12px;' +
+            'color:white;font-family:Arial,sans-serif;';
+
+        var heading = document.createElement('div');
+        heading.textContent = 'CHaturbate Browser Test 1.1.0';
+        heading.style.cssText =
+            'font-size:17px;font-weight:bold;margin-bottom:12px;';
+
+        var button = document.createElement('button');
+        button.textContent = 'ВІДКРИТИ TEST PAGE';
+
+        button.style.cssText =
+            'width:100%;padding:15px;border:0;border-radius:8px;' +
+            'background:#347bba;color:white;font-size:15px;' +
+            'font-weight:bold;';
+
+        button.onclick = function () {
+            var android = window.Lampa && Lampa.Android;
+
+            if (!android ||
+                typeof android.openBrowser !== 'function') {
+                showMessage('Lampa.Android.openBrowser недоступний');
+                return;
             }
-        });
 
-        Lampa.Settings.add({
-            component: 'interface'
-        });
+            showMessage('Перевіряємо відкриття сторінки...');
 
-        $('.settings-param').last().after(node);
+            try {
+                android.openBrowser('https://example.com/');
+            } catch (e) {
+                showMessage('Помилка: ' + e.message);
+            }
+        };
+
+        var close = document.createElement('button');
+        close.textContent = 'ЗАКРИТИ ТЕСТ';
+
+        close.style.cssText =
+            'width:100%;padding:12px;margin-top:8px;' +
+            'border:0;border-radius:8px;background:#343840;' +
+            'color:white;font-size:14px;';
+
+        close.onclick = function () {
+            panel.remove();
+        };
+
+        panel.appendChild(heading);
+        panel.appendChild(button);
+        panel.appendChild(close);
+
+        document.body.appendChild(panel);
     }
 
-    if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') addButton();
-        });
+    function start() {
+        createButton();
     }
 
-    setTimeout(addButton, 3000);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        start();
+    }
+
+    setTimeout(start, 2500);
+    setTimeout(start, 5000);
 
 })();
