@@ -2,141 +2,143 @@
 (function () {
     'use strict';
 
-    var ID = 'android_webview_detector_100';
+    /*
+     * CHATURBATE MODAL HTML TEST 1.0.0
+     */
+
+    var ID = 'chaturbate_modal_html_test_100';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    function safeSource(fn) {
-        if (typeof fn !== 'function') return 'Not a function';
+    function source(fn) {
+        if (typeof fn !== 'function') return String(fn);
 
         try {
             return Function.prototype.toString.call(fn);
         } catch (e) {
-            return 'Unavailable: ' + e.message;
+            return 'Unavailable';
         }
     }
 
-    function keys(obj) {
-        try {
-            return obj ? Object.getOwnPropertyNames(obj).join(', ') : 'Not found';
-        } catch (e) {
-            return 'Access denied';
-        }
-    }
+    function inspectModal() {
+        var modal = Lampa.Modal;
+        var output = [];
 
-    var out = [];
+        output.push('LAMPA MODAL DIAGNOSTIC');
+        output.push('=====================');
+        output.push('Properties: ' +
+            Object.getOwnPropertyNames(modal).join(', '));
 
-    out.push('ANDROID WEBVIEW DETECTOR 1.0.0');
-    out.push('================================');
-
-    out.push('\n1. ANDROID CLIENT');
-    out.push('Version: ' +
-        (window.AndroidJS && AndroidJS.appVersion
-            ? AndroidJS.appVersion()
-            : 'Unknown'));
-
-    out.push('\n2. AndroidJS METHODS');
-    out.push(keys(window.AndroidJS));
-
-    out.push('\n3. Lampa.Android METHODS');
-    out.push(keys(window.Lampa && Lampa.Android));
-
-    out.push('\n4. window.android');
-    out.push(keys(window.android));
-
-    out.push('\n5. AndroidJS.openBrowser SOURCE');
-    out.push(safeSource(
-        window.AndroidJS && AndroidJS.openBrowser
-    ));
-
-    out.push('\n6. Lampa.Android.openBrowser SOURCE');
-    out.push(safeSource(
-        window.Lampa && Lampa.Android && Lampa.Android.openBrowser
-    ));
-
-    out.push('\n7. GLOBAL BROWSER OBJECTS');
-
-    var found = [];
-
-    try {
-        Object.getOwnPropertyNames(window).forEach(function (name) {
-            if (/webview|browser|chrome|android|webkit/i.test(name)) {
-                found.push(name);
+        Object.getOwnPropertyNames(modal).forEach(function (key) {
+            if (typeof modal[key] === 'function') {
+                output.push('\n' + key + ':\n' + source(modal[key]));
             }
         });
-    } catch (e) {
-        found.push('Global scan unavailable: ' + e.message);
+
+        return output.join('\n');
     }
 
-    out.push(found.join(', '));
+    function showPanel() {
+        var old = document.getElementById(ID + '_panel');
+        if (old) old.remove();
 
-    out.push('\n8. LAMPA COMPONENTS');
+        var panel = document.createElement('div');
 
-    var components = [];
+        panel.id = ID + '_panel';
 
-    try {
-        Object.getOwnPropertyNames(Lampa).forEach(function (name) {
-            if (/web|browser|iframe|modal|player|window/i.test(name)) {
-                components.push(name + ' (' + typeof Lampa[name] + ')');
+        panel.style.cssText =
+            'position:fixed;z-index:999999;top:5%;left:4%;width:92%;' +
+            'max-height:90%;overflow:auto;background:#151515;color:white;' +
+            'padding:18px;box-sizing:border-box;border:1px solid #777;' +
+            'border-radius:12px;font-family:Arial,sans-serif;';
+
+        var title = document.createElement('h3');
+        title.textContent = 'LAMPA MODAL HTML TEST';
+        panel.appendChild(title);
+
+        var info = document.createElement('pre');
+        info.textContent = inspectModal();
+        info.style.cssText =
+            'white-space:pre-wrap;word-break:break-word;font-size:12px;';
+        panel.appendChild(info);
+
+        var button = document.createElement('button');
+        button.textContent = 'ТЕСТ HTML + IFRAME';
+        button.style.cssText =
+            'width:100%;padding:16px;margin-top:15px;font-size:16px;';
+
+        button.onclick = function () {
+            panel.remove();
+            showHtmlTest();
+        };
+
+        panel.appendChild(button);
+
+        var close = document.createElement('button');
+        close.textContent = 'ЗАКРИТИ';
+        close.style.cssText =
+            'width:100%;padding:14px;margin-top:10px;font-size:16px;';
+
+        close.onclick = function () {
+            panel.remove();
+        };
+
+        panel.appendChild(close);
+        document.body.appendChild(panel);
+    }
+
+    function showHtmlTest() {
+        var wrap = document.createElement('div');
+
+        wrap.id = ID + '_html';
+
+        wrap.style.cssText =
+            'position:fixed;z-index:999999;top:4%;left:3%;width:94%;' +
+            'height:90%;background:#111;border:2px solid #888;' +
+            'border-radius:12px;overflow:hidden;';
+
+        var header = document.createElement('div');
+
+        header.style.cssText =
+            'height:48px;background:#222;color:white;' +
+            'display:flex;align-items:center;justify-content:space-between;' +
+            'padding:0 12px;font-size:15px;';
+
+        header.innerHTML =
+            '<span>HTML WEBVIEW TEST</span>' +
+            '<button id="' + ID + '_close">ЗАКРИТИ</button>';
+
+        var frame = document.createElement('iframe');
+
+        frame.src = 'https://example.com/';
+        frame.style.cssText =
+            'width:100%;height:calc(100% - 48px);border:0;background:white;';
+
+        frame.setAttribute('allow', 'fullscreen; autoplay');
+
+        wrap.appendChild(header);
+        wrap.appendChild(frame);
+        document.body.appendChild(wrap);
+
+        document.getElementById(ID + '_close').onclick = function () {
+            frame.src = 'about:blank';
+            wrap.remove();
+        };
+    }
+
+    function start() {
+        showPanel();
+    }
+
+    if (window.Lampa && Lampa.Listener) {
+        Lampa.Listener.follow('app', function (event) {
+            if (event.type === 'ready') {
+                setTimeout(start, 1500);
             }
         });
-    } catch (e) {
-        components.push('Scan unavailable: ' + e.message);
+    } else {
+        setTimeout(start, 3000);
     }
-
-    out.push(components.join('\n'));
-
-    out.push('\n9. WEBVIEW RELATED GLOBALS');
-
-    [
-        'WebView',
-        'AndroidWebView',
-        'WebViewClient',
-        'WebChromeClient',
-        'webkit',
-        'chrome',
-        'browser',
-        'Android'
-    ].forEach(function (name) {
-        out.push(name + ': ' + typeof window[name]);
-    });
-
-    var result = out.join('\n');
-
-    console.log(result);
-
-    var panel = document.createElement('div');
-
-    panel.style.cssText =
-        'position:fixed;z-index:999999;top:3%;left:3%;width:94%;' +
-        'max-height:92%;overflow:auto;background:#111;color:#eee;' +
-        'padding:16px;border:2px solid #777;border-radius:12px;' +
-        'box-sizing:border-box;font:12px monospace;white-space:pre-wrap;';
-
-    var heading = document.createElement('div');
-    heading.textContent = 'ANDROID WEBVIEW DIAGNOSTIC';
-    heading.style.cssText =
-        'font-size:17px;font-weight:bold;color:#8fd3ff;margin-bottom:12px;';
-
-    var pre = document.createElement('pre');
-    pre.textContent = result;
-    pre.style.cssText =
-        'white-space:pre-wrap;word-break:break-word;';
-
-    var button = document.createElement('button');
-    button.textContent = 'ЗАКРИТИ';
-    button.style.cssText =
-        'padding:12px 25px;margin-top:12px;font-size:16px;';
-
-    button.onclick = function () {
-        panel.remove();
-    };
-
-    panel.appendChild(heading);
-    panel.appendChild(pre);
-    panel.appendChild(button);
-
-    document.body.appendChild(panel);
 
 })();
