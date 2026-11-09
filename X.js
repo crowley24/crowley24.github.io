@@ -2,64 +2,65 @@
 (function () {
     'use strict';
 
-    /*
-     * CHaturbate WebView Detector 1.0.0
-     * Crowley24
-     *
-     * Діагностика Android Bridge / WebView у Lampa.
-     * Нічого не запускає і не змінює в системі.
-     */
+    var ID = 'crowley_chaturbate_bridge_probe';
 
-    var PLUGIN_ID = 'crowley_chaturbate_webview_detector';
-    var REPORT_ID = 'crowley-webview-detector-report';
+    if (window[ID]) return;
+    window[ID] = true;
 
-    if (window[PLUGIN_ID]) return;
-    window[PLUGIN_ID] = true;
-
-    function safeKeys(obj) {
-        if (!obj) return [];
-
-        try {
-            return Object.getOwnPropertyNames(obj);
-        } catch (e) {
-            return [];
-        }
-    }
-
-    function describeObject(name, obj) {
+    function inspect(name, fn) {
         var result = [];
 
-        if (!obj) {
-            return name + ': НЕ ЗНАЙДЕНО';
+        result.push('\n========== ' + name + ' ==========');
+
+        if (typeof fn !== 'function') {
+            result.push('Не є функцією');
+            return result.join('\n');
         }
 
-        result.push(name + ': ЗНАЙДЕНО');
+        try {
+            result.push(Function.prototype.toString.call(fn));
+        } catch (e) {
+            result.push('Не вдалося прочитати: ' + e.message);
+        }
+
+        return result.join('\n');
+    }
+
+    function inspectObject(name, obj) {
+        var result = [];
+
+        result.push('\n========== ' + name + ' ==========');
+
+        if (!obj) {
+            result.push('Об’єкт відсутній');
+            return result.join('\n');
+        }
 
         var current = obj;
         var depth = 0;
-        var found = {};
+        var visited = {};
 
         while (current && depth < 3) {
-            safeKeys(current).forEach(function (key) {
-                if (found[key]) return;
-
-                found[key] = true;
+            Object.getOwnPropertyNames(current).forEach(function (key) {
+                if (visited[key]) return;
+                visited[key] = true;
 
                 try {
                     var descriptor =
                         Object.getOwnPropertyDescriptor(current, key);
 
-                    if (!descriptor) return;
+                    if (!descriptor || typeof descriptor.value !== 'function') {
+                        return;
+                    }
 
-                    var value = descriptor.value;
+                    result.push('\n--- ' + key + ' ---');
 
-                    if (typeof value === 'function') {
-                        result.push('  ' + key + '()');
-                    } else if (
-                        value &&
-                        typeof value === 'object'
-                    ) {
-                        result.push('  ' + key + ' [object]');
+                    try {
+                        result.push(
+                            Function.prototype.toString.call(descriptor.value)
+                        );
+                    } catch (e) {
+                        result.push('[source unavailable]');
                     }
                 } catch (e) {}
             });
@@ -76,278 +77,120 @@
         return result.join('\n');
     }
 
-    function collectReport() {
-        var lines = [];
+    function run() {
+        var report = [];
 
-        lines.push('CHaturbate WebView Detector 1.0.0');
-        lines.push('================================');
-        lines.push('');
+        report.push('CHaturbate Android Bridge Probe 1.0.0');
 
-        lines.push('1. PLATFORM');
-        lines.push('User Agent: ' + navigator.userAgent);
-        lines.push('URL: ' + location.href);
-        lines.push('');
-
-        lines.push('2. LAMPA');
-
-        var L = window.Lampa;
-
-        lines.push('Lampa: ' + (!!L ? 'YES' : 'NO'));
-
-        if (L) {
-            [
-                'Android',
-                'Platform',
-                'Player',
-                'Modal',
-                'Component',
-                'Activity',
-                'Settings',
-                'Listener',
-                'Storage',
-                'Notice'
-            ].forEach(function (key) {
-                lines.push(
-                    describeObject('Lampa.' + key, L[key])
-                );
-                lines.push('');
-            });
-        }
-
-        lines.push('3. ANDROID BRIDGES');
-
-        [
-            'Android',
-            'android',
-            'AndroidBridge',
-            'AndroidInterface',
-            'NativeAndroid',
-            'App',
-            'Native',
-            'WebView',
-            'webkit',
-            'JSBridge',
-            'LampaAndroid'
-        ].forEach(function (key) {
-            var obj;
-
-            try {
-                obj = window[key];
-            } catch (e) {}
-
-            lines.push(describeObject('window.' + key, obj));
-            lines.push('');
-        });
-
-        lines.push('4. MATCHING GLOBAL OBJECTS');
-
-        safeKeys(window).forEach(function (key) {
-            if (!/(android|webview|bridge|native|intent|browser)/i.test(key)) {
-                return;
-            }
-
-            try {
-                var value = window[key];
-
-                lines.push(
-                    key + ': ' +
-                    (typeof value === 'function'
-                        ? 'FUNCTION'
-                        : typeof value)
-                );
-
-                if (value && typeof value === 'object') {
-                    var methods = safeKeys(value).filter(function (k) {
-                        try {
-                            return typeof value[k] === 'function';
-                        } catch (e) {
-                            return false;
-                        }
-                    });
-
-                    if (methods.length) {
-                        lines.push('  Methods: ' + methods.join(', '));
-                    }
-                }
-            } catch (e) {
-                lines.push(key + ': inaccessible');
-            }
-        });
-
-        lines.push('');
-        lines.push('5. ENVIRONMENT');
-
-        lines.push(
-            'Touch support: ' +
-            ('ontouchstart' in window)
+        report.push(
+            inspectObject('Lampa.Android', window.Lampa && Lampa.Android)
         );
 
-        lines.push(
-            'Cordova: ' +
-            (!!window.cordova)
+        report.push(
+            inspectObject('AndroidJS', window.AndroidJS)
         );
 
-        lines.push(
-            'Capacitor: ' +
-            (!!window.Capacitor)
+        report.push(
+            inspectObject('window.android', window.android)
         );
 
-        lines.push(
-            'External protocol handler: ' +
-            (!!window.navigator.registerProtocolHandler)
+        report.push(
+            inspect(
+                'Lampa.Android.openBrowser',
+                window.Lampa &&
+                Lampa.Android &&
+                Lampa.Android.openBrowser
+            )
         );
 
-        lines.push('');
-        lines.push('END OF REPORT');
+        report.push(
+            inspect(
+                'AndroidJS.openBrowser',
+                window.AndroidJS &&
+                AndroidJS.openBrowser
+            )
+        );
 
-        return lines.join('\n');
-    }
+        report.push(
+            inspect(
+                'android.openBrowser',
+                window.android &&
+                android.openBrowser
+            )
+        );
 
-    function showReport(report) {
-        var old = document.getElementById(REPORT_ID);
+        var output = report.join('\n');
+
+        console.log(output);
+
+        var old = document.getElementById('crowley-bridge-probe');
 
         if (old) old.remove();
 
-        var overlay = document.createElement('div');
-        overlay.id = REPORT_ID;
+        var box = document.createElement('div');
 
-        overlay.style.cssText =
-            'position:fixed;inset:0;z-index:999999;' +
-            'background:rgba(0,0,0,.94);' +
-            'display:flex;align-items:center;' +
-            'justify-content:center;padding:3%;' +
-            'box-sizing:border-box;color:white;';
+        box.id = 'crowley-bridge-probe';
 
-        var panel = document.createElement('div');
-
-        panel.style.cssText =
-            'width:100%;max-width:900px;max-height:90%;' +
-            'display:flex;flex-direction:column;' +
-            'background:#17191e;border:1px solid #444;' +
-            'border-radius:12px;padding:20px;' +
-            'box-sizing:border-box;';
+        box.style.cssText =
+            'position:fixed;z-index:999999;inset:3%;' +
+            'background:#111;color:white;padding:15px;' +
+            'display:flex;flex-direction:column;border:1px solid #555;' +
+            'border-radius:10px;';
 
         var title = document.createElement('div');
-        title.textContent = 'CHaturbate — WebView Detector';
+
+        title.textContent = 'Android Bridge Probe — результат';
 
         title.style.cssText =
-            'font-size:20px;font-weight:bold;margin-bottom:12px;';
+            'font-size:18px;font-weight:bold;margin-bottom:10px;';
 
-        var info = document.createElement('div');
+        var area = document.createElement('textarea');
 
-        info.textContent =
-            'Скопіюй звіт і надішли його сюди. ' +
-            'Він покаже, чи доступний Android WebView у Lampa.';
+        area.value = output;
+        area.readOnly = true;
 
-        info.style.cssText =
-            'font-size:14px;color:#aaa;margin-bottom:12px;';
+        area.style.cssText =
+            'flex:1;width:100%;background:#050505;color:#bde5c8;' +
+            'font:11px monospace;padding:10px;box-sizing:border-box;';
 
-        var output = document.createElement('textarea');
+        var copy = document.createElement('button');
 
-        output.value = report;
-        output.readOnly = true;
+        copy.textContent = 'КОПІЮВАТИ';
 
-        output.style.cssText =
-            'width:100%;height:48vh;min-height:180px;' +
-            'resize:none;background:#08090b;color:#bde5c8;' +
-            'border:1px solid #444;border-radius:6px;' +
-            'padding:12px;box-sizing:border-box;' +
-            'font:12px monospace;outline:none;';
+        copy.style.cssText =
+            'padding:14px;margin-top:10px;background:#344;color:white;';
 
-        var buttons = document.createElement('div');
-
-        buttons.style.cssText =
-            'display:flex;gap:10px;margin-top:12px;';
-
-        function makeButton(label, callback) {
-            var button = document.createElement('button');
-
-            button.textContent = label;
-
-            button.style.cssText =
-                'flex:1;padding:13px;border:0;border-radius:6px;' +
-                'background:#303640;color:white;font-size:15px;' +
-                'font-weight:bold;';
-
-            button.onclick = callback;
-
-            return button;
-        }
-
-        var copyButton = makeButton('КОПІЮВАТИ ЗВІТ', function () {
-            output.focus();
-            output.select();
+        copy.onclick = function () {
+            area.focus();
+            area.select();
 
             try {
-                var ok = document.execCommand('copy');
-
-                copyButton.textContent =
-                    ok ? 'СКОПІЙОВАНО' : 'ВИДІЛЕНО — СКОПІЮЙ';
-
+                document.execCommand('copy');
+                copy.textContent = 'СКОПІЙОВАНО';
             } catch (e) {
-                copyButton.textContent = 'ВИДІЛЕНО — СКОПІЮЙ';
+                copy.textContent = 'ВИДІЛЕНО — СКОПІЮЙ';
             }
-        });
+        };
 
-        var closeButton = makeButton('ЗАКРИТИ', function () {
-            overlay.remove();
-        });
+        var close = document.createElement('button');
 
-        buttons.appendChild(copyButton);
-        buttons.appendChild(closeButton);
+        close.textContent = 'ЗАКРИТИ';
 
-        panel.appendChild(title);
-        panel.appendChild(info);
-        panel.appendChild(output);
-        panel.appendChild(buttons);
+        close.style.cssText =
+            'padding:14px;margin-top:6px;background:#333;color:white;';
 
-        overlay.appendChild(panel);
-        document.body.appendChild(overlay);
+        close.onclick = function () {
+            box.remove();
+        };
 
-        output.focus();
+        box.appendChild(title);
+        box.appendChild(area);
+        box.appendChild(copy);
+        box.appendChild(close);
+
+        document.body.appendChild(box);
     }
 
-    function run() {
-        try {
-            var report = collectReport();
-
-            console.log(report);
-
-            showReport(report);
-
-            if (
-                window.Lampa &&
-                Lampa.Notice &&
-                typeof Lampa.Notice.show === 'function'
-            ) {
-                Lampa.Notice.show(
-                    'CHaturbate WebView Detector: звіт готовий'
-                );
-            }
-
-        } catch (e) {
-            console.error(
-                'CHaturbate WebView Detector:',
-                e
-            );
-        }
-    }
-
-    var attempts = 0;
-
-    function waitForLampa() {
-        attempts++;
-
-        if (window.Lampa && document.body) {
-            run();
-            return;
-        }
-
-        if (attempts < 20) {
-            setTimeout(waitForLampa, 1000);
-        }
-    }
-
-    setTimeout(waitForLampa, 1500);
+    setTimeout(run, 1500);
 
 })();
