@@ -2,62 +2,133 @@
 (function () {
     'use strict';
 
-    var ID = 'chaturbate_iframe_api_probe_101';
+    /*
+     * CHATURBATE IFRAME TEST 1.0.2
+     * Native Lampa Iframe
+     */
+
+    var ID = 'chaturbate_iframe_test_102';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    var iframe = Lampa.Iframe;
-    var methods = ['init', 'show', 'close', 'render'];
-    var result = [];
+    var currentUrl = 'https://example.com/';
 
-    result.push('LAMPA IFRAME API PROBE 1.0.1');
-    result.push('============================');
-
-    methods.forEach(function (name) {
-        var fn = iframe && iframe[name];
-
-        result.push('\n' + name + ':');
-        result.push('Type: ' + typeof fn);
-
-        if (typeof fn === 'function') {
-            try {
-                result.push(
-                    'Source:\n' +
-                    Function.prototype.toString.call(fn)
-                );
-            } catch (e) {
-                result.push('Source unavailable: ' + e.message);
-            }
+    function openPage(url) {
+        if (!Lampa.Iframe ||
+            typeof Lampa.Iframe.init !== 'function' ||
+            typeof Lampa.Iframe.show !== 'function') {
+            alert('Lampa.Iframe недоступний');
+            return;
         }
-    });
 
-    result.push('\nObject keys: ' + Object.keys(iframe).join(', '));
+        try {
+            Lampa.Iframe.init();
 
-    var output = result.join('\n');
+            Lampa.Iframe.show({
+                url: url,
+                onBack: function () {
+                    console.log('[CHATURBATE] Iframe closed');
+                }
+            });
 
-    console.log(output);
+            console.log('[CHATURBATE] Opened:', url);
+        } catch (e) {
+            console.error('[CHATURBATE] Iframe error:', e);
+            alert('Помилка Iframe: ' + e.message);
+        }
+    }
 
-    var panel = document.createElement('div');
-    panel.style.cssText =
-        'position:fixed;z-index:999999;top:4%;left:3%;width:94%;' +
-        'max-height:90%;overflow:auto;background:#111;color:#eee;' +
-        'padding:16px;border:2px solid #888;border-radius:10px;' +
-        'box-sizing:border-box;font:13px monospace;white-space:pre-wrap;';
+    function closePage() {
+        try {
+            Lampa.Iframe.close();
+        } catch (e) {
+            console.error(e);
+        }
+    }
 
-    var pre = document.createElement('pre');
-    pre.textContent = output;
-    pre.style.cssText = 'white-space:pre-wrap;word-break:break-word;';
+    function createPanel() {
+        var old = document.getElementById(ID + '_panel');
+        if (old) old.remove();
 
-    var button = document.createElement('button');
-    button.textContent = 'ЗАКРИТИ';
-    button.style.cssText = 'padding:12px 24px;margin-top:12px;';
+        var panel = document.createElement('div');
 
-    button.onclick = function () {
-        panel.remove();
-    };
+        panel.id = ID + '_panel';
 
-    panel.appendChild(pre);
-    panel.appendChild(button);
-    document.body.appendChild(panel);
+        panel.style.cssText = [
+            'position:fixed',
+            'z-index:999998',
+            'left:5%',
+            'top:12%',
+            'width:90%',
+            'background:#151515',
+            'color:#fff',
+            'border:1px solid #555',
+            'border-radius:14px',
+            'padding:20px',
+            'box-sizing:border-box',
+            'font-family:Arial,sans-serif'
+        ].join(';');
+
+        var title = document.createElement('div');
+        title.textContent = 'CHATURBATE — IFRAME TEST';
+        title.style.cssText =
+            'font-size:20px;font-weight:bold;margin-bottom:18px;';
+
+        panel.appendChild(title);
+
+        function addButton(label, url) {
+            var button = document.createElement('button');
+
+            button.textContent = label;
+            button.style.cssText =
+                'display:block;width:100%;padding:16px;margin:10px 0;' +
+                'font-size:17px;border-radius:8px;';
+
+            button.onclick = function () {
+                panel.remove();
+                openPage(url);
+            };
+
+            panel.appendChild(button);
+        }
+
+        addButton(
+            '1. Відкрити example.com',
+            'https://example.com/'
+        );
+
+        addButton(
+            '2. Відкрити Chaturbate',
+            'https://chaturbate.com/'
+        );
+
+        var closeButton = document.createElement('button');
+        closeButton.textContent = 'ЗАКРИТИ';
+        closeButton.style.cssText =
+            'display:block;width:100%;padding:14px;margin-top:16px;' +
+            'font-size:16px;';
+
+        closeButton.onclick = function () {
+            panel.remove();
+        };
+
+        panel.appendChild(closeButton);
+        document.body.appendChild(panel);
+    }
+
+    function start() {
+        createPanel();
+    }
+
+    if (window.Lampa && Lampa.Listener) {
+        Lampa.Listener.follow('app', function (event) {
+            if (event.type === 'ready') {
+                setTimeout(start, 1500);
+            }
+        });
+    } else {
+        setTimeout(start, 3000);
+    }
+
 })();
