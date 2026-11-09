@@ -2,120 +2,151 @@
 (function () {
     'use strict';
 
-    var ID = 'lampa_template_probe_100';
+    var VERSION = '1.0.0';
 
-    if (window[ID]) return;
-    window[ID] = true;
+    function runProbe() {
+        var report = [];
 
-    var out = [];
-
-    function inspect(name, obj) {
-        out.push('\n' + name);
-
-        if (!obj) {
-            out.push('Not available');
-            return;
+        function add(value) {
+            report.push(String(value));
         }
 
-        out.push('Type: ' + typeof obj);
-        out.push('Properties: ' +
-            Object.getOwnPropertyNames(obj).join(', '));
-
-        Object.getOwnPropertyNames(obj).forEach(function (key) {
-            if (typeof obj[key] === 'function') {
-                try {
-                    out.push('\n' + key + ':\n' +
-                        Function.prototype.toString.call(obj[key]));
-                } catch (e) {}
-            }
-        });
-    }
-
-    out.push('LAMPA TEMPLATE PROBE 1.0.0');
-    out.push('==========================');
-
-    inspect('Lampa.Template', Lampa.Template);
-
-    inspect('Lampa.Modal', Lampa.Modal);
-
-    out.push('\nHTML TEMPLATE TEST');
-
-    try {
-        var template = Lampa.Template.get('modal', {
-            title: 'TEST'
-        });
-
-        out.push('Template result type: ' + typeof template);
-        out.push('Template result: ' +
-            (template && template.length !== undefined
-                ? 'length=' + template.length
-                : 'No length property'));
-
-        out.push('Template first element: ' +
-            (template && template[0]
-                ? template[0].tagName
-                : 'Not found'));
-
-    } catch (e) {
-        out.push('Template error: ' + e.message);
-    }
-
-    var report = out.join('\n');
-
-    console.log(report);
-
-    var panel = document.createElement('div');
-
-    panel.style.cssText =
-        'position:fixed;z-index:999999;top:3%;left:3%;width:94%;' +
-        'max-height:94%;overflow:auto;background:#111;color:#eee;' +
-        'padding:16px;border:2px solid #777;border-radius:12px;' +
-        'box-sizing:border-box;font:12px monospace;';
-
-    var pre = document.createElement('pre');
-    pre.textContent = report;
-    pre.style.cssText =
-        'white-space:pre-wrap;word-break:break-word;';
-
-    var copy = document.createElement('button');
-    copy.textContent = 'КОПІЮВАТИ ЗВІТ';
-    copy.style.cssText = 'padding:14px;width:100%;font-size:16px;';
-
-    copy.onclick = function () {
-        var area = document.createElement('textarea');
-        area.value = report;
-        area.style.cssText =
-            'position:fixed;left:-9999px;top:0;';
-
-        document.body.appendChild(area);
-        area.select();
-
-        var success = false;
+        add('LAMPA TEMPLATE SELECTOR PROBE ' + VERSION);
+        add('==============================');
 
         try {
-            success = document.execCommand('copy');
-        } catch (e) {}
+            var templates = Lampa.Template.all();
 
-        area.remove();
+            add('TEMPLATE COUNT: ' + Object.keys(templates).length);
+            add('');
 
-        copy.textContent = success
-            ? 'СКОПІЙОВАНО!'
-            : 'КОПІЮВАННЯ НЕ ВДАЛОСЯ';
-    };
+            Object.keys(templates).sort().forEach(function (name) {
+                var html = String(templates[name] || '');
 
-    var close = document.createElement('button');
-    close.textContent = 'ЗАКРИТИ';
-    close.style.cssText =
-        'padding:14px;width:100%;margin-top:10px;font-size:16px;';
+                if (
+                    html.indexOf('selector') !== -1 ||
+                    html.indexOf('data-action') !== -1 ||
+                    html.indexOf('hover:') !== -1
+                ) {
+                    add('TEMPLATE: ' + name);
+                    add('LENGTH: ' + html.length);
 
-    close.onclick = function () {
-        panel.remove();
-    };
+                    var matches = html.match(/<[^>]*(?:selector|data-action|hover:)[^>]*>/gi);
 
-    panel.appendChild(pre);
-    panel.appendChild(copy);
-    panel.appendChild(close);
+                    if (matches) {
+                        matches.slice(0, 12).forEach(function (item) {
+                            add('  ' + item);
+                        });
+                    }
 
-    document.body.appendChild(panel);
+                    add('HTML PREVIEW:');
+                    add(html.substring(0, 1800));
+                    add('--------------------------------');
+                }
+            });
 
+            add('');
+            add('JQUERY CHECK');
+
+            var test = Lampa.Template.get('modal');
+
+            add('Template.get("modal"): ' + (test && test.jquery ? 'jQuery object' : typeof test));
+            add('find(".selector") available: ' + !!(test && test.find));
+            add('selector count: ' + (test && test.find ? test.find('.selector').length : 'N/A'));
+
+        } catch (e) {
+            add('ERROR: ' + e.message);
+        }
+
+        return report.join('\n');
+    }
+
+    function openReport() {
+        var report = runProbe();
+
+        var html = $('<div class="about">').css({
+            padding: '20px',
+            color: '#fff',
+            'font-size': '14px'
+        });
+
+        var output = $('<pre>').css({
+            'white-space': 'pre-wrap',
+            'overflow-wrap': 'break-word',
+            'max-height': '65vh',
+            'overflow-y': 'auto',
+            'font-size': '11px',
+            'line-height': '1.5',
+            'user-select': 'text'
+        }).text(report);
+
+        var buttons = $('<div>').css({
+            display: 'flex',
+            gap: '10px',
+            'margin-top': '15px'
+        });
+
+        var copy = $('<div class="selector button selector--focus">')
+            .text('КОПІЮВАТИ ЗВІТ');
+
+        var close = $('<div class="selector button">')
+            .text('ЗАКРИТИ');
+
+        copy.on('hover:enter click', function () {
+            var copied = false;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(report).then(function () {
+                    copy.text('СКОПІЙОВАНО');
+                }).catch(function () {
+                    fallbackCopy();
+                });
+            } else {
+                fallbackCopy();
+            }
+
+            function fallbackCopy() {
+                var textarea = document.createElement('textarea');
+                textarea.value = report;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+
+                try {
+                    copied = document.execCommand('copy');
+                } catch (e) {}
+
+                document.body.removeChild(textarea);
+                copy.text(copied ? 'СКОПІЙОВАНО' : 'НЕ ВДАЛОСЯ СКОПІЮВАТИ');
+            }
+        });
+
+        close.on('hover:enter click', function () {
+            Lampa.Modal.close();
+        });
+
+        buttons.append(copy, close);
+        html.append(output, buttons);
+
+        Lampa.Modal.open({
+            title: 'TEMPLATE SELECTOR PROBE',
+            html: html,
+            size: 'large'
+        });
+    }
+
+    if (window.Lampa && Lampa.Template && Lampa.Modal) {
+        Lampa.Template.add(
+            'crowley_template_selector_probe_button',
+            '<div class="selector">TEMPLATE SELECTOR PROBE</div>'
+        );
+
+        Lampa.Template.get('crowley_template_selector_probe_button')
+            .on('hover:enter', openReport);
+
+        $('body').append(
+            Lampa.Template.get('crowley_template_selector_probe_button')
+        );
+    }
 })();
