@@ -2,153 +2,125 @@
 (function () {
     'use strict';
 
-    var ID = 'chaturbate_webview_detector_100';
+    /*
+     * CHATURBATE IFRAME DIAGNOSTIC 1.0.0
+     * Перевірка внутрішнього компонента Lampa.Iframe
+     */
 
-    if (window[ID]) return;
-    window[ID] = true;
+    var PLUGIN_ID = 'chaturbate_iframe_diagnostic_100';
 
-    function inspectObject(obj) {
-        if (!obj) return ['Об’єкт недоступний'];
+    if (window[PLUGIN_ID]) return;
+    window[PLUGIN_ID] = true;
 
-        try {
-            return Object.getOwnPropertyNames(obj).sort();
-        } catch (e) {
-            return ['Помилка читання: ' + e.message];
+    function inspect() {
+        var output = [];
+
+        function add(title, value) {
+            output.push(title + '\n' + String(value));
         }
-    }
 
-    function run() {
-        var report = [];
+        add('CHATURBATE IFRAME DIAGNOSTIC 1.0.0',
+            '================================');
 
-        report.push('CHATURBATE WEBVIEW DETECTOR 1.0.0');
-        report.push('================================');
-        report.push('');
-
-        report.push('Lampa version: ' +
-            (typeof AndroidJS !== 'undefined' &&
-             typeof AndroidJS.appVersion === 'function'
+        add('Lampa version',
+            window.AndroidJS && AndroidJS.appVersion
                 ? AndroidJS.appVersion()
-                : 'невідомо'));
+                : 'Unknown');
 
-        report.push('');
-        report.push('1. Lampa.Android methods:');
+        add('Lampa.Iframe type',
+            typeof Lampa.Iframe);
 
-        var androidMethods = inspectObject(
-            window.Lampa && Lampa.Android
-        );
+        if (typeof Lampa.Iframe === 'function') {
+            add('Constructor source',
+                Function.prototype.toString.call(Lampa.Iframe));
 
-        report.push(androidMethods.join(', '));
+            add('Prototype methods',
+                Object.getOwnPropertyNames(
+                    Lampa.Iframe.prototype || {}
+                ).join(', ') || 'None');
 
-        report.push('');
-        report.push('2. AndroidJS methods:');
+            add('Static properties',
+                Object.getOwnPropertyNames(Lampa.Iframe)
+                    .join(', ') || 'None');
+        } else if (Lampa.Iframe) {
+            add('Iframe properties',
+                Object.keys(Lampa.Iframe).join(', '));
+        }
 
-        var nativeMethods = inspectObject(window.AndroidJS);
+        add('Lampa.Modal type',
+            typeof Lampa.Modal);
 
-        report.push(nativeMethods.join(', '));
+        add('Document',
+            document.readyState);
 
-        report.push('');
-        report.push('3. WebView-related methods:');
+        add('Iframe support',
+            typeof document.createElement('iframe').src);
 
-        var all = androidMethods.concat(nativeMethods);
-        var matches = all.filter(function (name) {
-            return /webview|web_view|browser|url|html|page|window/i.test(name);
-        });
+        var result = output.join('\n\n');
 
-        report.push(matches.length ? matches.join(', ') : 'Не знайдено');
+        console.log(result);
 
-        report.push('');
-        report.push('4. Global objects:');
+        var panel = document.createElement('div');
 
-        var globals = Object.getOwnPropertyNames(window).filter(function (name) {
-            return /webview|browser|android|web_view/i.test(name);
-        });
+        panel.id = PLUGIN_ID + '_panel';
 
-        report.push(globals.length ? globals.join(', ') : 'Не знайдено');
+        panel.style.cssText = [
+            'position:fixed',
+            'z-index:999999',
+            'top:5%',
+            'left:4%',
+            'width:92%',
+            'max-height:88%',
+            'overflow:auto',
+            'background:#111',
+            'color:#eee',
+            'border:2px solid #777',
+            'border-radius:12px',
+            'padding:18px',
+            'box-sizing:border-box',
+            'font:14px monospace',
+            'white-space:pre-wrap',
+            'word-break:break-word'
+        ].join(';');
 
-        report.push('');
-        report.push('5. Lampa components:');
+        var heading = document.createElement('div');
+        heading.textContent = 'IFRAME DIAGNOSTIC';
+        heading.style.cssText =
+            'font-size:18px;font-weight:bold;margin-bottom:14px;color:#8fd3ff';
 
-        var components = inspectObject(window.Lampa);
-
-        report.push(
-            components.filter(function (name) {
-                return /browser|web|iframe|player|modal/i.test(name);
-            }).join(', ') || 'Не знайдено'
-        );
-
-        return report.join('\n');
-    }
-
-    function show() {
-        var old = document.getElementById('cb_webview_detector');
-        if (old) old.remove();
-
-        var box = document.createElement('div');
-
-        box.id = 'cb_webview_detector';
-
-        box.style.cssText =
-            'position:fixed;z-index:999999;top:5%;left:5%;' +
-            'width:90%;max-width:700px;max-height:85%;' +
-            'overflow:auto;background:#171717;color:white;' +
-            'padding:18px;box-sizing:border-box;border-radius:12px;';
-
-        var title = document.createElement('div');
-        title.textContent = 'CHaturbate WebView Detector';
-        title.style.cssText =
-            'font-size:20px;font-weight:bold;margin-bottom:12px;';
-
-        var output = document.createElement('textarea');
-        output.readOnly = true;
-        output.value = run();
-
-        output.style.cssText =
-            'width:100%;height:350px;box-sizing:border-box;' +
-            'background:#080808;color:#ddd;border:1px solid #444;' +
-            'padding:12px;font-size:13px;';
+        var content = document.createElement('pre');
+        content.textContent = result;
+        content.style.cssText =
+            'white-space:pre-wrap;word-break:break-word;margin:0;';
 
         var close = document.createElement('button');
         close.textContent = 'ЗАКРИТИ';
         close.style.cssText =
-            'width:100%;padding:13px;margin-top:12px;' +
-            'background:#555;color:white;border:0;border-radius:7px;';
+            'margin-top:16px;padding:12px 24px;font-size:16px;';
 
         close.onclick = function () {
-            box.remove();
+            panel.remove();
         };
 
-        box.appendChild(title);
-        box.appendChild(output);
-        box.appendChild(close);
+        panel.appendChild(heading);
+        panel.appendChild(content);
+        panel.appendChild(close);
 
-        document.body.appendChild(box);
-
-        output.focus();
-        output.select();
+        document.body.appendChild(panel);
     }
 
-    var button = document.createElement('button');
-
-    button.textContent = 'WEBVIEW TEST';
-    button.style.cssText =
-        'position:fixed;z-index:999998;right:20px;bottom:100px;' +
-        'padding:15px 20px;background:#315b9b;color:white;' +
-        'border:0;border-radius:8px;font-weight:bold;';
-
-    button.onclick = show;
-
-    function init() {
-        if (!document.getElementById('cb_webview_detector_button')) {
-            button.id = 'cb_webview_detector_button';
-            document.body.appendChild(button);
-        }
+    function start() {
+        inspect();
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+    if (window.Lampa && Lampa.Listener) {
+        Lampa.Listener.follow('app', function (event) {
+            if (event.type === 'ready') {
+                setTimeout(start, 1500);
+            }
+        });
     } else {
-        init();
+        setTimeout(start, 3000);
     }
 
-    setTimeout(init, 2000);
 })();
