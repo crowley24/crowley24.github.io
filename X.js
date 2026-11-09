@@ -2,81 +2,102 @@
 (function () {
     'use strict';
 
-    var ID = 'crowley_modal_diagnostic_104';
+    var ID = 'crowley_modal_state_105';
 
     if (document.getElementById(ID)) return;
 
     var report = [];
 
-    function log(text) {
-        report.push(String(text));
-        console.log('[LAMPA DIAG]', text);
+    function log(s) {
+        report.push(String(s));
+        console.log('[MODAL STATE]', s);
     }
 
-    log('LAMPA MODAL DIAGNOSTIC 1.0.4');
-    log('Lampa: ' + !!window.Lampa);
-    log('Modal: ' + !!(window.Lampa && Lampa.Modal));
-    log('Template: ' + !!(window.Lampa && Lampa.Template));
+    function inspect() {
+        log('');
+        log('===== MODAL STATE =====');
+
+        try {
+            log('Modal.opened(): ' + Lampa.Modal.opened());
+        } catch (e) {
+            log('opened error: ' + e.message);
+        }
+
+        var modals = document.querySelectorAll('.modal');
+
+        log('DOM .modal count: ' + modals.length);
+
+        Array.prototype.forEach.call(modals, function (el, i) {
+            var css = window.getComputedStyle(el);
+            var rect = el.getBoundingClientRect();
+
+            log('MODAL #' + i);
+            log('class: ' + el.className);
+            log('display: ' + css.display);
+            log('visibility: ' + css.visibility);
+            log('opacity: ' + css.opacity);
+            log('z-index: ' + css.zIndex);
+            log('position: ' + css.position);
+            log('size: ' + Math.round(rect.width) + 'x' + Math.round(rect.height));
+            log('parent: ' + (el.parentElement ? el.parentElement.tagName : 'none'));
+        });
+
+        log('Controller: ' + !!Lampa.Controller);
+
+        if (Lampa.Controller) {
+            log('Controller properties: ' + Object.keys(Lampa.Controller).join(', '));
+        }
+    }
 
     var panel = document.createElement('div');
 
     panel.id = ID;
     panel.style.cssText =
-        'position:fixed;z-index:2147483647;top:4%;left:3%;width:94%;' +
-        'max-height:90%;overflow:auto;background:#17191f;color:white;' +
-        'padding:20px;box-sizing:border-box;border:2px solid #35c98b;' +
-        'border-radius:12px;font:14px Arial;';
+        'position:fixed;z-index:2147483647;top:3%;left:3%;width:94%;' +
+        'max-height:92%;overflow:auto;background:#17191f;color:white;' +
+        'padding:18px;box-sizing:border-box;border:2px solid #35c98b;' +
+        'font:13px Arial;border-radius:10px';
 
-    var heading = document.createElement('div');
-    heading.textContent = 'LAMPA MODAL DIAGNOSTIC';
-    heading.style.cssText = 'font-size:20px;font-weight:bold;color:#35c98b;margin-bottom:15px';
+    var heading = document.createElement('h3');
+    heading.textContent = 'MODAL STATE PROBE 1.0.5';
+    heading.style.color = '#35c98b';
 
     var output = document.createElement('pre');
-    output.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5';
-    output.textContent = report.join('\n');
+    output.style.whiteSpace = 'pre-wrap';
+    output.style.overflowWrap = 'anywhere';
 
-    function refresh() {
-        output.textContent = report.join('\n');
-    }
-
-    function button(label, callback) {
-        var el = document.createElement('button');
-        el.textContent = label;
-        el.style.cssText = 'padding:13px;margin:6px 6px 6px 0;background:#287b5a;color:white;border:0;border-radius:6px;font-size:14px';
-        el.onclick = callback;
-        return el;
-    }
-
-    var test = button('ТЕСТ MODAL', function () {
+    var test = document.createElement('button');
+    test.textContent = 'ВІДКРИТИ MODAL І ПЕРЕВІРИТИ';
+    test.onclick = function () {
         try {
-            log('--- MODAL TEST ---');
+            log('Opening modal...');
 
-            var tpl = Lampa.Template.get('modal', {
-                title: 'DIAGNOSTIC TEST'
+            var content = Lampa.Template.get('modal', {
+                title: 'STATE TEST'
             });
 
-            log('Template type: ' + typeof tpl);
-            log('jQuery: ' + !!tpl.jquery);
-            log('Length: ' + tpl.length);
-            log('Body found: ' + tpl.find('.modal__body').length);
-
-            var body = $('<div>').text('MODAL TEST CONTENT');
+            content.find('.modal__body').append(
+                $('<div>').text('TEST CONTENT')
+            );
 
             Lampa.Modal.open({
-                title: 'TEST',
-                html: body,
+                title: 'STATE TEST',
+                html: content.find('.modal__body').children(),
                 size: 'large'
             });
 
-            log('Modal.open call returned successfully');
+            log('Modal.open returned');
         } catch (e) {
-            log('MODAL ERROR: ' + (e.stack || e.message || e));
+            log('ERROR: ' + (e.stack || e.message || e));
         }
 
-        refresh();
-    });
+        inspect();
+        output.textContent = report.join('\n');
+    };
 
-    var copy = button('КОПІЮВАТИ ЗВІТ', function () {
+    var copy = document.createElement('button');
+    copy.textContent = 'КОПІЮВАТИ ЗВІТ';
+    copy.onclick = function () {
         var area = document.createElement('textarea');
         area.value = report.join('\n');
         area.style.position = 'fixed';
@@ -90,11 +111,17 @@
         } catch (e) {}
 
         document.body.removeChild(area);
-        copy.textContent = ok ? 'СКОПІЙОВАНО' : 'КОПІЮВАННЯ НЕ ВДАЛОСЯ';
-    });
+        copy.textContent = ok ? 'СКОПІЙОВАНО' : 'ПОМИЛКА КОПІЮВАННЯ';
+    };
 
-    var close = button('ЗАКРИТИ', function () {
+    var close = document.createElement('button');
+    close.textContent = 'ЗАКРИТИ';
+    close.onclick = function () {
         panel.remove();
+    };
+
+    [test, copy, close].forEach(function (b) {
+        b.style.cssText = 'padding:12px;margin:5px;background:#287b5a;color:white;border:0;border-radius:5px;font-size:14px';
     });
 
     panel.appendChild(heading);
@@ -105,7 +132,8 @@
 
     document.body.appendChild(panel);
 
-    log('Diagnostic panel created');
-    refresh();
+    log('Initial state');
+    inspect();
+    output.textContent = report.join('\n');
 
 })();
