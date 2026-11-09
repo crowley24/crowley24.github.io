@@ -2,155 +2,120 @@
 (function () {
     'use strict';
 
-    /*
-     * CHATURBATE LAMPA BROWSER TEST 1.0.2
-     * Native Lampa Modal + HTML iframe
-     */
-
-    var ID = 'chaturbate_lampa_browser_102';
+    var ID = 'lampa_template_probe_100';
 
     if (window[ID]) return;
     window[ID] = true;
 
-    var currentUrl = 'https://example.com/';
-    var modalOpened = false;
+    var out = [];
 
-    function closeBrowser() {
-        if (!modalOpened) return;
+    function inspect(name, obj) {
+        out.push('\n' + name);
+
+        if (!obj) {
+            out.push('Not available');
+            return;
+        }
+
+        out.push('Type: ' + typeof obj);
+        out.push('Properties: ' +
+            Object.getOwnPropertyNames(obj).join(', '));
+
+        Object.getOwnPropertyNames(obj).forEach(function (key) {
+            if (typeof obj[key] === 'function') {
+                try {
+                    out.push('\n' + key + ':\n' +
+                        Function.prototype.toString.call(obj[key]));
+                } catch (e) {}
+            }
+        });
+    }
+
+    out.push('LAMPA TEMPLATE PROBE 1.0.0');
+    out.push('==========================');
+
+    inspect('Lampa.Template', Lampa.Template);
+
+    inspect('Lampa.Modal', Lampa.Modal);
+
+    out.push('\nHTML TEMPLATE TEST');
+
+    try {
+        var template = Lampa.Template.get('modal', {
+            title: 'TEST'
+        });
+
+        out.push('Template result type: ' + typeof template);
+        out.push('Template result: ' +
+            (template && template.length !== undefined
+                ? 'length=' + template.length
+                : 'No length property'));
+
+        out.push('Template first element: ' +
+            (template && template[0]
+                ? template[0].tagName
+                : 'Not found'));
+
+    } catch (e) {
+        out.push('Template error: ' + e.message);
+    }
+
+    var report = out.join('\n');
+
+    console.log(report);
+
+    var panel = document.createElement('div');
+
+    panel.style.cssText =
+        'position:fixed;z-index:999999;top:3%;left:3%;width:94%;' +
+        'max-height:94%;overflow:auto;background:#111;color:#eee;' +
+        'padding:16px;border:2px solid #777;border-radius:12px;' +
+        'box-sizing:border-box;font:12px monospace;';
+
+    var pre = document.createElement('pre');
+    pre.textContent = report;
+    pre.style.cssText =
+        'white-space:pre-wrap;word-break:break-word;';
+
+    var copy = document.createElement('button');
+    copy.textContent = 'КОПІЮВАТИ ЗВІТ';
+    copy.style.cssText = 'padding:14px;width:100%;font-size:16px;';
+
+    copy.onclick = function () {
+        var area = document.createElement('textarea');
+        area.value = report;
+        area.style.cssText =
+            'position:fixed;left:-9999px;top:0;';
+
+        document.body.appendChild(area);
+        area.select();
+
+        var success = false;
 
         try {
-            Lampa.Modal.close();
-        } catch (e) {
-            console.log('[CB BROWSER] Close error:', e);
-        }
+            success = document.execCommand('copy');
+        } catch (e) {}
 
-        modalOpened = false;
-    }
+        area.remove();
 
-    function openBrowser(url) {
-        currentUrl = url;
+        copy.textContent = success
+            ? 'СКОПІЙОВАНО!'
+            : 'КОПІЮВАННЯ НЕ ВДАЛОСЯ';
+    };
 
-        var html = document.createElement('div');
+    var close = document.createElement('button');
+    close.textContent = 'ЗАКРИТИ';
+    close.style.cssText =
+        'padding:14px;width:100%;margin-top:10px;font-size:16px;';
 
-        html.style.cssText =
-            'width:100%;height:100%;display:flex;flex-direction:column;';
+    close.onclick = function () {
+        panel.remove();
+    };
 
-        var toolbar = document.createElement('div');
+    panel.appendChild(pre);
+    panel.appendChild(copy);
+    panel.appendChild(close);
 
-        toolbar.style.cssText =
-            'display:flex;align-items:center;gap:8px;padding:10px;' +
-            'background:#171717;flex-shrink:0;';
-
-        function makeButton(label, callback) {
-            var button = document.createElement('button');
-
-            button.textContent = label;
-            button.style.cssText =
-                'padding:10px 14px;font-size:14px;border-radius:6px;';
-
-            button.onclick = callback;
-
-            return button;
-        }
-
-        var address = document.createElement('input');
-
-        address.type = 'text';
-        address.value = currentUrl;
-        address.style.cssText =
-            'flex:1;min-width:0;padding:11px;font-size:14px;' +
-            'background:#292929;color:white;border:1px solid #555;';
-
-        address.onkeydown = function (event) {
-            if (event.key === 'Enter') {
-                navigate(address.value);
-            }
-        };
-
-        var frame = document.createElement('iframe');
-
-        frame.src = currentUrl;
-
-        frame.style.cssText =
-            'width:100%;height:100%;border:0;background:white;flex:1;';
-
-        frame.setAttribute('allow', 'fullscreen; autoplay');
-
-        function navigate(value) {
-            value = String(value || '').trim();
-
-            if (!value) return;
-
-            if (!/^https?:\/\//i.test(value)) {
-                value = 'https://' + value;
-            }
-
-            try {
-                var parsed = new URL(value);
-
-                if (parsed.protocol !== 'https:' &&
-                    parsed.protocol !== 'http:') {
-                    return;
-                }
-
-                currentUrl = parsed.href;
-                address.value = currentUrl;
-                frame.src = currentUrl;
-
-            } catch (e) {
-                console.log('[CB BROWSER] Invalid URL:', e);
-            }
-        }
-
-        toolbar.appendChild(
-            makeButton('←', function () {
-                try {
-                    frame.contentWindow.history.back();
-                } catch (e) {
-                    console.log(e);
-                }
-            })
-        );
-
-        toolbar.appendChild(address);
-
-        toolbar.appendChild(
-            makeButton('↻', function () {
-                frame.src = currentUrl;
-            })
-        );
-
-        toolbar.appendChild(
-            makeButton('×', closeBrowser)
-        );
-
-        html.appendChild(toolbar);
-        html.appendChild(frame);
-
-        Lampa.Modal.open({
-            title: 'BROWSER TEST',
-            html: html,
-            size: 'full',
-            overlay: true
-        });
-
-        modalOpened = true;
-
-        console.log('[CB BROWSER] Opened:', currentUrl);
-    }
-
-    function start() {
-        openBrowser('https://example.com/');
-    }
-
-    if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                setTimeout(start, 1500);
-            }
-        });
-    } else {
-        setTimeout(start, 3000);
-    }
+    document.body.appendChild(panel);
 
 })();
