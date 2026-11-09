@@ -2,138 +2,115 @@
 (function () {
     'use strict';
 
-    var ID = 'crowley_modal_state_105';
+    var ID = 'crowley_modal_visual_106';
 
     if (document.getElementById(ID)) return;
-
-    var report = [];
-
-    function log(s) {
-        report.push(String(s));
-        console.log('[MODAL STATE]', s);
-    }
-
-    function inspect() {
-        log('');
-        log('===== MODAL STATE =====');
-
-        try {
-            log('Modal.opened(): ' + Lampa.Modal.opened());
-        } catch (e) {
-            log('opened error: ' + e.message);
-        }
-
-        var modals = document.querySelectorAll('.modal');
-
-        log('DOM .modal count: ' + modals.length);
-
-        Array.prototype.forEach.call(modals, function (el, i) {
-            var css = window.getComputedStyle(el);
-            var rect = el.getBoundingClientRect();
-
-            log('MODAL #' + i);
-            log('class: ' + el.className);
-            log('display: ' + css.display);
-            log('visibility: ' + css.visibility);
-            log('opacity: ' + css.opacity);
-            log('z-index: ' + css.zIndex);
-            log('position: ' + css.position);
-            log('size: ' + Math.round(rect.width) + 'x' + Math.round(rect.height));
-            log('parent: ' + (el.parentElement ? el.parentElement.tagName : 'none'));
-        });
-
-        log('Controller: ' + !!Lampa.Controller);
-
-        if (Lampa.Controller) {
-            log('Controller properties: ' + Object.keys(Lampa.Controller).join(', '));
-        }
-    }
 
     var panel = document.createElement('div');
 
     panel.id = ID;
     panel.style.cssText =
-        'position:fixed;z-index:2147483647;top:3%;left:3%;width:94%;' +
-        'max-height:92%;overflow:auto;background:#17191f;color:white;' +
-        'padding:18px;box-sizing:border-box;border:2px solid #35c98b;' +
-        'font:13px Arial;border-radius:10px';
+        'position:fixed;z-index:2147483647;top:5%;left:3%;width:94%;' +
+        'max-height:90%;overflow:auto;background:#17191f;color:white;' +
+        'padding:15px;border:2px solid #35c98b;box-sizing:border-box';
 
-    var heading = document.createElement('h3');
-    heading.textContent = 'MODAL STATE PROBE 1.0.5';
-    heading.style.color = '#35c98b';
-
-    var output = document.createElement('pre');
-    output.style.whiteSpace = 'pre-wrap';
-    output.style.overflowWrap = 'anywhere';
-
-    var test = document.createElement('button');
-    test.textContent = 'ВІДКРИТИ MODAL І ПЕРЕВІРИТИ';
-    test.onclick = function () {
-        try {
-            log('Opening modal...');
-
-            var content = Lampa.Template.get('modal', {
-                title: 'STATE TEST'
-            });
-
-            content.find('.modal__body').append(
-                $('<div>').text('TEST CONTENT')
-            );
-
-            Lampa.Modal.open({
-                title: 'STATE TEST',
-                html: content.find('.modal__body').children(),
-                size: 'large'
-            });
-
-            log('Modal.open returned');
-        } catch (e) {
-            log('ERROR: ' + (e.stack || e.message || e));
-        }
-
-        inspect();
-        output.textContent = report.join('\n');
-    };
+    var result = document.createElement('pre');
+    result.style.cssText = 'white-space:pre-wrap;font-size:12px';
 
     var copy = document.createElement('button');
     copy.textContent = 'КОПІЮВАТИ ЗВІТ';
+
+    var close = document.createElement('button');
+    close.textContent = 'ЗАКРИТИ';
+
+    function add(text) {
+        result.textContent += text + '\n';
+    }
+
+    function inspect() {
+        var modal = document.querySelector('.modal');
+
+        add('MODAL EXISTS: ' + !!modal);
+
+        if (modal) {
+            var css = getComputedStyle(modal);
+            var rect = modal.getBoundingClientRect();
+
+            add('RECT: ' + JSON.stringify({
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height
+            }));
+
+            add('Z-INDEX: ' + css.zIndex);
+
+            var x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
+            var y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2));
+
+            var topElement = document.elementFromPoint(x, y);
+
+            add('ELEMENT AT MODAL CENTER: ' +
+                (topElement ? topElement.tagName + '.' + topElement.className : 'none'));
+
+            add('BODY CHILDREN: ' + document.body.children.length);
+        }
+    }
+
+    copy.style.cssText = close.style.cssText =
+        'padding:12px;margin:6px;background:#287b5a;color:white;border:0;font-size:15px';
+
     copy.onclick = function () {
         var area = document.createElement('textarea');
-        area.value = report.join('\n');
+        area.value = result.textContent;
         area.style.position = 'fixed';
         area.style.left = '-9999px';
         document.body.appendChild(area);
         area.select();
 
         var ok = false;
+
         try {
             ok = document.execCommand('copy');
         } catch (e) {}
 
-        document.body.removeChild(area);
-        copy.textContent = ok ? 'СКОПІЙОВАНО' : 'ПОМИЛКА КОПІЮВАННЯ';
+        area.remove();
+        copy.textContent = ok ? 'СКОПІЙОВАНО' : 'ПОМИЛКА';
     };
 
-    var close = document.createElement('button');
-    close.textContent = 'ЗАКРИТИ';
     close.onclick = function () {
         panel.remove();
     };
 
-    [test, copy, close].forEach(function (b) {
-        b.style.cssText = 'padding:12px;margin:5px;background:#287b5a;color:white;border:0;border-radius:5px;font-size:14px';
-    });
-
-    panel.appendChild(heading);
-    panel.appendChild(output);
-    panel.appendChild(test);
+    panel.appendChild(document.createTextNode('MODAL VISUAL PROBE 1.0.6'));
+    panel.appendChild(result);
     panel.appendChild(copy);
     panel.appendChild(close);
 
     document.body.appendChild(panel);
 
-    log('Initial state');
+    try {
+        var content = $('<div>').css({
+            background: '#d60000',
+            color: '#ffffff',
+            padding: '40px',
+            'font-size': '28px',
+            'min-height': '250px',
+            'text-align': 'center'
+        }).text('ЯСКРАВЕ ТЕСТОВЕ ВІКНО LAMPA');
+
+        Lampa.Modal.open({
+            title: 'VISUAL TEST',
+            html: content,
+            size: 'large',
+            overlay: true
+        });
+
+        add('Modal.open: OK');
+    } catch (e) {
+        add('ERROR: ' + (e.stack || e.message || e));
+    }
+
     inspect();
-    output.textContent = report.join('\n');
 
 })();
