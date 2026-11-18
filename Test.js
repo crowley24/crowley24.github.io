@@ -1,986 +1,1592 @@
-
-/*
- * Card Fusion Mobile v1.1
- * Independent mobile detail-card layout for Lampa.
- * Custom responsive card, TMDB logos and background slideshow.
- *
- * Included:
- * - Custom mobile detail-card template
- * - Portrait and landscape layouts
- * - TMDB logo selection
- * - Automatic backdrop slideshow
- * - Native Lampa action selectors
- *
- * Excluded:
- * - Cardify
- * - Uator
- * - MDB Ratings
- * - Android TV / desktop layout modifications
- */
-
 (function () {
     'use strict';
 
-    if (window.CardFusionMobileLoaded) return;
+    /*
+     * @name MOB_INTERFACE
+     * @version 4.0.0
+     * @author Crowley24
+     * @description Portrait Cinematic TMDB Backdrop Interface
+     * @platforms Lampa | Mobile
+     *
+     * 4.0.0 CHANGES:
+     * - Portrait layout up to 899px, landscape left unchanged
+     * - Full-bleed TMDB backdrop layer instead of stretched poster
+     * - Crossfade TMDB backdrop slideshow with quality and interval controls
+     * - Removed duplicate year/country above movie logo
+     * - Preserved year/country in metadata row
+     * - Minimal transparent metadata design
+     * - Removed metadata glass panel, background and border
+     * - Thin elegant metadata separators
+     * - Minimal transparent buttons
+     * - Removed button backgrounds, borders and heavy shadows
+     * - Subtle button press animation
+     * - Improved logo shadows and glow
+     * - Refined tagline typography
+     * - Improved poster gradients
+     * - Improved animations
+     * - Age rating completely hidden
+     * - No custom badges or custom ratings
+     * - Native Lampa ratings preserved
+     * - TMDB cache and async request protection
+     * - Safe slideshow timer management
+     */
 
-    if (!window.Lampa ||
-        !window.Lampa.Template ||
-        !window.Lampa.Listener ||
-        !window.jQuery) {
-        console.warn('[Card Fusion Mobile] Lampa is not ready');
-        return;
-    }
+    if (window.MOB_INTERFACE_V40_READY) return;
+    window.MOB_INTERFACE_V40_READY = true;
 
-    var Lampa = window.Lampa;
-    var $ = window.jQuery;
+    var slideshowTimer = null;
+    var detailsCache = {};
+    var currentActiveId = null;
+    var activeRenderToken = 0;
+    var started = false;
 
-    /* =========================================
-       DEVICE DETECTION
-    ========================================= */
+    var settings_list = [
+        { id: 'mobile_interface_animation', default: true },
+        { id: 'mobile_interface_ui_anim', default: true },
+        { id: 'mobile_interface_ui_anim_effect', default: 'cinematic' },
+        { id: 'mobile_interface_slideshow', default: true },
+        { id: 'mobile_interface_slideshow_time', default: '10000' },
+        { id: 'mobile_interface_slideshow_quality', default: 'w780' },
+        { id: 'mobile_interface_logo_size_v2', default: '125' },
+        { id: 'mobile_interface_logo_quality', default: 'w500' },
+        { id: 'mobile_interface_show_tagline', default: true },
+        { id: 'mobile_interface_blocks_gap', default: '8px' },
+        { id: 'mobile_interface_ratings_size', default: '0.45em' },
+        { id: 'mobile_interface_studios', default: true }
+    ];
 
-    function isMobile() {
-        var ua = navigator.userAgent || '';
+    settings_list.forEach(function (opt) {
+        if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {
+            Lampa.Storage.set(opt.id, opt.default);
+        }
+    });
 
-        var uaMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-        var platformMobile = false;
-        var touchMobile = false;
-
-        try {
-            platformMobile = !!(
-                Lampa.Platform &&
-                typeof Lampa.Platform.is === 'function' &&
-                Lampa.Platform.is('mobile')
-            );
-        } catch (e) {}
-
-        try {
-            touchMobile =
-                navigator.maxTouchPoints > 0 &&
-                Math.max(screen.width, screen.height) <= 1000;
-        } catch (e) {}
-
-        return uaMobile || platformMobile || touchMobile;
-    }
-
-    if (!isMobile()) {
-        console.log('[Card Fusion Mobile] Not a mobile device');
-        return;
-    }
-
-    window.CardFusionMobileLoaded = true;
-
-    var PREFIX = 'cfm_';
-
-    var slideTimer = null;
-    var slideToken = 0;
-    var logoToken = 0;
-    var activeCardKey = '';
-
-    var initialized = false;
-
-    /* =========================================
-       SETTINGS
-    ========================================= */
-
-    function setting(name, fallback) {
-        try {
-            var value = Lampa.Storage.get(PREFIX + name, fallback);
-
-            return value === undefined || value === null
-                ? fallback
-                : value;
-        } catch (e) {
-            return fallback;
+    function stopSlideshow() {
+        if (slideshowTimer) {
+            clearInterval(slideshowTimer);
+            slideshowTimer = null;
         }
     }
 
-    function addSettings() {
-        if (!Lampa.SettingsApi ||
-            !Lampa.SettingsApi.addComponent ||
-            !Lampa.SettingsApi.addParam) return;
+    function isImageDark(imgSrc, callback) {
+        var img = new Image();
 
-        try {
-            Lampa.SettingsApi.addComponent({
-                component: 'card_fusion_mobile',
-                name: 'Card Fusion Mobile',
-                icon:
-                    '<svg viewBox="0 0 24 24" width="24" height="24">' +
-                    '<rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>' +
-                    '<path d="M9 18h6" stroke="currentColor" stroke-width="2"/>' +
-                    '</svg>'
-            });
+        img.crossOrigin = 'Anonymous';
 
-            function addParam(name, type, def, values, title, description) {
-                var param = {
-                    name: PREFIX + name,
-                    type: type,
-                    default: def
-                };
+        img.onload = function () {
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
 
-                if (values) param.values = values;
+                canvas.width = 40;
+                canvas.height = 40;
 
-                Lampa.SettingsApi.addParam({
-                    component: 'card_fusion_mobile',
-                    param: param,
-                    field: {
-                        name: title,
-                        description: description || ''
+                ctx.drawImage(img, 0, 0, 40, 40);
+
+                var imgData = ctx.getImageData(0, 0, 40, 40);
+                var data = imgData.data;
+
+                var totalBrightness = 0;
+                var hasColor = false;
+                var count = 0;
+
+                for (var i = 0; i < data.length; i += 4) {
+                    var alpha = data[i + 3];
+
+                    if (alpha > 50) {
+                        var r = data[i];
+                        var g = data[i + 1];
+                        var b = data[i + 2];
+
+                        var brightness =
+                            (r * 299 + g * 587 + b * 114) / 1000;
+
+                        totalBrightness += brightness;
+                        count++;
+
+                        if (
+                            Math.max(r, g, b) -
+                            Math.min(r, g, b) > 30
+                        ) {
+                            hasColor = true;
+                        }
                     }
-                });
+                }
+
+                var avgBrightness = count > 0
+                    ? totalBrightness / count
+                    : 255;
+
+                callback(avgBrightness < 110 && !hasColor);
+
+            } catch (e) {
+                callback(false);
+            }
+        };
+
+        img.onerror = function () {
+            callback(false);
+        };
+
+        img.src = imgSrc;
+    }
+
+    /*
+     * DUPLICATE HEADER METADATA CLEANUP
+     */
+
+    function hideDuplicateHeaderMetadata($render) {
+        if (!$render || !$render.length) return;
+
+        var $right = $render.find('.full-start-new__right').first();
+
+        if (!$right.length) return;
+
+        var root = $right[0];
+
+        var title = $right.find('.full-start-new__title').first()[0];
+
+        if (!title) return;
+
+        var protectedSelector = [
+            '.full-start-new__title',
+            '.full-start-new__tagline',
+            '.full-start-new__buttons',
+            '.studio-header-brand',
+            '.plugin-meta-row',
+            '.full-start__rates',
+            '.full-start__button',
+            'button',
+            'a',
+            'input',
+            'img',
+            'video',
+            'svg'
+        ].join(',');
+
+        function isProtected(element) {
+            if (!element || element === root) return true;
+
+            if (element.matches && element.matches(protectedSelector)) {
+                return true;
             }
 
-            addParam(
-                'slideshow',
-                'trigger',
-                true,
-                null,
-                'Слайдшоу фонів',
-                'Автоматична зміна фонових зображень картки'
-            );
-
-            addParam(
-                'quality',
-                'select',
-                'w1280',
-                {
-                    w780: 'W780',
-                    w1280: 'W1280',
-                    original: 'Original'
-                },
-                'Якість фону'
-            );
-
-            addParam(
-                'interval',
-                'select',
-                8000,
-                {
-                    5000: '5 секунд',
-                    8000: '8 секунд',
-                    10000: '10 секунд',
-                    15000: '15 секунд'
-                },
-                'Інтервал слайдшоу'
-            );
-
-            addParam(
-                'logo',
-                'trigger',
-                true,
-                null,
-                'Логотип TMDB',
-                'Показувати графічний логотип замість текстової назви'
-            );
-
-            addParam(
-                'logo_language',
-                'select',
-                'uk',
-                {
-                    uk: 'Українська',
-                    en: 'Англійська',
-                    original: 'Оригінальна',
-                    any: 'Будь-яка доступна'
-                },
-                'Мова логотипа'
-            );
-
-        } catch (e) {
-            console.warn('[Card Fusion Mobile] Settings error:', e);
-        }
-    }
-
-    /* =========================================
-       CUSTOM TEMPLATE
-    ========================================= */
-
-    var mobileTemplate =
-
-        '<div class="full-start-new cfm-card">' +
-
-            '<div class="cfm-backdrop"></div>' +
-            '<div class="cfm-shade"></div>' +
-
-            '<div class="full-start-new__body cfm-body">' +
-
-                '<div class="full-start-new__left cfm-poster-wrap">' +
-                    '<div class="full-start-new__poster">' +
-                        '<img class="full-start-new__img full--poster" />' +
-                    '</div>' +
-                '</div>' +
-
-                '<div class="full-start-new__right cfm-content">' +
-
-                    '<div class="full-start-new__head"></div>' +
-
-                    '<div class="cfm-heading">' +
-
-                        '<div class="cfm-logo"></div>' +
-
-                        '<div class="full-start-new__title">{title}</div>' +
-
-                    '</div>' +
-
-                    '<div class="full-start-new__rate-line cfm-ratings">' +
-
-                        '<div class="full-start__rate rate--tmdb">' +
-                            '<div>{rating}</div>' +
-                            '<div class="source--name">TMDB</div>' +
-                        '</div>' +
-
-                        '<div class="full-start__rate rate--imdb hide">' +
-                            '<div></div><div>IMDB</div>' +
-                        '</div>' +
-
-                        '<div class="full-start__rate rate--kp hide">' +
-                            '<div></div><div>KP</div>' +
-                        '</div>' +
-
-                        '<div class="full-start__rate rate--cub hide">' +
-                            '<div></div><div>CUB</div>' +
-                        '</div>' +
-
-                    '</div>' +
-
-                    '<div class="full-start-new__details cfm-details"></div>' +
-
-                    '<div class="cfm-description"></div>' +
-
-                    '<div class="full-start-new__buttons cfm-actions">' +
-
-                        '<div class="full-start__button selector button--play">' +
-                            '<span>#{title_watch}</span>' +
-                        '</div>' +
-
-                        '<div class="full-start__button selector button--book">' +
-                            '<span>#{settings_input_links}</span>' +
-                        '</div>' +
-
-                        '<div class="full-start__button selector button--reaction">' +
-                            '<span>#{title_reactions}</span>' +
-                        '</div>' +
-
-                        '<div class="full-start__button selector button--subscribe hide">' +
-                            '<span>#{title_subscribe}</span>' +
-                        '</div>' +
-
-                        '<div class="full-start__button selector button--options">' +
-                            '<span>#{title_more}</span>' +
-                        '</div>' +
-
-                    '</div>' +
-
-                    '<div class="full-start-new__reactions selector">' +
-                        '<div>#{reactions_none}</div>' +
-                    '</div>' +
-
-                    '<div class="full-start-new__rate-line cfm-status">' +
-
-                        '<div class="full-start__pg hide"></div>' +
-                        '<div class="full-start__status hide"></div>' +
-
-                    '</div>' +
-
-                '</div>' +
-
-            '</div>' +
-
-            '<div class="hide buttons--container">' +
-
-                '<div class="full-start__button view--torrent hide">' +
-                    '<span>#{full_torrents}</span>' +
-                '</div>' +
-
-                '<div class="full-start__button selector view--trailer">' +
-                    '<span>Трейлери</span>' +
-                '</div>' +
-
-            '</div>' +
-
-        '</div>';
-
-    /* =========================================
-       CSS
-    ========================================= */
-
-    var styles =
-
-        '.cfm-card{' +
-            'position:relative!important;' +
-            'min-height:100vh;' +
-            'min-height:100dvh;' +
-            'overflow:hidden!important;' +
-            'background:#101116!important;' +
-            'color:#fff!important;' +
-            'isolation:isolate;' +
-            'box-sizing:border-box;' +
-        '}' +
-
-        '.cfm-card *{' +
-            'box-sizing:border-box;' +
-        '}' +
-
-        '.cfm-backdrop{' +
-            'position:absolute;' +
-            'inset:0;' +
-            'z-index:0;' +
-            'background-position:center;' +
-            'background-size:cover;' +
-            'background-repeat:no-repeat;' +
-            'opacity:.78;' +
-            'transform:scale(1.02);' +
-            'transition:opacity .5s ease;' +
-            'pointer-events:none;' +
-        '}' +
-
-        '.cfm-shade{' +
-            'position:absolute;' +
-            'inset:0;' +
-            'z-index:1;' +
-            'pointer-events:none;' +
-            'background:' +
-            'linear-gradient(0deg,rgba(8,9,13,.99) 0%,rgba(8,9,13,.84) 43%,rgba(8,9,13,.28) 100%),' +
-            'linear-gradient(90deg,rgba(8,9,13,.4),transparent 75%);' +
-        '}' +
-
-        '.cfm-body{' +
-            'position:relative!important;' +
-            'z-index:2;' +
-            'display:flex!important;' +
-            'flex-direction:column!important;' +
-            'align-items:stretch!important;' +
-            'justify-content:flex-end!important;' +
-            'box-sizing:border-box!important;' +
-            'min-height:100vh;' +
-            'min-height:100dvh;' +
-            'height:auto!important;' +
-            'padding:24px 5vw 34px!important;' +
-            'gap:18px;' +
-        '}' +
-
-        '.cfm-poster-wrap{' +
-            'display:none!important;' +
-        '}' +
-
-        '.cfm-content{' +
-            'display:flex!important;' +
-            'position:relative;' +
-            'flex-direction:column!important;' +
-            'align-items:stretch!important;' +
-            'width:100%!important;' +
-            'max-width:100%!important;' +
-            'min-width:0!important;' +
-            'gap:12px;' +
-        '}' +
-
-        '.cfm-heading{' +
-            'display:flex;' +
-            'flex-direction:column;' +
-            'align-items:flex-start;' +
-            'gap:8px;' +
-        '}' +
-
-        '.cfm-logo{' +
-            'display:none;' +
-            'max-width:88%;' +
-            'max-height:19vh;' +
-            'align-items:flex-start;' +
-            'justify-content:flex-start;' +
-        '}' +
-
-        '.cfm-logo img{' +
-            'display:block;' +
-            'max-width:100%;' +
-            'max-height:19vh;' +
-            'object-fit:contain;' +
-            'object-position:left center;' +
-        '}' +
-
-        '.cfm-card .full-start-new__title{' +
-            'display:block!important;' +
-            'font-size:clamp(25px,6vw,42px)!important;' +
-            'line-height:1.08!important;' +
-            'font-weight:800!important;' +
-            'text-shadow:0 2px 16px #000!important;' +
-            'margin:0!important;' +
-        '}' +
-
-        '.cfm-card .cfm-title-hidden{' +
-            'display:none!important;' +
-        '}' +
-
-        '.cfm-ratings,.cfm-status{' +
-            'display:flex!important;' +
-            'flex-wrap:wrap;' +
-            'gap:9px;' +
-            'align-items:center;' +
-            'margin:0!important;' +
-        '}' +
-
-        '.cfm-details{' +
-            'display:flex!important;' +
-            'flex-wrap:wrap!important;' +
-            'gap:7px 10px!important;' +
-            'max-height:none!important;' +
-            'height:auto!important;' +
-            'overflow:visible!important;' +
-            'font-size:13px!important;' +
-        '}' +
-
-        '.cfm-description{' +
-            'display:-webkit-box!important;' +
-            '-webkit-box-orient:vertical;' +
-            '-webkit-line-clamp:4;' +
-            'overflow:hidden!important;' +
-            'font-size:14px!important;' +
-            'line-height:1.45!important;' +
-            'color:rgba(255,255,255,.88)!important;' +
-            'max-width:850px;' +
-            'text-shadow:0 1px 5px #000;' +
-        '}' +
-
-        '.cfm-actions{' +
-            'display:flex!important;' +
-            'flex-wrap:wrap!important;' +
-            'gap:9px!important;' +
-            'margin-top:5px!important;' +
-        '}' +
-
-        '.cfm-actions .full-start__button{' +
-            'display:flex!important;' +
-            'align-items:center;' +
-            'justify-content:center;' +
-            'min-height:44px;' +
-            'padding:0 15px!important;' +
-            'border-radius:12px!important;' +
-            'background:rgba(255,255,255,.13)!important;' +
-            'border:1px solid rgba(255,255,255,.15)!important;' +
-            'backdrop-filter:blur(12px);' +
-            '-webkit-backdrop-filter:blur(12px);' +
-            'font-size:14px!important;' +
-        '}' +
-
-        '.cfm-actions .button--play{' +
-            'background:#fff!important;' +
-            'color:#111!important;' +
-            'font-weight:700!important;' +
-        '}' +
-
-        '.cfm-actions .hide{' +
-            'display:none!important;' +
-        '}' +
-
-        '.cfm-card .full-start-new__reactions{' +
-            'display:none!important;' +
-        '}' +
-
-        '.cfm-card .full-start-new__head{' +
-            'display:block!important;' +
-        '}' +
-
-        '.cfm-card .full-start-new__rate-line .full-start__rate{' +
-            'margin:0!important;' +
-        '}' +
-
-        '.cfm-card .full-start-new__details>div{' +
-            'margin:0!important;' +
-        '}' +
-
-        '@media (orientation:landscape) and (min-width:600px){' +
-
-            '.cfm-body{' +
-                'min-height:100vh;' +
-                'min-height:100dvh;' +
-                'display:grid!important;' +
-                'grid-template-columns:minmax(120px,25vw) minmax(0,1fr);' +
-                'align-items:end!important;' +
-                'gap:4vw;' +
-                'padding:5vh 5vw!important;' +
-            '}' +
-
-            '.cfm-poster-wrap{' +
-                'display:block!important;' +
-                'align-self:end;' +
-                'max-width:25vw;' +
-            '}' +
-
-            '.cfm-poster-wrap .full-start-new__poster{' +
-                'width:100%;' +
-                'max-width:25vw;' +
-                'border-radius:14px;' +
-                'overflow:hidden;' +
-                'box-shadow:0 12px 40px rgba(0,0,0,.5);' +
-            '}' +
-
-            '.cfm-poster-wrap .full-start-new__img{' +
-                'display:block;' +
-                'width:100%;' +
-                'height:auto;' +
-                'object-fit:cover;' +
-            '}' +
-
-            '.cfm-content{' +
-                'max-width:900px!important;' +
-                'gap:14px;' +
-            '}' +
-
-            '.cfm-card .full-start-new__title{' +
-                'font-size:clamp(28px,4vw,54px)!important;' +
-            '}' +
-
-            '.cfm-description{' +
-                '-webkit-line-clamp:5;' +
-            '}' +
-
-        '}' +
-
-        '@media (orientation:portrait){' +
-
-            '.cfm-body{' +
-                'padding-top:16vh!important;' +
-            '}' +
-
-            '.cfm-card .full-start-new__title{' +
-                'font-size:clamp(24px,7vw,36px)!important;' +
-            '}' +
-
-            '.cfm-description{' +
-                '-webkit-line-clamp:4;' +
-            '}' +
-
-        '}' +
-
-        '@media (max-width:380px){' +
-
-            '.cfm-body{' +
-                'padding-left:4vw!important;' +
-                'padding-right:4vw!important;' +
-            '}' +
-
-            '.cfm-actions .full-start__button{' +
-                'min-height:40px;' +
-                'padding:0 11px!important;' +
-                'font-size:12px!important;' +
-            '}' +
-
-            '.cfm-description{' +
-                '-webkit-line-clamp:3;' +
-            '}' +
-
-        '}';
-
-    function installStyles() {
-        if (document.getElementById('card-fusion-mobile-style')) return;
-
-        var style = document.createElement('style');
-
-        style.id = 'card-fusion-mobile-style';
-        style.type = 'text/css';
-        style.textContent = styles;
-
-        document.head.appendChild(style);
-    }
-
-    /* =========================================
-       TEMPLATE REGISTRATION
-    ========================================= */
-
-    function registerTemplate() {
-        try {
-            Lampa.Template.add('full_start_new', mobileTemplate);
-
-            console.log('[Card Fusion Mobile] Template registered');
-
-            return true;
-        } catch (e) {
-            console.error('[Card Fusion Mobile] Template error:', e);
+            if (element.querySelector && element.querySelector(protectedSelector)) {
+                return true;
+            }
 
             return false;
         }
-    }
 
-    /* =========================================
-       HELPERS
-    ========================================= */
+        function isYearCountryLine(element) {
+            if (!element) return false;
 
-    function imageUrl(path, quality) {
-        if (!path || !Lampa.TMDB || !Lampa.TMDB.image) return '';
+            var text = String(element.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim();
 
-        try {
-            return Lampa.TMDB.image('t/p/' + quality + path);
-        } catch (e) {
-            return '';
-        }
-    }
+            if (!text || text.length > 90) return false;
 
-    function getMovie(event) {
-        return (event.data && (event.data.movie || event.data.tv)) ||
-            (event.object && event.object.card) ||
-            {};
-    }
+            var yearMatch = text.match(/\b(?:19|20)\d{2}\b/);
 
-    function getMediaType(event, movie) {
-        if (event && event.data && event.data.tv && !event.data.movie) {
-            return 'tv';
+            if (!yearMatch) return false;
+
+            var remaining = text
+                .replace(/\b(?:19|20)\d{2}\b/g, '')
+                .replace(/[•·|,;:\/\-–—()[\]]/g, '')
+                .replace(/\s+/g, '')
+                .trim();
+
+            return /[\p{L}]/u.test(remaining);
         }
 
-        if (event && event.object &&
-            event.object.method === 'tv') {
-            return 'tv';
-        }
+        var candidates = [];
+        var elements = root.querySelectorAll('*');
 
-        if (movie && (movie.name || movie.first_air_date) && !movie.title) {
-            return 'tv';
-        }
+        for (var i = 0; i < elements.length; i++) {
+            var element = elements[i];
 
-        return 'movie';
-    }
-
-    function getRender(event) {
-        try {
-            if (event &&
-                event.object &&
-                event.object.activity &&
-                typeof event.object.activity.render === 'function') {
-
-                var render = event.object.activity.render();
-
-                if (render && render.jquery) return render;
-
-                return $(render);
+            if (
+                element.classList.contains('mi312-header-meta-hidden') ||
+                isProtected(element)
+            ) {
+                continue;
             }
-        } catch (e) {
-            console.warn('[Card Fusion Mobile] Render error:', e);
+
+            if (!isYearCountryLine(element)) continue;
+
+            var position = element.compareDocumentPosition(title);
+
+            var beforeTitle = !!(position & 4);
+
+            if (!beforeTitle) continue;
+
+            candidates.push(element);
+        }
+                candidates.forEach(function (element) {
+            if (!element.parentElement) return;
+
+            var target = element;
+            var current = element;
+
+            for (var depth = 0; depth < 3; depth++) {
+                var parent = current.parentElement;
+
+                if (!parent || parent === root) break;
+
+                if (isProtected(parent)) break;
+
+                var parentText = String(parent.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                var childText = String(target.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (parentText !== childText) break;
+
+                target = parent;
+                current = parent;
+            }
+
+            if (
+                target &&
+                target !== root &&
+                !isProtected(target)
+            ) {
+                target.classList.add('mi312-header-meta-hidden');
+            }
+        });
+    }
+
+    /*
+     * STYLES
+     */
+
+    function applyStyles() {
+        var style = document.getElementById('mobile-interface-styles');
+
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'mobile-interface-styles';
+            document.head.appendChild(style);
         }
 
-        return $();
-    }
+        var isPosterAnim = Lampa.Storage.get(
+            'mobile_interface_animation'
+        );
 
-    /* =========================================
-       BACKGROUND IMAGE
-    ========================================= */
+        var isUIAnim = Lampa.Storage.get(
+            'mobile_interface_ui_anim'
+        );
 
-    function setBackdrop($render, url) {
-        if (!url || !$render || !$render.length) return;
+        var animEffect = Lampa.Storage.get(
+            'mobile_interface_ui_anim_effect',
+            'cinematic'
+        );
 
-        var $layer = $render.find('.cfm-backdrop').first();
+        var lHeight = Lampa.Storage.get(
+            'mobile_interface_logo_size_v2',
+            '125'
+        );
 
-        if (!$layer.length) return;
+        var showTagline = Lampa.Storage.get(
+            'mobile_interface_show_tagline'
+        );
 
-        var image = new Image();
+        var blocksGap = Lampa.Storage.get(
+            'mobile_interface_blocks_gap',
+            '8px'
+        );
 
-        image.onload = function () {
-            if (!$render[0] || !document.body.contains($render[0])) return;
+        var rSize = Lampa.Storage.get(
+            'mobile_interface_ratings_size',
+            '0.45em'
+        );
 
-            $layer.css({
-                backgroundImage: 'url("' + url.replace(/"/g, '') + '")',
-                opacity: '.78'
-            });
-        };
+        var animNames = [
+            'fluid',
+            'cyber',
+            'cinematic',
+            'elastic',
+            'minimal'
+        ];
 
-        image.onerror = function () {
-            console.warn('[Card Fusion Mobile] Backdrop load failed');
-        };
-
-        image.src = url;
-    }
-
-    /* =========================================
-       SLIDESHOW
-    ========================================= */
-
-    function stopSlideshow() {
-        slideToken++;
-
-        if (slideTimer) {
-            clearInterval(slideTimer);
+        if (animNames.indexOf(animEffect) === -1) {
+            animEffect = 'cinematic';
         }
 
-        slideTimer = null;
+        var animTiming = animEffect === 'elastic'
+            ? 'cubic-bezier(0.34,1.56,0.64,1)'
+            : 'cubic-bezier(0.16,1,0.3,1)';
+
+        var enter = isUIAnim
+            ? 'animation:anim_' + animEffect +
+              ' .8s ' + animTiming + ' both;'
+            : '';
+
+        var css = '';
+
+        /*
+         * ANIMATIONS
+         */
+
+        css += '@keyframes kenBurnsEffect{';
+        css += '0%{transform:scale(1)}';
+        css += '50%{transform:scale(1.075)}';
+        css += '100%{transform:scale(1)}';
+        css += '}';
+
+        css += '@keyframes anim_fluid{';
+        css += '0%{opacity:0;transform:translate3d(0,22px,0) scale(.97);filter:blur(7px)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
+        css += '}';
+
+        css += '@keyframes anim_cyber{';
+        css += '0%{opacity:0;transform:translate3d(-24px,0,0);filter:brightness(1.4)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0);filter:brightness(1)}';
+        css += '}';
+
+        css += '@keyframes anim_cinematic{';
+        css += '0%{opacity:0;transform:translate3d(0,18px,0) scale(1.025);filter:blur(6px)}';
+        css += '100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}';
+        css += '}';
+
+        css += '@keyframes anim_elastic{';
+        css += '0%{opacity:0;transform:scale(.88)}';
+        css += '75%{opacity:1;transform:scale(1.025)}';
+        css += '100%{opacity:1;transform:scale(1)}';
+        css += '}';
+
+        css += '@keyframes anim_minimal{';
+        css += '0%{opacity:0;transform:translateY(9px)}';
+        css += '100%{opacity:1;transform:translateY(0)}';
+        css += '}';
+
+        css += '@keyframes poster_fade_in{';
+        css += '0%{opacity:0;transform:scale(1.025)}';
+        css += '100%{opacity:1;transform:scale(1)}';
+        css += '}';
+
+        css += '@keyframes premium_glow{';
+        css += '0%,100%{filter:drop-shadow(0 4px 16px rgba(0,0,0,.85))}';
+        css += '50%{filter:drop-shadow(0 5px 23px rgba(255,255,255,.13))}';
+        css += '}';
+
+        css += '@media screen and (max-width:899px) and (orientation:portrait){';
+
+        /*
+         * MAIN CARD
+         */
+
+        css += '.full-start-new{';
+        css += 'position:relative!important;';
+        css += 'isolation:isolate;';
+        css += 'background:transparent!important;';
+        css += '}';
+
+        css += '.full-start-new{';
+        css += 'display:block!important;';
+        css += 'width:100%!important;';
+        css += 'min-height:100vh!important;';
+        css += 'min-height:100svh!important;';
+        css += 'overflow:visible!important;';
+        css += 'box-sizing:border-box!important;';
+        css += '}';
+        css += '.full-start-new .full-start-new__left{';
+        css += 'display:none!important;';
+        css += '}';
+        css += '.full-start-new .mi40-backdrop{';
+        css += 'position:absolute!important;';
+        css += 'top:0!important;left:0!important;right:0!important;';
+        css += 'height:68vh!important;height:68svh!important;';
+        css += 'min-height:430px!important;';
+        css += 'overflow:hidden!important;';
+        css += 'z-index:0!important;';
+        css += 'pointer-events:none!important;';
+        css += 'background:#050608!important;';
+        css += '}';
+        css += '.full-start-new .mi40-backdrop img{';
+        css += 'position:absolute!important;inset:0!important;';
+        css += 'width:100%!important;height:100%!important;';
+        css += 'object-fit:cover!important;object-position:center 25%!important;';
+        css += 'opacity:0;transition:opacity 1.4s ease-in-out!important;';
+        css += 'filter:saturate(1.06) contrast(1.04)!important;';
+        css += 'transform:scale(1.025);';
+        css += '}';
+        css += '.full-start-new .mi40-backdrop img.is-active{opacity:1!important;}';
+        css += '.full-start-new .mi40-backdrop:after{';
+        css += 'content:"";position:absolute;inset:0;z-index:2;';
+        css += 'background:linear-gradient(180deg,rgba(5,6,8,.10) 0%,rgba(5,6,8,.05) 35%,rgba(5,6,8,.52) 65%,#050608 100%);';
+        css += '}';
+        css += '.full-start-new .full-start-new__poster{display:none!important;}';
+
+        css += '.full-start-new .full-start__reactions,';
+        css += '.full-start-new [class*="reactions"]{';
+        css += 'display:none!important;';
+        css += '}';
+
+        /*
+         * DUPLICATE METADATA
+         */
+
+        css += '.full-start-new .mi312-header-meta-hidden{';
+        css += 'display:none!important;';
+        css += 'visibility:hidden!important;';
+        css += 'height:0!important;';
+        css += 'min-height:0!important;';
+        css += 'margin:0!important;';
+                css += 'padding:0!important;';
+        css += 'overflow:hidden!important;';
+        css += '}';
+
+        /*
+         * AGE RATING
+         */
+
+        css += '.full-start-new .full-start__age,';
+        css += '.full-start-new .full-start-new__age,';
+        css += '.full-start-new [class*="age"],';
+        css += '.full-start-new [class*="pg"]{';
+        css += 'display:none!important;';
+        css += 'visibility:hidden!important;';
+        css += '}';
+
+        css += '.full-start-new .full-start__status,';
+        css += '.full-start-new .full-start-new__status{';
+        css += 'display:none!important;';
+        css += '}';
+
+        css += '.full-start-new .full-start-new__details,';
+        css += '.full-start-new .full-start__info{';
+        css += 'display:none!important;';
+        css += '}';
+
+        /*
+         * CINEMATIC POSTER
+         */
+
+        css += '.full-start-new .full-start-new__poster{';
+        css += 'position:relative!important;';
+        css += 'overflow:hidden!important;';
+        css += 'background:#050608;';
+        css += 'z-index:1;';
+        css += 'height:62vh!important;';
+        css += 'min-height:390px;';
+
+        if (isUIAnim) {
+            css += 'animation:poster_fade_in .9s cubic-bezier(.16,1,.3,1) both;';
+        }
+
+        css += '}';
+
+        css += '.full-start-new .full-start-new__poster:after{';
+        css += 'content:"";';
+        css += 'position:absolute;';
+        css += 'inset:15% 0 0;';
+        css += 'pointer-events:none;';
+        css += 'z-index:2;';
+        css += 'background:linear-gradient(';
+        css += '180deg,';
+        css += 'rgba(5,7,11,0) 0%,';
+        css += 'rgba(5,7,11,.12) 22%,';
+        css += 'rgba(5,7,11,.38) 48%,';
+        css += 'rgba(5,7,11,.82) 78%,';
+        css += '#050608 100%';
+        css += ');';
+        css += '}';
+
+        css += '.full-start-new .full-start-new__poster img{';
+        css += 'position:absolute;';
+        css += 'inset:0;';
+        css += 'width:100%;';
+        css += 'height:100%;';
+        css += 'object-fit:cover;';
+        css += 'filter:saturate(1.06) contrast(1.045)!important;';
+        css += 'transform-origin:center center!important;';
+        css += 'transition:opacity 1.35s ease-in-out!important;';
+
+        if (isPosterAnim) {
+            css += 'animation:kenBurnsEffect 28s ease-in-out infinite!important;';
+        }
+
+        css += 'mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
+        css += '-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 64%,transparent 100%)!important;';
+        css += '}';
+
+        /*
+         * MAIN CONTENT
+         */
+
+        css += '.full-start-new .full-start-new__right{';
+        css += 'position:relative!important;';
+        css += 'z-index:3!important;';
+        css += 'display:flex!important;';
+        css += 'flex-direction:column!important;';
+        css += 'align-items:center!important;';
+        css += 'gap:' + blocksGap + '!important;';
+        css += 'padding:36vh 14px 30px!important;';
+        css += 'padding-top:36svh!important;';
+        css += 'margin-top:0!important;';
+        css += 'width:100%!important;';
+        css += 'box-sizing:border-box!important;';
+        css += 'background:none!important;';
+        css += '}';
+
+        /*
+         * STUDIO LOGO
+         */
+
+        css += '.full-start-new .studio-header-brand{';
+        css += enter;
+        css += 'animation-delay:.04s;';
+        css += 'order:1;';
+        css += 'width:100%;';
+        css += 'display:flex;';
+        css += 'justify-content:center;';
+        css += 'align-items:center;';
+        css += 'margin:0 0 2px!important;';
+        css += 'min-height:20px;';
+        css += '}';
+
+        css += '.full-start-new .studio-header-brand img{';
+        css += 'height:20px!important;';
+        css += 'width:auto;';
+        css += 'max-width:120px;';
+        css += 'object-fit:contain;';
+        css += 'opacity:.94;';
+        css += 'filter:drop-shadow(0 2px 8px rgba(0,0,0,.95));';
+        css += 'transition:opacity .3s ease,filter .3s ease;';
+        css += '}';
+
+        css += '.full-start-new .studio-header-brand img.is-dark-logo{';
+        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,.8))!important;';
+        css += '}';
+
+        /*
+         * MOVIE LOGO
+         */
+
+        css += '.full-start-new .full-start-new__title{';
+        css += enter;
+        css += 'animation-delay:.1s;';
+        css += 'order:2;';
+        css += 'width:100%!important;';
+        css += 'min-height:60px;';
+        css += 'display:flex!important;';
+        css += 'justify-content:center!important;';
+        css += 'align-items:center!important;';
+        css += 'margin:0!important;';
+        css += 'overflow:visible!important;';
+        css += '}';
+
+        css += '.full-start-new .full-start-new__title img{';
+        css += 'display:block;';
+        css += 'height:auto!important;';
+        css += 'max-height:' + lHeight + 'px!important;';
+        css += 'width:auto!important;';
+        css += 'max-width:90vw!important;';
+        css += 'object-fit:contain!important;';
+        css += 'filter:drop-shadow(0 5px 18px rgba(0,0,0,.95)) drop-shadow(0 0 12px rgba(255,255,255,.08));';
+        css += 'margin:0!important;';
+        css += 'transition:filter .4s ease,transform .4s ease;';
+        css += '}';
+
+        /*
+         * TAGLINE
+         */
+
+        css += '.full-start-new .full-start-new__tagline{';
+        css += enter;
+        css += 'animation-delay:.17s;';
+        css += 'order:3;';
+        css += 'display:' + (showTagline ? 'block' : 'none') + '!important;';
+        css += 'max-width:90%;';
+        css += 'margin:1px 0 2px!important;';
+        css += 'text-align:center!important;';
+        css += 'font-family:Georgia,serif!important;';
+        css += 'font-size:.91em!important;';
+        css += 'line-height:1.5!important;';
+        css += 'font-style:italic!important;';
+        css += 'font-weight:400!important;';
+        css += 'letter-spacing:.025em;';
+        css += 'color:rgba(255,255,255,.82)!important;';
+        css += 'text-shadow:0 2px 12px rgba(0,0,0,.95);';
+        css += '}';
+
+        /*
+         * MINIMAL TRANSPARENT METADATA
+         */
+
+        css += '.full-start-new .plugin-meta-row{';
+        css += enter;
+        css += 'animation-delay:.23s;';
+        css += 'order:4;';
+        css += 'width:100%;';
+        css += 'max-width:100%;';
+        css += 'display:flex;';
+        css += 'justify-content:center;';
+        css += 'align-items:center;';
+        css += 'flex-wrap:wrap;';
+        css += 'gap:7px 9px;';
+        css += 'margin:4px 0 0!important;';
+        css += 'padding:3px 0;';
+        css += 'box-sizing:border-box;';
+        css += 'border:none!important;';
+        css += 'border-radius:0!important;';
+        css += 'background:transparent!important;';
+        css += 'box-shadow:none!important;';
+        css += 'backdrop-filter:none!important;';
+        css += '-webkit-backdrop-filter:none!important;';
+        css += 'font-family:Inter,-apple-system,system-ui,sans-serif;';
+        css += 'font-size:calc(' + rSize + ' * 2.25);';
+        css += 'line-height:1.5;';
+        css += 'color:rgba(255,255,255,.91);';
+        css += 'text-shadow:0 1px 5px rgba(0,0,0,.9);';
+        css += '}';
+                css += '.full-start-new .plugin-meta-row .info-separator{';
+        css += 'display:inline-block;';
+        css += 'width:1px;';
+        css += 'height:11px;';
+        css += 'min-width:1px;';
+        css += 'font-size:0;';
+        css += 'line-height:0;';
+        css += 'color:transparent;';
+        css += 'background:rgba(255,255,255,.38);';
+        css += 'margin:0 1px;';
+        css += 'opacity:.8;';
+        css += 'vertical-align:middle;';
+        css += '}';
+
+        /*
+         * NATIVE LAMPA RATINGS
+         */
+
+        css += '.full-start-new .plugin-meta-row .full-start__rates{';
+        css += 'display:inline-flex!important;';
+        css += 'align-items:center;';
+        css += 'justify-content:center;';
+        css += 'flex-wrap:wrap;';
+        css += 'gap:9px;';
+        css += 'margin:0!important;';
+        css += 'padding:0!important;';
+        css += 'background:none!important;';
+        css += '}';
+
+        css += '.full-start-new .plugin-meta-row .rate--tmdb,';
+        css += '.full-start-new .plugin-meta-row .rate--imdb,';
+        css += '.full-start-new .plugin-meta-row .rate--kp{';
+        css += 'display:inline-flex!important;';
+        css += 'align-items:center;';
+        css += 'margin:0!important;';
+        css += 'padding:0!important;';
+        css += 'font-size:.9em!important;';
+        css += 'white-space:nowrap!important;';
+        css += '}';
+
+        /*
+         * MINIMAL BUTTON CONTAINER
+         */
+
+        css += '.full-start-new .full-start-new__buttons{';
+        css += enter;
+        css += 'animation-delay:.31s;';
+        css += 'order:6;';
+        css += 'display:flex!important;';
+        css += 'justify-content:space-around!important;';
+        css += 'align-items:center!important;';
+        css += 'gap:7px;';
+        css += 'width:100%!important;';
+        css += 'max-width:100%!important;';
+        css += 'padding:3px 0 0!important;';
+        css += 'box-sizing:border-box!important;';
+        css += 'margin:7px 0 0!important;';
+        css += 'background:transparent!important;';
+        css += 'border:none!important;';
+        css += 'box-shadow:none!important;';
+        css += '}';
+
+        /*
+         * TRANSPARENT BUTTONS
+         */
+
+        css += '.full-start-new .full-start__button{';
+        css += 'position:relative;';
+        css += 'overflow:hidden;';
+        css += 'background:transparent!important;';
+        css += 'border:1px solid transparent!important;';
+        css += 'border-radius:12px!important;';
+        css += 'box-shadow:none!important;';
+        css += 'display:flex!important;';
+        css += 'flex-direction:column!important;';
+        css += 'align-items:center!important;';
+        css += 'justify-content:center!important;';
+        css += 'flex:1 1 0!important;';
+        css += 'min-width:0!important;';
+        css += 'min-height:54px;';
+        css += 'padding:8px 2px!important;';
+        css += 'transition:transform .22s cubic-bezier(.16,1,.3,1),background .22s ease,color .22s ease,opacity .22s ease;';
+        css += 'opacity:.9;';
+        css += '}';
+
+        /*
+         * REMOVE BUTTON DECORATIVE GLASS
+         */
+
+        css += '.full-start-new .full-start__button:before{';
+        css += 'display:none!important;';
+        css += 'content:none!important;';
+        css += '}';
+
+        /*
+         * SUBTLE PRESS EFFECT
+         */
+
+        css += '.full-start-new .full-start__button:active{';
+        css += 'transform:scale(.94);';
+        css += 'background:rgba(255,255,255,.075)!important;';
+        css += 'border-color:transparent!important;';
+        css += 'box-shadow:none!important;';
+        css += 'opacity:1;';
+        css += '}';
+
+        /*
+         * BUTTON ICONS
+         */
+
+        css += '.full-start-new .full-start__button svg,';
+        css += '.full-start-new .full-start__button img{';
+        css += 'position:relative;';
+        css += 'z-index:1;';
+        css += 'width:22px!important;';
+        css += 'height:22px!important;';
+        css += 'margin:0 0 5px!important;';
+        css += 'fill:#fff!important;';
+        css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));';
+        css += 'transition:transform .22s ease,filter .22s ease;';
+        css += '}';
+
+        /*
+         * BUTTON LABELS
+         */
+
+        css += '.full-start-new .full-start__button span{';
+        css += 'position:relative;';
+        css += 'z-index:1;';
+        css += 'font-size:8px!important;';
+        css += 'line-height:1.2!important;';
+        css += 'text-transform:uppercase!important;';
+        css += 'opacity:.8!important;';
+        css += 'font-weight:650;';
+        css += 'letter-spacing:.065em;';
+        css += 'text-shadow:0 1px 5px rgba(0,0,0,.8);';
+        css += 'transition:opacity .22s ease;';
+        css += '}';
+
+        css += '.full-start-new .full-start__button:active svg,';
+        css += '.full-start-new .full-start__button:active img{';
+        css += 'transform:scale(.92);';
+        css += '}';
+
+        css += '.full-start-new .full-start__button:active span{';
+        css += 'opacity:1!important;';
+        css += '}';
+
+        css += '}';
+
+        /*
+         * REDUCED MOTION
+         */
+
+        css += '@media (prefers-reduced-motion:reduce){';
+        css += '.full-start-new *{';
+        css += 'animation-duration:.01ms!important;';
+        css += 'animation-iteration-count:1!important;';
+        css += 'transition-duration:.01ms!important;';
+        css += '}';
+        css += '}';
+
+        style.textContent = css;
     }
 
-    function startSlideshow(movie, type, $render) {
-        stopSlideshow();
+    /*
+     * TIME FORMAT
+     */
 
-        var token = slideToken;
+    function formatTime(mins) {
+        if (!mins) return '';
 
-        if (!setting('slideshow', true) ||
-            !movie ||
-            !movie.id ||
-            !Lampa.Api ||
-            !Lampa.Api.sources ||
-            !Lampa.Api.sources.tmdb) return;
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
 
-        var include = 'uk,en,null,xx';
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
 
-        try {
-            Lampa.Api.sources.tmdb.get(
-                type + '/' + movie.id + '/images?include_image_language=' + include,
-                {},
-                function (data) {
-                    if (token !== slideToken ||
-                        !$render[0] ||
-                        !document.body.contains($render[0]) ||
-                        !data ||
-                        !Array.isArray(data.backdrops)) return;
+    /*
+     * METADATA ROW
+     */
 
-                    var backdrops = data.backdrops.slice();
+    function renderMeta(container, e) {
+        container.find('.plugin-meta-row').remove();
 
-                    backdrops.sort(function (a, b) {
-                        var aa = a.iso_639_1 ? 1 : 0;
-                        var bb = b.iso_639_1 ? 1 : 0;
+        var movie = e.data.movie || {};
+        var $metaRow = $('<div class="plugin-meta-row"></div>');
 
-                        return aa - bb ||
-                            (b.vote_average || 0) - (a.vote_average || 0);
-                    });
+        function addText(value) {
+            if (
+                value === undefined ||
+                value === null ||
+                value === ''
+            ) {
+                return;
+            }
 
-                    backdrops = backdrops.filter(function (item) {
-                        return item && item.file_path;
-                    }).slice(0, 15);
+            if ($metaRow.children().length) {
+                $metaRow.append(
+                    '<span class="info-separator">•</span>'
+                );
+            }
 
-                    if (!backdrops.length) return;
+            $('<div class="info-text-item"></div>')
+                .text(String(value))
+                .appendTo($metaRow);
+        }
 
-                    var quality = setting('quality', 'w1280');
-                    var index = 0;
+        /*
+         * YEAR
+         */
 
-                    setBackdrop(
-                        $render,
-                        imageUrl(backdrops[0].file_path, quality)
-                    );
+        var date = movie.release_date ||
+            movie.first_air_date ||
+            '';
 
-                    if (backdrops.length < 2) return;
+        addText(date ? date.substring(0, 4) : '');
+                /*
+         * COUNTRY
+         */
 
-                    var interval = parseInt(setting('interval', 8000), 10);
+        var country = '';
 
-                    if (!interval || interval < 1000) interval = 8000;
+        if (
+            movie.production_countries &&
+            movie.production_countries.length
+        ) {
+            country =
+                movie.production_countries[0].name ||
+                movie.production_countries[0].iso_3166_1 ||
+                '';
+        } else if (
+            movie.origin_country &&
+            movie.origin_country.length
+        ) {
+            country = movie.origin_country[0];
+        }
 
-                    slideTimer = setInterval(function () {
-                        if (token !== slideToken ||
-                            !$render[0] ||
-                            !document.body.contains($render[0])) {
+        addText(country);
 
-                            stopSlideshow();
-                            return;
-                        }
+        /*
+         * RUNTIME
+         */
 
-                        index = (index + 1) % backdrops.length;
+        var runtime = movie.runtime || (
+            movie.episode_run_time &&
+            movie.episode_run_time.length
+                ? movie.episode_run_time[0]
+                : 0
+        );
 
-                        setBackdrop(
-                            $render,
-                            imageUrl(backdrops[index].file_path, quality)
-                        );
+        if (runtime) {
+            addText(formatTime(runtime));
+        }
 
-                    }, interval);
-                }
+        /*
+         * GENRES
+         */
+
+        if (movie.genres && movie.genres.length) {
+            addText(
+                movie.genres
+                    .slice(0, 2)
+                    .map(function (g) {
+                        return g.name || '';
+                    })
+                    .filter(Boolean)
+                    .join(', ')
             );
-        } catch (e) {
-            console.warn('[Card Fusion Mobile] Slideshow error:', e);
         }
+
+        /*
+         * NATIVE LAMPA RATINGS
+         */
+
+        var $card = container.closest('.full-start-new');
+        var $nativeRates = $card.find('.full-start__rates').first();
+
+        if (!$nativeRates.length) {
+            var $rates = $card.find(
+                '.rate--tmdb, .rate--imdb, .rate--kp'
+            );
+
+            if ($rates.length) {
+                $nativeRates = $(
+                    '<div class="full-start__rates"></div>'
+                );
+
+                $rates.each(function () {
+                    $nativeRates.append(this);
+                });
+            }
+        }
+
+        if ($nativeRates.length) {
+            if ($metaRow.children().length) {
+                $metaRow.append(
+                    '<span class="info-separator">•</span>'
+                );
+            }
+
+            $nativeRates.appendTo($metaRow);
+        }
+
+        container.append($metaRow);
     }
 
-    /* =========================================
-       TMDB LOGOS
-    ========================================= */
+    /*
+     * TMDB DETAILS
+     */
 
-    function loadLogo(movie, type, $render) {
-        var token = ++logoToken;
+    function applyMovieDetailsData(
+        data,
+        movie,
+        $render,
+        renderToken
+    ) {
+        if (
+            renderToken !== activeRenderToken ||
+            !$render[0] ||
+            !document.body.contains($render[0])
+        ) {
+            return;
+        }
 
-        var $title = $render.find('.full-start-new__title').first();
-        var $logo = $render.find('.cfm-logo').first();
+        /*
+         * MOVIE LOGO
+         */
 
-        if (!$title.length || !$logo.length) return;
+        if (
+            data.images &&
+            data.images.logos &&
+            data.images.logos.length > 0
+        ) {
+            var lang = Lampa.Storage.get('language') || 'uk';
 
-        $logo.empty().hide();
-        $title.removeClass('cfm-title-hidden');
+            var logo = data.images.logos.filter(function (l) {
+                return l.iso_639_1 === lang;
+            })[0] || data.images.logos.filter(function (l) {
+                return l.iso_639_1 === 'en';
+            })[0] || data.images.logos[0];
 
-        if (!setting('logo', true) ||
-            !movie ||
-            !movie.id ||
-            !Lampa.Api ||
-            !Lampa.Api.sources ||
-            !Lampa.Api.sources.tmdb) return;
+            if (logo) {
+                var logoUrl = Lampa.TMDB.image(
+                    '/t/p/' +
+                    Lampa.Storage.get(
+                        'mobile_interface_logo_quality',
+                        'w500'
+                    ) +
+                    logo.file_path.replace('.svg', '.png')
+                );
 
-        var lang = setting('logo_language', 'uk');
+                $render.find('.full-start-new__title')
+                    .html(
+                        $('<img>')
+                            .attr('src', logoUrl)
+                            .attr('alt', movie.title || movie.name || '')
+                    );
+            }
+        }
 
-        var languages = lang === 'any'
-            ? 'uk,en,null'
-            : lang === 'original'
-                ? 'null,en,uk'
-                : lang + ',null,en';
+        /*
+         * STUDIO LOGO
+         */
 
-        try {
-            Lampa.Api.sources.tmdb.get(
-                type + '/' + movie.id + '/images?include_image_language=' + languages,
-                {},
-                function (data) {
-                    if (token !== logoToken ||
+        if (Lampa.Storage.get('mobile_interface_studios')) {
+            $render.find('.studio-header-brand').remove();
+
+            var studio = null;
+
+            if (data.networks && data.networks.length > 0) {
+                studio = data.networks.find(function (n) {
+                    return n.logo_path;
+                });
+            }
+
+            if (
+                !studio &&
+                data.production_companies &&
+                data.production_companies.length > 0
+            ) {
+                studio = data.production_companies.find(
+                    function (c) {
+                        return c.logo_path;
+                    }
+                );
+            }
+
+            if (studio && studio.logo_path) {
+                var studioLogoUrl = Lampa.TMDB.image(
+                    '/t/p/w200' + studio.logo_path
+                );
+
+                var $brand = $(
+                    '<div class="studio-header-brand">' +
+                    '<img src="' + studioLogoUrl +
+                    '" alt="' + (studio.name || '') +
+                    '">' +
+                    '</div>'
+                );
+
+                var $img = $brand.find('img');
+
+                $img.on('error', function () {
+                    $brand.remove();
+                });
+
+                isImageDark(studioLogoUrl, function (isDark) {
+                    if (
+                        renderToken !== activeRenderToken ||
                         !$render[0] ||
-                        !document.body.contains($render[0]) ||
-                        !data ||
-                        !Array.isArray(data.logos)) return;
-
-                    var logos = data.logos.filter(function (logo) {
-                        return logo && logo.file_path;
-                    });
-
-                    function rank(logo) {
-                        if (lang === 'any') {
-                            return logo.iso_639_1 === 'uk' ? 0 :
-                                logo.iso_639_1 === 'en' ? 1 : 2;
-                        }
-
-                        if (lang === 'original') {
-                            return !logo.iso_639_1 ? 0 :
-                                logo.iso_639_1 === 'en' ? 1 : 2;
-                        }
-
-                        return logo.iso_639_1 === lang ? 0 :
-                            !logo.iso_639_1 ? 1 :
-                            logo.iso_639_1 === 'en' ? 2 : 3;
+                        !document.body.contains($render[0])
+                    ) {
+                        return;
                     }
 
-                    logos.sort(function (a, b) {
-                        return rank(a) - rank(b) ||
-                            (b.vote_average || 0) - (a.vote_average || 0);
-                    });
+                    if (isDark) {
+                        $img.addClass('is-dark-logo');
+                    }
+                });
 
-                    if (!logos.length) return;
+                $render.find('.full-start-new__title')
+                    .before($brand);
+            }
+        }
+                /*
+         * BACKDROPS
+         */
 
-                    var url = imageUrl(logos[0].file_path, 'w500');
-
-                    if (!url) return;
-
-                    var img = new Image();
-
-                    img.onload = function () {
-                        if (token !== logoToken ||
-                            !$render[0] ||
-                            !document.body.contains($render[0])) return;
-
-                        $logo.empty().append(img).css('display', 'flex');
-
-                        $title.addClass('cfm-title-hidden');
-                    };
-
-                    img.onerror = function () {
-                        if (token === logoToken) {
-                            $logo.empty().hide();
-                            $title.removeClass('cfm-title-hidden');
-                        }
-                    };
-
-                    img.alt = '';
-                    img.src = url;
+        if (data.images && data.images.backdrops) {
+            var backdrops = data.images.backdrops.filter(
+                function (elem) {
+                    return elem.aspect_ratio > 1.5 &&
+                        (
+                            !elem.iso_639_1 ||
+                            elem.iso_639_1 === 'xx'
+                        );
                 }
             );
-        } catch (e) {
-            console.warn('[Card Fusion Mobile] Logo error:', e);
+
+            if (backdrops.length === 0) {
+                backdrops = data.images.backdrops.filter(
+                    function (elem) {
+                        return elem.aspect_ratio > 1.5;
+                    }
+                );
+            }
+
+            if (backdrops.length > 0) {
+                backdrops.sort(function (a, b) {
+                    return (
+                        b.vote_average || 0
+                    ) - (
+                        a.vote_average || 0
+                    );
+                });
+
+                startPosterSlideshow(
+                    $render,
+                    backdrops.slice(0, 15),
+                    renderToken
+                );
+            } else if (data.backdrop_path) {
+                startPosterSlideshow(
+                    $render,
+                    [{ file_path: data.backdrop_path }],
+                    renderToken
+                );
+            }
+        } else if (data.backdrop_path) {
+            startPosterSlideshow(
+                $render,
+                [{ file_path: data.backdrop_path }],
+                renderToken
+            );
         }
+
+        /*
+         * RECHECK DUPLICATE METADATA
+         */
+
+        hideDuplicateHeaderMetadata($render);
     }
 
-    /* =========================================
-       CARD INITIALIZATION
-    ========================================= */
+    /*
+     * LOAD TMDB DETAILS
+     */
 
-    function initializeCard(event) {
-        if (!event || event.type !== 'complite') return;
+    function loadMovieDetails(movie, $render, renderToken) {
+        var movieId = movie.id;
 
-        var movie = getMovie(event);
+        var type = (
+            movie.name ||
+            movie.first_air_date
+        ) ? 'tv' : 'movie';
 
-        if (!movie || !movie.id) return;
+        var cacheKey = type + ':' + movieId;
 
-        var type = getMediaType(event, movie);
+        currentActiveId = cacheKey;
 
-        var key = type + ':' + movie.id;
-
-        var $render = getRender(event);
-
-        if (!$render.length) return;
-
-        var $card = $render.find('.cfm-card').first();
-
-        if (!$card.length) {
-            console.warn(
-                '[Card Fusion Mobile] Custom template not found. ' +
-                'Lampa may be using another template.'
-            );
+        if (detailsCache[cacheKey]) {
+            if (renderToken === activeRenderToken) {
+                applyMovieDetailsData(
+                    detailsCache[cacheKey],
+                    movie,
+                    $render,
+                    renderToken
+                );
+            }
 
             return;
         }
 
-        activeCardKey = key;
+        var url =
+            'https://api.themoviedb.org/3/' +
+            type + '/' + movieId +
+            '?api_key=' + Lampa.TMDB.key() +
+            '&append_to_response=images' +
+            '&include_image_language=uk,en,null';
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            dataType: 'json',
+            timeout: 12000,
+
+            success: function (data) {
+                if (
+                    !data ||
+                    renderToken !== activeRenderToken ||
+                    currentActiveId !== cacheKey
+                ) {
+                    return;
+                }
+
+                detailsCache[cacheKey] = data;
+
+                var cacheKeys = Object.keys(detailsCache);
+
+                if (cacheKeys.length > 100) {
+                    delete detailsCache[cacheKeys[0]];
+                }
+
+                applyMovieDetailsData(
+                    data,
+                    movie,
+                    $render,
+                    renderToken
+                );
+            },
+
+            error: function () {
+                // Помилка TMDB не повинна порушувати роботу картки.
+            }
+        });
+    }
+
+    /*
+     * POSTER SLIDESHOW
+     */
+
+    function startPosterSlideshow($render, items, renderToken) {
+        if (!items || !items.length || !$render || !$render.length) return;
 
         stopSlideshow();
 
-        logoToken++;
+        var $card = $render.find('.full-start-new').first();
+        if (!$card.length) $card = $render;
 
-        var overview = movie.overview ||
-            movie.description ||
-            '';
+        var $background = $card.children('.mi40-backdrop').first();
+        if (!$background.length) {
+            $background = $('<div class="mi40-backdrop" aria-hidden="true"></div>');
+            $card.prepend($background);
+        }
 
-        $render.find('.cfm-description').text(overview);
+        $background.empty();
 
-        startSlideshow(movie, type, $render);
+        var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
+        if (['w780', 'w1280', 'original'].indexOf(quality) === -1) quality = 'w780';
 
-        loadLogo(movie, type, $render);
+        function imageUrl(item) {
+            return Lampa.TMDB.image('/t/p/' + quality + item.file_path);
+        }
 
-        console.log('[Card Fusion Mobile] Card initialized:', key);
+        var index = 0;
+        var activeSlot = 0;
+        var $first = $('<img>').addClass('is-active').attr('alt', '');
+        var $second = $('<img>').attr('alt', '');
+        $background.append($first, $second);
+
+        function alive() {
+            return renderToken === activeRenderToken &&
+                $background[0] &&
+                document.body.contains($background[0]);
+        }
+
+        function showInitial() {
+            if (!alive()) return;
+            $first.attr('src', imageUrl(items[0]));
+        }
+
+        showInitial();
+
+        if (!Lampa.Storage.get('mobile_interface_slideshow') || items.length < 2) return;
+
+        var intervalTime = parseInt(
+            Lampa.Storage.get('mobile_interface_slideshow_time', '10000'),
+            10
+        );
+        if (!intervalTime || intervalTime < 3000) intervalTime = 10000;
+
+        slideshowTimer = setInterval(function () {
+            if (!alive()) {
+                stopSlideshow();
+                return;
+            }
+
+            var nextIndex = (index + 1) % items.length;
+            var nextUrl = imageUrl(items[nextIndex]);
+            var nextSlot = activeSlot === 0 ? 1 : 0;
+            var $next = nextSlot === 0 ? $first : $second;
+            var $current = activeSlot === 0 ? $first : $second;
+            var preload = new Image();
+
+            preload.onload = function () {
+                if (!alive()) return;
+
+                $next.attr('src', nextUrl);
+                requestAnimationFrame(function () {
+                    if (!alive()) return;
+                    $next.addClass('is-active');
+                    $current.removeClass('is-active');
+                    activeSlot = nextSlot;
+                    index = nextIndex;
+                });
+            };
+            preload.onerror = function () {};
+            preload.src = nextUrl;
+        }, intervalTime);
+    }
+        /*
+     * INITIALIZATION
+     */
+
+    function isPortraitMobile() {
+        return window.innerWidth <= 899 && window.innerHeight >= window.innerWidth;
     }
 
-    /* =========================================
-       NAVIGATION
-    ========================================= */
+    function init() {
+        Lampa.Listener.follow('full', function (e) {
 
-    function onActivity(event) {
-        if (!event) return;
+            if (
+                e.type === 'destroy' ||
+                e.type === 'onBeforeDestroy'
+            ) {
+                activeRenderToken++;
+                stopSlideshow();
+                currentActiveId = null;
+                return;
+            }
 
-        if (event.type === 'back' ||
-            event.type === 'destroy') {
+            if (
+                !isPortraitMobile() ||
+                (
+                    e.type !== 'complite' &&
+                    e.type !== 'complete'
+                )
+            ) {
+                return;
+            }
+
+            if (
+                !e.data ||
+                !e.data.movie ||
+                !e.object ||
+                !e.object.activity
+            ) {
+                return;
+            }
 
             stopSlideshow();
 
-            logoToken++;
+            var renderToken = ++activeRenderToken;
+            var movie = e.data.movie;
+            var $render = e.object.activity.render();
 
-            activeCardKey = '';
-        }
+            if (!$render || !$render.length) {
+                return;
+            }
+
+            if (window.lampa_settings) {
+                window.lampa_settings.blur_poster = false;
+            }
+
+            /*
+             * METADATA
+             */
+
+            renderMeta(
+                $render.find('.full-start-new__right'),
+                e
+            );
+
+            /*
+             * HIDE DUPLICATE YEAR/COUNTRY
+             */
+
+            hideDuplicateHeaderMetadata($render);
+
+            /*
+             * TMDB
+             */
+
+            loadMovieDetails(
+                movie,
+                $render,
+                renderToken
+            );
+        });
     }
 
-    /* =========================================
-       START PLUGIN
-    ========================================= */
+    /*
+     * SETTINGS
+     */
+
+    function setupSettings() {
+        Lampa.SettingsApi.addComponent({
+            component: 'mobile_interface',
+            name: 'Мобільний інтерфейс',
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>'
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_animation',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Зум-ефект постера (Ken Burns)'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_ui_anim',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Плавна анімація появи елементів'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_ui_anim_effect',
+                type: 'select',
+                values: {
+                    fluid: 'Apple Fluid',
+                    cyber: 'Cyber Neon',
+                    cinematic: 'Cinematic Depth',
+                    elastic: 'Elastic Spring',
+                    minimal: 'Minimal Fade'
+                },
+                default: 'cinematic'
+            },
+            field: {
+                name: 'Стиль анімації появи'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_slideshow',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Автозміна фонових кадрів'
+            },
+            onChange: function () {
+                stopSlideshow();
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_slideshow_time',
+                type: 'select',
+                values: {
+                    '5000': '5 сек',
+                    '8000': '8 сек',
+                    '10000': '10 сек',
+                    '15000': '15 сек',
+                    '20000': '20 сек'
+                },
+                default: '10000'
+            },
+            field: {
+                name: 'Інтервал зміни фону'
+            },
+            onChange: function () {
+                stopSlideshow();
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_slideshow_quality',
+                type: 'select',
+                values: {
+                    w780: 'Висока (780)',
+                    w1280: 'Дуже висока (1280)',
+                    original: 'Оригінал'
+                },
+                default: 'w780'
+            },
+            field: {
+                name: 'Якість фонових кадрів'
+            },
+            onChange: function () {
+                stopSlideshow();
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_logo_size_v2',
+                type: 'select',
+                values: {
+                    '125': 'Малий',
+                    '150': 'Середній',
+                    '180': 'Стандартний',
+                    '210': 'Великий'
+                },
+                default: '125'
+            },
+            field: {
+                name: 'Висота логотипу тайтлу'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_show_tagline',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Відображати слоган'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_blocks_gap',
+                type: 'select',
+                values: {
+                    '8px': 'Компактний',
+                    '12px': 'Стандартний',
+                    '18px': 'Просторий',
+                    '24px': 'Панорамний'
+                },
+                default: '8px'
+            },
+            field: {
+                name: 'Відступи між блоками'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_ratings_size',
+                type: 'select',
+                values: {
+                    '0.4em': 'Дрібний',
+                    '0.45em': 'Звичайний',
+                    '0.5em': 'Великий',
+                    '0.55em': 'Дуже великий'
+                },
+                default: '0.45em'
+            },
+            field: {
+                name: 'Розмір шрифту інфо-блоків'
+            },
+            onChange: applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: {
+                name: 'mobile_interface_studios',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Показувати логотип студії'
+            },
+            onChange: applyStyles
+        });
+    }
+
+    /*
+     * START
+     */
 
     function startPlugin() {
-        if (initialized) return;
+        if (started) return;
 
-        initialized = true;
+        started = true;
 
-        installStyles();
+        applyStyles();
+        setupSettings();
+        init();
 
-        var registered = registerTemplate();
-
-        if (!registered) {
-            initialized = false;
-            return;
-        }
-
-        addSettings();
-
-        Lampa.Listener.follow('full', initializeCard);
-
-        Lampa.Listener.follow('activity', onActivity);
-
-        console.log('[Card Fusion Mobile] v1.1 loaded successfully');
+        console.log(
+            '[MOB_INTERFACE] 4.0.0 Portrait Cinematic initialized'
+        );
     }
-
-    /* =========================================
-       WAIT FOR LAMPA APP
-    ========================================= */
 
     if (window.appready) {
         startPlugin();
     } else {
-        Lampa.Listener.follow('app', function (event) {
-            if (event && event.type === 'ready') {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') {
                 startPlugin();
             }
         });
