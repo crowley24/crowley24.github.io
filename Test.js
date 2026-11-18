@@ -28,33 +28,29 @@
         }
     }
 
-    // Збереження налаштувань "на льоту"
-    function saveSettings() {
-        try {
-            Lampa.Storage.set(PLUGIN_NAME + '_settings', settings);
-        } catch (e) {
-            console.error(PLUGIN_NAME, 'Помилка збереження налаштувань:', e);
-        }
-    }
-
     loadSettings();
 
-    // Інтерфейс плагіна
-    function CardLiteFusion() {
-        let network = new Lampa.Reguest();
+    // Головний компонент плагіна для картки
+    function CardLiteFusion(object) {
+        let network = new Lampa.Network();
         let background_container = null;
-        let active_trailer = null;
         let slideshow_timer = null;
         let current_posters = [];
         let current_poster_index = 0;
+        let render = object.activity.render();
+        let movie = object.card;
 
-        this.create = function (data) {
-            let html = $('<div><div class="card-lite-fusion-wrap"></div></div>');
-            return html;
+        let self = this;
+
+        this.create = function () {
+            if (!movie) return;
+            
+            self.setBackground();
+            self.setLogo();
         };
 
         // Встановлення фону (Трейлер або Слайдшоу)
-        this.setBackground = function (element, movie) {
+        this.setBackground = function () {
             background_container = $('<div class="card-lite-background"></div>').css({
                 'position': 'absolute',
                 'top': 0,
@@ -68,17 +64,17 @@
                 'transition': 'all 0.5s ease'
             });
 
-            element.find('.full-view__background').html(background_container);
+            render.find('.full-view__background').html(background_container);
 
             if (settings.bg_type === 'trailer') {
-                this.loadTrailer(movie);
+                self.loadTrailer();
             } else {
-                this.loadSlideshow(movie);
+                self.loadSlideshow();
             }
         };
 
         // Завантаження трейлера з YouTube
-        this.loadTrailer = function (movie) {
+        this.loadTrailer = function () {
             let id = movie.id;
             let type = movie.name ? 'tv' : 'movie';
 
@@ -90,15 +86,15 @@
                     let yt_url = `https://www.youtube.com/embed/${trailer.key}?autoplay=1&mute=${settings.trailer_sound ? 0 : 1}&controls=0&loop=1&playlist=${trailer.key}&enablejsapi=1`;
                     background_container.html(`<iframe src="${yt_url}" style="width:100%;height:100%;border:none;pointer-events:none;" allow="autoplay"></iframe>`);
                 } else {
-                    this.loadSlideshow(movie); // Fallback на слайдшоу якщо немає трейлера
+                    self.loadSlideshow(); // Fallback на слайдшоу якщо немає трейлера
                 }
             }, () => {
-                this.loadSlideshow(movie);
+                self.loadSlideshow();
             });
         };
 
         // Слайдшоу постерів TMDB
-        this.loadSlideshow = function (movie) {
+        this.loadSlideshow = function () {
             let id = movie.id;
             let type = movie.name ? 'tv' : 'movie';
 
@@ -111,9 +107,9 @@
                     let img_el = $(`<div style="width:100%;height:100%;background-size:cover;background-position:center;transition:background-image 1s ease-in-out;"></div>`);
                     background_container.html(img_el);
                     
-                    this.changeSlide(img_el);
+                    self.changeSlide(img_el);
                     slideshow_timer = setInterval(() => {
-                        this.changeSlide(img_el);
+                        self.changeSlide(img_el);
                     }, settings.slideshow_interval);
                 }
             });
@@ -126,31 +122,30 @@
         };
 
         // Графічні логотипи TMDB + Пікер + Автоінвертування
-        this.setLogo = function (element, movie) {
-            let title_block = element.find('.full-start__title');
+        this.setLogo = function () {
+            let title_block = render.find('.full-start__title');
             let id = movie.id;
             let type = movie.name ? 'tv' : 'movie';
 
             // Перевірка збереженого ручного вибору користувача
             let custom_logo = Lampa.Storage.get(PLUGIN_NAME + '_logo_' + id);
             if (custom_logo) {
-                this.applyLogoImage(title_block, custom_logo, movie, element);
+                self.applyLogoImage(title_block, custom_logo);
                 return;
             }
 
             network.silent(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=4ef0ecd7c5d4dda4661e92a49f96b27e&include_image_language=ru,en,uk,null`, (data) => {
                 let logos = data.logos || [];
-                // Шукаємо українську, руську або англійську
                 let logo = logos.find(l => l.iso_639_1 === 'uk') || logos.find(l => l.iso_639_1 === 'ru') || logos.find(l => l.iso_639_1 === 'en') || logos[0];
 
                 if (logo) {
                     let logo_url = `https://image.tmdb.org/t/p/w500${logo.file_path}`;
-                    this.applyLogoImage(title_block, logo_url, movie, element);
+                    self.applyLogoImage(title_block, logo_url);
                 }
             });
         };
 
-        this.applyLogoImage = function (title_block, url, movie, root_element) {
+        this.applyLogoImage = function (title_block, url) {
             let img = $(`<img class="card-lite-tmdb-logo" src="${url}" alt="logo" style="max-height: 80px; max-width: 300px; object-fit: contain; cursor: pointer;" />`);
             
             if (settings.logo_auto_invert) {
@@ -159,14 +154,14 @@
 
             // Додаємо обробник кліку для ручного вибору (пікер)
             img.on('hover:enter click', () => {
-                this.openLogoPicker(movie, root_element);
+                self.openLogoPicker();
             });
 
             title_block.html(img);
         };
 
         // Вікно вибору логотипа (Пікер)
-        this.openLogoPicker = function (movie, root_element) {
+        this.openLogoPicker = function () {
             let id = movie.id;
             let type = movie.name ? 'tv' : 'movie';
 
@@ -190,7 +185,7 @@
                     items: items,
                     onSelect: (a) => {
                         Lampa.Storage.set(PLUGIN_NAME + '_logo_' + id, a.url);
-                        this.setLogo(root_element, movie);
+                        self.setLogo();
                         Lampa.Noty.show('Логотип змінено успішно');
                     },
                     onBack: () => {
@@ -200,9 +195,15 @@
             });
         };
 
+        // Знищення таймерів при закритті картки
         this.destroy = function () {
             if (slideshow_timer) clearInterval(slideshow_timer);
+            slideshow_timer = null;
         };
+
+        render.on('destroy', () => {
+            self.destroy();
+        });
     }
 
     // Додавання CSS стилів для компонування та мобільного центрування
@@ -224,21 +225,25 @@
         }
     `).appendTo('head');
 
-    // Реєстрація плагіна в Lampa
-    if (window.appready) {
-        initializePlugin();
-    } else {
+    // Реєстрація плагіна в Lampa через слухач подій повного перегляду
+    function registerPlugin() {
         Lampa.Listener.follow('full', (e) => {
-            if (e.type === 'complite') {
-                let fusion = new CardLiteFusion();
-                fusion.setBackground(e.object.activity.render(), e.data);
-                fusion.setLogo(e.object.activity.render(), e.data);
+            if (e.type === 'complete') {
+                let fusion = new CardLiteFusion(e.object);
+                fusion.create();
             }
         });
+        console.log(PLUGIN_NAME, 'ініціалізовано успішно');
     }
 
-    function initializePlugin() {
-        console.log(PLUGIN_NAME, 'ініціалізовано успішно');
+    if (window.appready) {
+        registerPlugin();
+    } else {
+        Lampa.Listener.follow('app', (e) => {
+            if (e.type === 'ready') {
+                registerPlugin();
+            }
+        });
     }
 
 })();
